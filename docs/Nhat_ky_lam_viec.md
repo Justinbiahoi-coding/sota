@@ -24,3 +24,17 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Lập lại Gantt 12 tuần, giữ nguyên 5 thành viên, đổi vai trò cho khớp module mới (vd "Backend & đồng bộ" → "Bảo tàng, Triển lãm & Bản đồ").
 
 ---
+
+## 2026-10-11, 21:47 — Bỏ dấu vết AI khỏi git + đổi tên dự án + tạo repo GitHub
+
+- **Thời gian làm việc:** 11/10/2026, ghi nhận lúc 21:47.
+- **Làm việc gì:** Đổi tên dự án MuseConnect → Sota (Space of the Art); xóa lịch sử git cũ (có dòng đồng tác giả AI) và khởi tạo lại sạch; tạo repo GitHub công khai và push.
+- **Ứng dụng/module:** Toàn bộ dự án (branding + hạ tầng git).
+- **Tác dụng:** Người dùng phát hiện commit có dòng `Co-Authored-By: Claude...` khiến AI hiện trong danh sách contributor trên GitHub — không phù hợp cho đồ án nhóm 5 người thầy có thể xem. Từ nay không thêm dòng này vào bất kỳ commit nào nữa.
+- **Làm như thế nào:**
+  - Đổi tên thư mục `museconnect` → `sota`, cập nhật `package.json`, `package-lock.json` (chạy lại `npm install`), và các nhắc tới tên cũ trong README.md/CONTRIBUTING.md/nhật ký này.
+  - Vì repo local chưa từng push lên đâu (an toàn), xóa hẳn `.git` và `git init` lại, tạo 1 commit sạch duy nhất — không còn dòng đồng tác giả AI trong lịch sử.
+  - `npm run build` + `npx prisma validate` lại lần cuối — vẫn sạch sau khi đổi tên.
+  - Tạo repo GitHub public `Justinbiahoi-coding/sota` bằng `gh repo create`, push nhánh `main`. Xác minh qua GitHub API: commit chỉ đứng tên người dùng, không có đồng tác giả nào khác.
+
+---
