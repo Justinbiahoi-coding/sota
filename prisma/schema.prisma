@@ -1,0 +1,166 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum VaiTro {
+  KHACH
+  QUAN_TRI
+}
+
+enum TrangThaiVe {
+  CHO_THANH_TOAN
+  DA_THANH_TOAN
+  DA_HUY
+}
+
+enum TrangThaiDonHang {
+  CHO_XU_LY
+  DA_THANH_TOAN
+  DANG_GIAO
+  DA_GIAO
+  DA_HUY
+}
+
+model NguoiDung {
+  id        String   @id // trùng id với Supabase Auth user, không tự sinh
+  email     String   @unique
+  hoTen     String?
+  vaiTro    VaiTro   @default(KHACH)
+  createdAt DateTime @default(now())
+
+  ve      Ve[]
+  donHang DonHang[]
+}
+
+model BaoTang {
+  id          String   @id @default(cuid())
+  ten         String
+  diaChi      String
+  viDo        Float // latitude
+  kinhDo      Float // longitude
+  gioMoCua    String // vd "9:00 - 17:00", giữ dạng chuỗi cho MVP
+  moTa        String?
+  createdAt   DateTime @default(now())
+
+  hienVat   HienVat[]
+  trienLam  TrienLam[]
+  suatVe    SuatVe[]
+}
+
+model HienVat {
+  id              String  @id @default(cuid())
+  // id gốc bên Smithsonian Open Access API, dùng để đồng bộ lại / tránh trùng
+  smithsonianId   String  @unique
+  tieuDe          String
+  tacGia          String?
+  anhUrl          String?
+  moTa            String?
+
+  baoTangId String
+  baoTang   BaoTang @relation(fields: [baoTangId], references: [id])
+
+  trienLamHienVat TrienLamHienVat[]
+  sanPham         SanPham[]
+}
+
+model TrienLam {
+  id        String   @id @default(cuid())
+  tieuDe    String
+  moTa      String?
+  ngayBatDau DateTime
+  ngayKetThuc DateTime
+
+  baoTangId String
+  baoTang   BaoTang @relation(fields: [baoTangId], references: [id])
+
+  trienLamHienVat TrienLamHienVat[]
+}
+
+// Bảng nối nhiều-nhiều: 1 triển lãm có nhiều hiện vật, 1 hiện vật có thể
+// thuộc nhiều triển lãm khác nhau theo thời gian.
+model TrienLamHienVat {
+  trienLamId String
+  trienLam   TrienLam @relation(fields: [trienLamId], references: [id])
+  hienVatId  String
+  hienVat    HienVat  @relation(fields: [hienVatId], references: [id])
+
+  @@id([trienLamId, hienVatId])
+}
+
+model SuatVe {
+  id        String   @id @default(cuid())
+  ngay      DateTime
+  gioBatDau String // vd "09:00" — giữ chuỗi cho MVP, không cần model lịch phức tạp
+  giaVe     Int // đơn vị: cent (USD), khớp định dạng Stripe
+  soLuongToiDa Int
+  soLuongDaDat Int @default(0)
+
+  baoTangId String
+  baoTang   BaoTang @relation(fields: [baoTangId], references: [id])
+
+  ve Ve[]
+}
+
+model Ve {
+  id                    String      @id @default(cuid())
+  soLuong               Int
+  trangThai             TrangThaiVe @default(CHO_THANH_TOAN)
+  stripePaymentIntentId String?
+  createdAt             DateTime    @default(now())
+
+  nguoiDungId String
+  nguoiDung   NguoiDung @relation(fields: [nguoiDungId], references: [id])
+  suatVeId    String
+  suatVe      SuatVe    @relation(fields: [suatVeId], references: [id])
+}
+
+model SanPham {
+  id        String  @id @default(cuid())
+  ten       String
+  moTa      String?
+  anhUrl    String?
+  gia       Int // đơn vị: cent (USD)
+  tonKho    Int     @default(0)
+
+  // Tùy chọn: sản phẩm lấy cảm hứng từ 1 hiện vật cụ thể (vd postcard in lại
+  // tác phẩm đang trưng bày) — có thể null nếu là quà lưu niệm chung.
+  hienVatId String?
+  hienVat   HienVat? @relation(fields: [hienVatId], references: [id])
+
+  donHangSanPham DonHangSanPham[]
+}
+
+model DonHang {
+  id                    String           @id @default(cuid())
+  trangThai             TrangThaiDonHang @default(CHO_XU_LY)
+  stripePaymentIntentId String?
+  createdAt             DateTime         @default(now())
+
+  nguoiDungId String
+  nguoiDung   NguoiDung @relation(fields: [nguoiDungId], references: [id])
+
+  sanPham DonHangSanPham[]
+}
+
+// Bảng nối: 1 đơn hàng có nhiều sản phẩm, mỗi dòng giữ lại đơn giá lúc đặt
+// (giaLucDat) vì giá sản phẩm có thể đổi sau này — không lấy giá hiện tại.
+model DonHangSanPham {
+  donHangId  String
+  donHang    DonHang @relation(fields: [donHangId], references: [id])
+  sanPhamId  String
+  sanPham    SanPham @relation(fields: [sanPhamId], references: [id])
+  soLuong    Int
+  giaLucDat  Int
+
+  @@id([donHangId, sanPhamId])
+}
