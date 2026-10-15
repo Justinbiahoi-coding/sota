@@ -38,3 +38,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Tạo repo GitHub public `Justinbiahoi-coding/sota` bằng `gh repo create`, push nhánh `main`. Xác minh qua GitHub API: commit chỉ đứng tên người dùng, không có đồng tác giả nào khác.
 
 ---
+
+## 2026-10-15, 21:19 — Chia task cụ thể cho 5 người
+
+- **Thời gian làm việc:** 15/10/2026, ghi nhận lúc 21:19.
+- **Làm việc gì:** Viết checklist công việc cụ thể cho từng người, chi tiết hơn bản Gantt theo tuần đã có — gắn đúng vào route/model thật trong schema hiện tại thay vì mô tả chung chung.
+- **Ứng dụng/module:** Toàn bộ 5 module + phần phối hợp chung.
+- **Tác dụng:** Gantt theo tuần chỉ nói "làm gì ở tuần mấy", chưa đủ cụ thể để từng người biết chính xác phải tạo file nào, route nào, gọi API nào — checklist này để mỗi người bắt tay vào việc được ngay.
+- **Làm như thế nào:** Tạo `docs/Phan_cong_cong_viec.md`, liệt kê task theo từng người, trỏ thẳng vào model Prisma và đường dẫn route cụ thể đã có sẵn trong schema. Thêm mục "Việc chung" ghi rõ 2 điểm phụ thuộc giữa các module (Người 2+4 cùng dùng Stripe; module Triển lãm/Lưu niệm phụ thuộc data hiện vật của Người 1).
+
+---
