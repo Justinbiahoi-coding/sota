@@ -58,3 +58,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Tạo `docs/Bang_phan_cong.md`, dùng đúng MSSV/tên thật 5 thành viên đã có sẵn, gộp thông tin từ Gantt (tuần) + checklist (vai trò/công việc chính) thành 1 bảng, trỏ ngược lại 2 file kia để ai cần chi tiết hơn thì xem thêm.
 
 ---
+
+## 2026-10-15, 23:02 — Lập bảng tính năng chi tiết
+
+- **Thời gian làm việc:** 15/10/2026, ghi nhận lúc 23:02.
+- **Làm việc gì:** Tạo bảng đặc tả tính năng — liệt kê từng tính năng cụ thể (21 tính năng, chia 2 nhóm khách/quản trị), kèm mô tả, model Prisma liên quan, độ ưu tiên (MVP/Nâng cao), người phụ trách.
+- **Ứng dụng/module:** Toàn bộ hệ thống — tài liệu dùng cho SRS/đề cương.
+- **Tác dụng:** Bảng phân công (`Bang_phan_cong.md`) nói "ai làm module nào", nhưng không liệt kê rõ TỪNG tính năng cụ thể trong module đó — bảng này bổ sung đúng góc nhìn "hệ thống có bao nhiêu tính năng, cái nào bắt buộc (MVP) cái nào có thể bỏ nếu hết giờ (Nâng cao)".
+- **Làm như thế nào:** Tạo `docs/Bang_tinh_nang.md`, rà lại toàn bộ tính năng đã thống nhất trong các buổi trước (showcase, tham quan online, đặt vé, lưu niệm, bản đồ/chỉ đường, các CRUD quản trị), gắn mỗi tính năng với đúng model trong `prisma/schema.prisma` và đúng người phụ trách theo `Bang_phan_cong.md`. Đánh dấu "Nâng cao" cho các phần đã từng bàn là rút gọn/mở rộng (tham quan online 360°, chỉ đường, lưu yêu thích) để không ai hiểu nhầm là bắt buộc.
+
+---
