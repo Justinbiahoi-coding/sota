@@ -83,3 +83,16 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Phát hiện phụ: bản `PA02_SDP_FitDuel.docx` cũ bị lỗi XML trong các ô bảng (có thể do lúc tạo trước đây) — không sửa vì FitDuel đã ngưng, chỉ ghi nhận lại để biết nếu sau này cần mở lại file đó.
 
 ---
+
+## 2026-10-16, 00:04 — Dọn văn phong AI khỏi tài liệu nộp thầy + thêm hook nhắc nhở tự động
+
+- **Thời gian làm việc:** 16/10/2026, ghi nhận lúc 00:04.
+- **Làm việc gì:** Áp dụng skill `humanizer`/`stop-slop` lên 3 tài liệu vừa viết (đề xuất 1 trang, SDP, Vision Document) để bỏ các dấu hiệu văn AI (dấu gạch ngang em dash, kiểu câu "không phải X mà là Y"...). Thêm 1 rule hookify tự động nhắc khi phát hiện dấu hiệu này trong các lần viết file `.md`/`.docx` sau này.
+- **Ứng dụng/module:** Tài liệu nộp môn học.
+- **Tác dụng:** Tài liệu do agent viết (kể cả agent đã được dặn viết đúng văn phong) vẫn dễ lẫn các tell văn AI quen thuộc — cần 1 lượt dọn riêng trước khi nộp, và nên có cảnh báo tự động để không phải nhớ chạy tay mỗi lần.
+- **Làm như thế nào:**
+  - Viết lại đoạn giới thiệu trong `docs/De_xuat_du_an_1_trang.pdf` (bỏ 3 dấu em dash, bỏ cấu trúc "không phải... mà là...", tách lại thành câu ngắn hơn), regenerate PDF.
+  - Giao 2 subagent (fork) đọc trực tiếp `docs/PA1_SDP_Sota.docx` và `docs/PA1_Vision_Sota.docx`, áp cùng bộ quy tắc, chỉ sửa văn phong, giữ nguyên toàn bộ bảng/số liệu/cấu trúc.
+  - Tạo `.claude/hookify.no-ai-writing-tells.local.md`: cảnh báo tự động khi phát hiện em dash hoặc cấu trúc "không phải X mà là Y" trong file `.md`/`.docx` mới viết/sửa. Thêm `.claude/*.local.md` vào `.gitignore` (rule cá nhân, không chia sẻ chung với nhóm, đúng khuyến nghị của skill `hookify`).
+
+---

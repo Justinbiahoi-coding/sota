@@ -1,5 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+# Claude Code local rules (per-machine, not shared with team)
+.claude/*.local.md
+
 # dependencies
 /node_modules
 /.pnp
