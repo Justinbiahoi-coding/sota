@@ -48,3 +48,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Tạo `docs/Phan_cong_cong_viec.md`, liệt kê task theo từng người, trỏ thẳng vào model Prisma và đường dẫn route cụ thể đã có sẵn trong schema. Thêm mục "Việc chung" ghi rõ 2 điểm phụ thuộc giữa các module (Người 2+4 cùng dùng Stripe; module Triển lãm/Lưu niệm phụ thuộc data hiện vật của Người 1).
 
 ---
+
+## 2026-10-15, 22:11 — Lập bảng phân công nhiệm vụ (dạng bảng tóm tắt)
+
+- **Thời gian làm việc:** 15/10/2026, ghi nhận lúc 22:11.
+- **Làm việc gì:** Tạo bảng phân công tóm tắt (1 dòng/người: MSSV, vai trò, công việc chính, tuần thực hiện) — khác với `Phan_cong_cong_viec.md` (checklist chi tiết từng đầu việc kỹ thuật).
+- **Ứng dụng/module:** Tài liệu dự án, dùng được cho đề cương/báo cáo nộp thầy.
+- **Tác dụng:** Checklist chi tiết hợp để code theo, nhưng không gọn để đưa vào báo cáo/đề cương — cần 1 bảng tóm tắt dễ đọc, đúng định dạng "bảng phân công nhiệm vụ" thường thấy trong SRS.
+- **Làm như thế nào:** Tạo `docs/Bang_phan_cong.md`, dùng đúng MSSV/tên thật 5 thành viên đã có sẵn, gộp thông tin từ Gantt (tuần) + checklist (vai trò/công việc chính) thành 1 bảng, trỏ ngược lại 2 file kia để ai cần chi tiết hơn thì xem thêm.
+
+---
