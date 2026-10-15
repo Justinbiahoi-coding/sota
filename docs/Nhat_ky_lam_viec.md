@@ -68,3 +68,16 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Tạo `docs/Bang_tinh_nang.md`, rà lại toàn bộ tính năng đã thống nhất trong các buổi trước (showcase, tham quan online, đặt vé, lưu niệm, bản đồ/chỉ đường, các CRUD quản trị), gắn mỗi tính năng với đúng model trong `prisma/schema.prisma` và đúng người phụ trách theo `Bang_phan_cong.md`. Đánh dấu "Nâng cao" cho các phần đã từng bàn là rút gọn/mở rộng (tham quan online 360°, chỉ đường, lưu yêu thích) để không ai hiểu nhầm là bắt buộc.
 
 ---
+
+## 2026-10-15, 23:51 — Phát hiện deadline PA1 gấp, viết lại 3 tài liệu nộp thầy cho Sota
+
+- **Thời gian làm việc:** 15/10/2026, ghi nhận lúc 23:51.
+- **Làm việc gì:** Phát hiện PA0+PA1 (giai đoạn Inception) hạn chót 16/10/2026 — tức ngày mai — qua đọc lại đúng đề bài gốc (`PA0/PA0_Dang_ky_nhom_va_Thiet_lap_cong_cu.pdf`). Sửa lại tên thư mục (`PA01`→`PA0`, `PA02`→`PA1`) cho khớp đúng số thứ tự bài tập. Viết lại 3 tài liệu nộp thầy cho Sota (trước đó toàn bộ nội dung cũ viết cho FitDuel, không còn đúng): đề xuất dự án 1 trang, Software Development Plan, Vision Document.
+- **Ứng dụng/module:** Tài liệu nộp môn học (không phải code sản phẩm).
+- **Tác dụng:** Đổi ý tưởng dự án (FitDuel → Sota) nhưng quên mất 3 tài liệu PA0/PA1 vẫn đang mô tả FitDuel — nếu không viết lại kịp sẽ nộp sai dự án cho thầy.
+- **Làm như thế nào:**
+  - Đọc lại bản PDF đề xuất 1 trang cũ (`FitDuel/docs/De_xuat_du_an_1_trang.pdf`, nằm ở `/Users/buivanthien/Learn/FitDuel` — phát hiện thư mục FitDuel đã bị di chuyển ra ngoài `ITSE/` ở thời điểm nào đó giữa các buổi làm việc, không phải do thao tác trong phiên này) để lấy đúng cấu trúc 4 mục bắt buộc theo đề bài.
+  - Viết script Python (`reportlab`, font Arial hệ thống để hiển thị đúng tiếng Việt có dấu) tạo `docs/De_xuat_du_an_1_trang.pdf` mới cho Sota — đủ 4 mục: thành viên, giới thiệu, người dùng mục tiêu, tính năng chính (9 tính năng chính rút từ `Bang_tinh_nang.md`). Xóa script tạm sau khi dùng xong.
+  - Giao 2 subagent (fork, chạy nền song song) viết **Software Development Plan** và **Vision Document** — mỗi agent tự đọc file mẫu tương ứng trong `PA1/`, bản cũ của FitDuel để tham khảo cấu trúc/văn phong, và đọc trực tiếp `prisma/schema.prisma` + 3 file kế hoạch đã có (`Bang_phan_cong.md`, `Phan_cong_cong_viec.md`, `Bang_tinh_nang.md`) để lấy đúng dữ kiện thật, không bịa. Lưu thành `docs/PA1_SDP_Sota.docx` và `docs/PA1_Vision_Sota.docx`.
+
+---
