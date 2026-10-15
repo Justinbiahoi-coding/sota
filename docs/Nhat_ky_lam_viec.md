@@ -94,5 +94,6 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Viết lại đoạn giới thiệu trong `docs/De_xuat_du_an_1_trang.pdf` (bỏ 3 dấu em dash, bỏ cấu trúc "không phải... mà là...", tách lại thành câu ngắn hơn), regenerate PDF.
   - Giao 2 subagent (fork) đọc trực tiếp `docs/PA1_SDP_Sota.docx` và `docs/PA1_Vision_Sota.docx`, áp cùng bộ quy tắc, chỉ sửa văn phong, giữ nguyên toàn bộ bảng/số liệu/cấu trúc.
   - Tạo `.claude/hookify.no-ai-writing-tells.local.md`: cảnh báo tự động khi phát hiện em dash hoặc cấu trúc "không phải X mà là Y" trong file `.md`/`.docx` mới viết/sửa. Thêm `.claude/*.local.md` vào `.gitignore` (rule cá nhân, không chia sẻ chung với nhóm, đúng khuyến nghị của skill `hookify`).
+  - Kết quả: Vision Document chỉ có 5 em dash cần sửa, không có tell nào khác. SDP có 13 chỗ cần sửa (10 em dash trong văn xuôi + 1 câu đối lập kiểu "không phải... mà là..." thừa) — riêng 9 dấu gạch ngang còn lại trong SDP là nhãn/tiêu đề bảng (vd "PA0 — Đề xuất dự án"), giữ nguyên theo đúng quy ước đã có từ trước (coi nhãn dữ liệu khác với văn xuôi). Cả 2 file verify lại mở đúng, số đoạn/bảng khớp, đã commit riêng từng file.
 
 ---
