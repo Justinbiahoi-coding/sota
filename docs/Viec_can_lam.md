@@ -2,13 +2,13 @@
 
 ## Backend
 
-- Đăng nhập / Đăng ký (Dễ) (Có OTP qua email, dùng Supabase Auth)
+- Đăng nhập / Đăng ký (Dễ) (Có OTP qua email, dùng Supabase Auth; đăng xuất; quên mật khẩu)
 - Quản lý người dùng (Trung bình) (Sửa tên, đổi mật khẩu; admin xem danh sách, đổi vai trò Khách/Quản trị viên)
-- CRUD Bảo tàng (Trung bình) (Tên, địa chỉ, giờ mở cửa, mô tả, ảnh, tọa độ cho bản đồ)
+- CRUD Bảo tàng (Trung bình) (Tên, địa chỉ, giờ mở cửa, mô tả, ảnh, tọa độ cho bản đồ; không cho xóa bảo tàng đang có triển lãm hoặc vé đã bán, dùng xóa mềm)
 - CRUD Triển lãm (Trung bình) (Ngày bắt đầu/kết thúc, gắn/gỡ hiện vật vào triển lãm)
 - CRUD Suất vé (Trung bình) (Ngày giờ, giá, số lượng tối đa, số chỗ còn lại)
 - CRUD Sản phẩm lưu niệm (Trung bình) (Giá, ảnh, tồn kho)
-- CRUD Đơn hàng (Trung bình) (Tạo đơn từ giỏ hàng, đổi trạng thái xử lý/giao/hoàn tất)
+- CRUD Đơn hàng (Trung bình) (Tạo đơn từ giỏ hàng, địa chỉ giao hàng, đổi trạng thái xử lý/giao/hoàn tất, khách tự hủy đơn chưa giao)
 
 Thêm vào so với bản nháp (các tính năng MVP trong `Bang_tinh_nang.md` chưa có ở trên):
 
@@ -16,6 +16,17 @@ Thêm vào so với bản nháp (các tính năng MVP trong `Bang_tinh_nang.md` 
 - Thanh toán Stripe (Khó) (Thanh toán vé và đơn hàng, webhook cập nhật trạng thái sau khi trả tiền)
 - Thống kê vé và doanh thu (Trung bình) (Theo bảo tàng, theo thời gian)
 - Phân quyền trang quản trị (Dễ) (Chỉ Quản trị viên vào được `/admin`)
+
+Thêm sau khi rà lại:
+
+- Sửa schema trước khi migrate (Dễ) (`DonHang` thêm tên người nhận, số điện thoại, địa chỉ giao; `Ve` thêm mã vé và trạng thái "đã sử dụng"; bảo tàng thêm cờ xóa mềm)
+- Chống bán quá số vé và tồn kho (Khó) (Giữ chỗ khi tạo phiên thanh toán, trả chỗ khi khách hủy hoặc hết hạn thanh toán)
+- Giỏ hàng (Trung bình) (Lưu giỏ trong cookie hoặc CSDL, thêm/bớt/đổi số lượng, kiểm tra tồn kho)
+- Upload ảnh (Dễ) (Ảnh bảo tàng và sản phẩm lên Supabase Storage)
+- Mã vé QR và soát vé (Trung bình) (Sinh QR cho mỗi vé; nhân viên quét QR để đánh dấu vé đã dùng)
+- Hủy vé (Trung bình) (Khách hủy vé chưa dùng, trả lại chỗ cho suất; hoàn tiền Stripe là tùy chọn)
+- Quản lý hiện vật sau khi đồng bộ (Dễ) (Admin sửa hoặc ẩn hiện vật lỗi ảnh, sai thông tin)
+- Email xác nhận (Dễ) (Bật biên lai tự động của Stripe cho vé và đơn hàng)
 
 ## Frontend (Tự động Dễ)
 
@@ -29,6 +40,18 @@ Thêm vào so với bản nháp (các tính năng MVP trong `Bang_tinh_nang.md` 
 - Bản đồ cụm bảo tàng
 - Trang chủ và layout chung (Header, footer, responsive trên điện thoại)
 - Trang thống kê cho admin (Biểu đồ)
+- Quên mật khẩu (Nhập email, đặt lại mật khẩu)
+- Form địa chỉ giao hàng khi thanh toán đơn
+- Mã QR trong trang vé của tôi, trang quét vé cho nhân viên
+- Nút hủy vé, hủy đơn
+- Admin: quản lý hiện vật (sửa, ẩn)
+
+## Kiểm thử
+
+- Test từng module theo test case, ghi lỗi lên GitHub Issues
+- Test cả luồng trên bản deploy: đăng ký, đặt vé, mua quà, thanh toán, xem lịch sử, soát vé
+- Test trên điện thoại
+- Sửa lỗi theo Issues
 
 ## Nâng cao (làm nếu còn thời gian)
 
@@ -41,3 +64,9 @@ Thêm vào so với bản nháp (các tính năng MVP trong `Bang_tinh_nang.md` 
 - Tạo Supabase, Stripe, điền key vào `.env`, chạy `npx prisma migrate dev`
 - Nối Vercel với GitHub để tự deploy
 - Dữ liệu mẫu để test
+
+## Cần chốt với nhóm trước khi làm
+
+- Ngôn ngữ: dữ liệu Smithsonian là tiếng Anh, giao diện tiếng Việt. Hiển thị mô tả hiện vật bằng tiếng Anh hay dịch?
+- Tiền tệ: schema đang để giá bằng USD (cent). Giữ USD hay đổi sang VND?
+- Múi giờ: suất vé tính theo giờ Washington hay giờ Việt Nam?

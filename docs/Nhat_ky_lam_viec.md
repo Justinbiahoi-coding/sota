@@ -127,3 +127,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Giữ nguyên các mục trong bản nháp, thêm chi tiết trong ngoặc; bổ sung các tính năng MVP mà bản nháp chưa có (đồng bộ Smithsonian, thanh toán Stripe, thống kê, phân quyền admin) thành một nhóm riêng có ghi độ khó; tách phần nâng cao và phần chuẩn bị ra cuối.
 
 ---
+
+## 2026-10-16, 20:44 — Bổ sung các việc còn thiếu vào bảng công việc
+
+- **Thời gian làm việc:** 16/10/2026, ghi nhận lúc 20:44.
+- **Làm việc gì:** Rà bảng công việc với schema Prisma và bổ sung các việc còn thiếu.
+- **Ứng dụng/module:** `docs/Viec_can_lam.md`.
+- **Tác dụng:** Bảng phủ đủ các chỗ dễ vấp khi demo (đơn hàng chưa có địa chỉ giao, bán quá số vé) và các câu cần nhóm chốt.
+- **Làm như thế nào:** Thêm vào Backend: sửa schema trước khi migrate, chống bán quá số vé và tồn kho, giỏ hàng, upload ảnh, QR và soát vé, hủy vé, quản lý hiện vật sau đồng bộ, email xác nhận; thêm đăng xuất/quên mật khẩu, xóa mềm bảo tàng, hủy đơn vào các mục sẵn có; thêm các trang Frontend tương ứng; thêm mục Kiểm thử và mục "Cần chốt với nhóm" (ngôn ngữ, tiền tệ, múi giờ).
+
+---
