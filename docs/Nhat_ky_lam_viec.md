@@ -117,3 +117,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Tách mỗi tính năng có cả hai phía thành một việc Backend (Server Actions, Route Handlers, truy vấn Prisma, Stripe, Supabase) và một việc Frontend (trang, component); gom việc chuẩn bị vào Backend, kiểm thử và demo vào bảng Chung. Kết quả 28 việc Backend, 26 việc Frontend, 5 việc chung.
 
 ---
+
+## 2026-10-16, 20:41 — Viết lại bảng công việc theo bản nháp của nhóm
+
+- **Thời gian làm việc:** 16/10/2026, ghi nhận lúc 20:41.
+- **Làm việc gì:** Viết lại `docs/Viec_can_lam.md` theo định dạng bản nháp Thiên gửi: danh sách Backend có ghi độ khó, Frontend mặc định là dễ.
+- **Ứng dụng/module:** `docs/Viec_can_lam.md`.
+- **Tác dụng:** Bảng gọn hơn, dễ chia việc theo độ khó.
+- **Làm như thế nào:** Giữ nguyên các mục trong bản nháp, thêm chi tiết trong ngoặc; bổ sung các tính năng MVP mà bản nháp chưa có (đồng bộ Smithsonian, thanh toán Stripe, thống kê, phân quyền admin) thành một nhóm riêng có ghi độ khó; tách phần nâng cao và phần chuẩn bị ra cuối.
+
+---
