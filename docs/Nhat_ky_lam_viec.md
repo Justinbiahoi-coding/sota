@@ -97,3 +97,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Kết quả: Vision Document chỉ có 5 em dash cần sửa, không có tell nào khác. SDP có 13 chỗ cần sửa (10 em dash trong văn xuôi + 1 câu đối lập kiểu "không phải... mà là..." thừa) — riêng 9 dấu gạch ngang còn lại trong SDP là nhãn/tiêu đề bảng (vd "PA0 — Đề xuất dự án"), giữ nguyên theo đúng quy ước đã có từ trước (coi nhãn dữ liệu khác với văn xuôi). Cả 2 file verify lại mở đúng, số đoạn/bảng khớp, đã commit riêng từng file.
 
 ---
+
+## 2026-10-16, 20:26 — Lập bảng công việc cần làm (phần code)
+
+- **Thời gian làm việc:** 16/10/2026, ghi nhận lúc 20:26.
+- **Làm việc gì:** Lập bảng các việc code còn phải làm, không gồm tài liệu.
+- **Ứng dụng/module:** `docs/Viec_can_lam.md`.
+- **Tác dụng:** Cả nhóm thấy thứ tự làm, ai làm việc gì và việc nào đang chặn việc khác (chưa có tài khoản Supabase/Stripe, chưa migrate).
+- **Làm như thế nào:** Đối chiếu bảng tính năng và bảng phân công với code hiện có, chia thành 5 giai đoạn: chuẩn bị, khung giao diện và tài khoản, module MVP, kiểm thử, nâng cao; mỗi việc có người làm, số tính năng và cột trạng thái.
+
+---
