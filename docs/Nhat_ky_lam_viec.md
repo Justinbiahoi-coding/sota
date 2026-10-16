@@ -107,3 +107,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Đối chiếu bảng tính năng và bảng phân công với code hiện có, chia thành 5 giai đoạn: chuẩn bị, khung giao diện và tài khoản, module MVP, kiểm thử, nâng cao; mỗi việc có người làm, số tính năng và cột trạng thái.
 
 ---
+
+## 2026-10-16, 20:36 — Chia bảng công việc theo Backend và Frontend
+
+- **Thời gian làm việc:** 16/10/2026, ghi nhận lúc 20:36.
+- **Làm việc gì:** Bỏ tên người trong bảng công việc (để trống cho nhóm tự điền), rồi chia lại bảng theo Backend và Frontend.
+- **Ứng dụng/module:** `docs/Viec_can_lam.md`.
+- **Tác dụng:** Nhóm có thể chia người theo mảng server và giao diện thay vì theo module.
+- **Làm như thế nào:** Tách mỗi tính năng có cả hai phía thành một việc Backend (Server Actions, Route Handlers, truy vấn Prisma, Stripe, Supabase) và một việc Frontend (trang, component); gom việc chuẩn bị vào Backend, kiểm thử và demo vào bảng Chung. Kết quả 28 việc Backend, 26 việc Frontend, 5 việc chung.
+
+---
