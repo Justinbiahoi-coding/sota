@@ -157,3 +157,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Viết theo nguyên tắc của skill stop-slop và humanizer (câu ngắn, nói thẳng, không gạch ngang dài, không câu đệm). Mỗi mô tả gồm việc cần làm, dòng "Xong khi" có điều kiện kiểm tra được (kèm mốc M0 đến Demo ở card chốt mốc), và dòng phase, tuần, ưu tiên. Cập nhật qua phiên Trello đang đăng nhập trên Chrome; card mốc kiểm tra và rủi ro giữ nguyên mô tả cũ.
 
 ---
+
+## 2026-10-17, 20:53 — Tạm gác phần game, tách ra nhánh riêng
+
+- **Thời gian làm việc:** 17/10/2026, ghi nhận lúc 20:53.
+- **Làm việc gì:** Tạm dừng phần game Vincent's Cats để tập trung làm frontend Sota; tách toàn bộ code game ra khỏi `main`.
+- **Ứng dụng/module:** git, nhánh `game` và `main` của repo `sota`.
+- **Tác dụng:** Push `main` lúc nào cũng không kéo theo game. Game giữ nguyên trên nhánh `game` (chưa push), làm xong mới push một lần.
+- **Làm như thế nào:** Tạo nhánh `game` giữ nguyên 15 commit chưa push (8 commit game, 7 commit tài liệu và Trello). Dựng lại `main` từ `origin/main` bằng cách cherry-pick 7 commit tài liệu và Trello; file nhật ký bị xung đột thì chỉ ghép thêm các mục mới vào cuối. Kết quả: `main` không còn `/kham-pha` và `public/vincents-cats/`; các mục nhật ký về game nằm trên nhánh `game`. Muốn quay lại làm game: `git switch game`.
+
+---
