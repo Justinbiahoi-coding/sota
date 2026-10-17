@@ -137,3 +137,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Thêm vào Backend: sửa schema trước khi migrate, chống bán quá số vé và tồn kho, giỏ hàng, upload ảnh, QR và soát vé, hủy vé, quản lý hiện vật sau đồng bộ, email xác nhận; thêm đăng xuất/quên mật khẩu, xóa mềm bảo tàng, hủy đơn vào các mục sẵn có; thêm các trang Frontend tương ứng; thêm mục Kiểm thử và mục "Cần chốt với nhóm" (ngôn ngữ, tiền tệ, múi giờ).
 
 ---
+
+## 2026-10-17, 13:26 — Dựng board Trello theo timeline của nhóm
+
+- **Thời gian làm việc:** 17/10/2026, ghi nhận lúc 13:26.
+- **Làm việc gì:** Đọc sheet "General Timeline IDK" (4 tab: Tổng quan, Chi tiết, Mốc kiểm tra, Rủi ro) và dựng board Trello "Sota" để nhóm phân công.
+- **Ứng dụng/module:** Trello, board https://trello.com/b/UCuET94U (workspace "Trello Không gian làm việc").
+- **Tác dụng:** Cả nhóm có một chỗ chung để nhận việc, kéo card qua "Đang làm" và "Xong", theo dõi mốc kiểm tra và rủi ro.
+- **Làm như thế nào:** Đọc sheet qua trình duyệt; tạo board bằng phiên Trello đang đăng nhập (Trello MCP chưa xác thực được vì tài khoản lúc đầu chưa có workspace). Mỗi phase P0–P5 và Buffer là một cột, thêm cột Mốc kiểm tra, Rủi ro, Đang làm, Xong; 33 card việc có tên dạng "T<tuần> · <việc>", gắn nhãn Backend/Frontend/DevOps-Test và Ưu tiên 1–3; 7 card mốc kiểm tra và 5 card rủi ro kèm ảnh hưởng và đối sách. Chưa gán thành viên.
+
+---
