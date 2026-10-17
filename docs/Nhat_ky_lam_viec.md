@@ -177,3 +177,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Xóa các dòng về chỉ đường trong README, bảng phân công, danh sách việc; tính năng số 7 trong bảng tính năng được gạch đi và ghi "Đã bỏ" (giữ số thứ tự để khớp mã F07 trong tài liệu PA1). Không sửa hai file PA1 (.docx) vì đã nộp; board Trello không có card nào về chỉ đường.
 
 ---
+
+## 2026-10-17, 21:17 — Bỏ chỉ đường khỏi cả hai tài liệu PA1
+
+- **Thời gian làm việc:** 17/10/2026, ghi nhận lúc 21:17.
+- **Làm việc gì:** Sửa nốt `PA1_SDP_Sota.docx` và `PA1_Vision_Sota.docx` cho khớp quyết định bỏ tính năng chỉ đường; đánh lại số tính năng.
+- **Ứng dụng/module:** `docs/PA1_SDP_Sota.docx`, `docs/PA1_Vision_Sota.docx`, `docs/Bang_tinh_nang.md`.
+- **Tác dụng:** Mọi tài liệu của nhóm thống nhất: còn 20 tính năng (17 MVP, 3 Nâng cao), có bản đồ cụm bảo tàng, không còn chỉ đường.
+- **Làm như thế nào:** Giải nén từng file docx, thay chữ trực tiếp trong `word/document.xml` (mỗi đoạn chỉ có một run nên giữ nguyên định dạng): SDP sửa phần phân công, số tính năng (21 thành 20, 4 Nâng cao thành 3) và rủi ro; Vision sửa phần mở đầu, so sánh sản phẩm, nhu cầu (đổi "Tìm đường" thành "Biết vị trí các bảo tàng trong cụm"), giả định và phụ thuộc. Xóa dòng F07 trong bảng tính năng của Vision, đánh lại F08–F21 thành F07–F20, rồi đánh lại số tương ứng trong `Bang_tinh_nang.md` (bỏ dòng "Đã bỏ" ghi ở lần trước). Đóng gói lại và kiểm tra cấu trúc bảng bằng python-docx.
+
+---
