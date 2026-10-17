@@ -147,3 +147,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Đọc sheet qua trình duyệt; tạo board bằng phiên Trello đang đăng nhập (Trello MCP chưa xác thực được vì tài khoản lúc đầu chưa có workspace). Mỗi phase P0–P5 và Buffer là một cột, thêm cột Mốc kiểm tra, Rủi ro, Đang làm, Xong; 33 card việc có tên dạng "T<tuần> · <việc>", gắn nhãn Backend/Frontend/DevOps-Test và Ưu tiên 1–3; 7 card mốc kiểm tra và 5 card rủi ro kèm ảnh hưởng và đối sách. Chưa gán thành viên.
 
 ---
+
+## 2026-10-17, 13:30 — Viết mô tả cho từng card trên board Trello
+
+- **Thời gian làm việc:** 17/10/2026, ghi nhận lúc 13:30.
+- **Làm việc gì:** Viết mô tả cho 33 card việc trên board Trello "Sota".
+- **Ứng dụng/module:** Trello, board https://trello.com/b/UCuET94U.
+- **Tác dụng:** Người nhận card biết phải làm gì và lúc nào thì được kéo card sang cột Xong, không phải hỏi lại.
+- **Làm như thế nào:** Viết theo nguyên tắc của skill stop-slop và humanizer (câu ngắn, nói thẳng, không gạch ngang dài, không câu đệm). Mỗi mô tả gồm việc cần làm, dòng "Xong khi" có điều kiện kiểm tra được (kèm mốc M0 đến Demo ở card chốt mốc), và dòng phase, tuần, ưu tiên. Cập nhật qua phiên Trello đang đăng nhập trên Chrome; card mốc kiểm tra và rủi ro giữ nguyên mô tả cũ.
+
+---
