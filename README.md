@@ -1,6 +1,6 @@
 # Sota (Space of the Art)
 
-**Nền tảng web cho cụm bảo tàng** — showcase hiện vật, tham quan online, đặt vé, mua quà lưu niệm, chỉ đường giữa các bảo tàng trong cụm.
+**Nền tảng web cho cụm bảo tàng** — showcase hiện vật, tham quan online, đặt vé, mua quà lưu niệm, bản đồ cụm bảo tàng.
 
 > Đồ án môn học Nhập môn Công nghệ phần mềm.
 
@@ -25,7 +25,7 @@ Dữ liệu hiện vật lấy thật từ [Smithsonian Open Access API](https:/
 - Tham quan online (gallery ảnh 360° đơn giản — không làm full kiểu Google Arts & Culture vì cần thiết bị chuyên dụng)
 - Đặt vé theo suất/ngày
 - Mua quà lưu niệm
-- Bản đồ + chỉ đường giữa các bảo tàng trong cụm
+- Bản đồ cụm bảo tàng
 - Tài khoản: lưu tác phẩm yêu thích, xem lịch sử vé/đơn hàng
 
 **Phía quản trị (CRUD cốt lõi)**

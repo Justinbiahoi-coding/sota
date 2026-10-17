@@ -167,3 +167,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Tạo nhánh `game` giữ nguyên 15 commit chưa push (8 commit game, 7 commit tài liệu và Trello). Dựng lại `main` từ `origin/main` bằng cách cherry-pick 7 commit tài liệu và Trello; file nhật ký bị xung đột thì chỉ ghép thêm các mục mới vào cuối. Kết quả: `main` không còn `/kham-pha` và `public/vincents-cats/`; các mục nhật ký về game nằm trên nhánh `game`. Muốn quay lại làm game: `git switch game`.
 
 ---
+
+## 2026-10-17, 21:10 — Bỏ tính năng chỉ đường giữa các bảo tàng
+
+- **Thời gian làm việc:** 17/10/2026, ghi nhận lúc 21:10.
+- **Làm việc gì:** Bỏ tính năng chỉ đường giữa 2 bảo tàng khỏi phạm vi dự án theo quyết định của Thiên; vẫn giữ bản đồ cụm bảo tàng.
+- **Ứng dụng/module:** `README.md`, `docs/Bang_tinh_nang.md`, `docs/Bang_phan_cong.md`, `docs/Phan_cong_cong_viec.md`, `docs/Viec_can_lam.md`.
+- **Tác dụng:** Bớt một tính năng nâng cao phải gọi dịch vụ chỉ đường bên ngoài, nhóm tập trung vào trang lớn của từng bảo tàng.
+- **Làm như thế nào:** Xóa các dòng về chỉ đường trong README, bảng phân công, danh sách việc; tính năng số 7 trong bảng tính năng được gạch đi và ghi "Đã bỏ" (giữ số thứ tự để khớp mã F07 trong tài liệu PA1). Không sửa hai file PA1 (.docx) vì đã nộp; board Trello không có card nào về chỉ đường.
+
+---

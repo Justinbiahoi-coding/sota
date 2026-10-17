@@ -55,7 +55,6 @@ Thêm sau khi rà lại:
 
 ## Nâng cao (làm nếu còn thời gian)
 
-- Chỉ đường giữa 2 bảo tàng
 - Tham quan online (ảnh 360°)
 - Lưu hiện vật yêu thích
 

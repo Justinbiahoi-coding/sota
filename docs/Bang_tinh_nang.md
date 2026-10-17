@@ -10,7 +10,7 @@
 | 4 | Xem danh sách & chi tiết bảo tàng | Tên, địa chỉ, giờ mở cửa, mô tả, danh sách triển lãm đang diễn ra | `BaoTang` | MVP | Người 3 |
 | 5 | Xem lịch triển lãm | Danh sách triển lãm theo bảo tàng, ngày bắt đầu/kết thúc, hiện vật trưng bày | `TrienLam`, `TrienLamHienVat` | MVP | Người 3 |
 | 6 | Bản đồ cụm bảo tàng | Hiển thị vị trí tất cả bảo tàng trên bản đồ | `BaoTang` (viDo/kinhDo) | MVP | Người 3 |
-| 7 | Chỉ đường giữa 2 bảo tàng | Vẽ đường đi bộ, ước tính thời gian/khoảng cách | `BaoTang` (viDo/kinhDo) | Nâng cao | Người 3 |
+| 7 | ~~Chỉ đường giữa 2 bảo tàng~~ | Đã bỏ ngày 17/10/2026, giữ số thứ tự để khớp với tài liệu PA1 (F07) | | Đã bỏ | |
 | 8 | Đặt vé | Chọn bảo tàng → chọn suất/ngày → số lượng → thanh toán | `SuatVe`, `Ve` | MVP | Người 2 |
 | 9 | Xem lịch sử vé đã đặt | Danh sách vé đã mua, trạng thái, QR/mã vé | `Ve` | MVP | Người 2 |
 | 10 | Xem & mua lưu niệm | Danh sách sản phẩm, thêm giỏ hàng, đặt hàng, thanh toán | `SanPham`, `DonHang`, `DonHangSanPham` | MVP | Người 4 |

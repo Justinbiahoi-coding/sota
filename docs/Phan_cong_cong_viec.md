@@ -32,8 +32,7 @@ Checklist cụ thể theo module, dựa trên `prisma/schema.prisma` đã có. M
 - [ ] Trang danh sách + chi tiết bảo tàng phía khách `src/app/bao-tang/`
 - [ ] Lấy tọa độ thật của các bảo tàng Smithsonian (thông tin công khai) để seed `viDo`/`kinhDo`
 - [ ] Tích hợp bản đồ (Mapbox GL JS hoặc Leaflet + OpenStreetMap) hiển thị vị trí cụm bảo tàng
-- [ ] Gọi Directions API vẽ đường đi bộ giữa 2 bảo tàng được chọn
-- [ ] README cho module + test cho logic phụ (nếu tự tính thêm khoảng cách/thời gian)
+- [ ] README cho module
 
 ## Người 4 — Nguyễn Lê Anh Tuấn — Giao diện & Lưu niệm
 
