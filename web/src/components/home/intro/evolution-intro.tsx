@@ -1,19 +1,22 @@
 "use client"
 
+import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { ArrowRight } from "lucide-react"
 
-// The opening: a full-screen chain of living paintings (images and films by Pear, pear.no, made
-// with AI) over the whole site, header included. Like pear.no, each visit opens on one of three
-// living paintings, picked at random; each has its own bridge film, and all three bridges arrive
-// on the same close-up (hands grafting a branch), from where the story runs on together.
+// The opening, laid out like pear.no: a full-screen story over the whole site (images and films by
+// Pear, pear.no, made with AI). A rail down the left (mark, menu, progress ticks), a rule across the
+// top, the sign-in button top right. Each visit opens on one of three living paintings, picked at
+// random; each has its own film into the pear tree, where the story runs on through Sota's features:
+// the collection, the 3D galleries, tickets, questions, the map, and a closing scene.
 // Each step (a click or tap, one notch of the wheel, a swipe, an arrow key) plays the short film
 // that carries the camera to the next painting, then rests. Films are played, never scrubbed.
-// Leaving (the last scene, "Bỏ qua", Esc) fades it away onto the home page.
+// Leaving (the last scene, "Bỏ qua", Esc, or any link) fades it away and remembers it was seen.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
-type Rest = { id: string; chapter: string; line: string; loop?: string; pos?: string } // loop: a living painting while resting; pos: where to crop it on a narrow screen
-type Step = { film?: string; from?: string } // film: the transition; from: its first frame, if the rest before differs
+type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
+type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean } // light: a pale painting, ink type over it
+type Step = { film: string; from?: string } // from: the film's first frame, dissolved in over the rest before it
 
 // the three openings (pos: where the figure stands, kept in frame on a narrow screen)
 const HEROES = [
@@ -21,26 +24,34 @@ const HEROES = [
   { id: "colossus", pos: "73% 54%" }, // the golden pear on its plinth
   { id: "reveal", pos: "68% 50%" }, // the youth drawing a curtain
 ]
-// the story after the bridge, shared by every opening
+// the story after the opening, shared by every opening
 const SHARED: Rest[] = [
-  { id: "graft", chapter: "Ghép cành", line: "Ở đây, quá khứ được ghép vào hiện tại." },
-  { id: "ripe", chapter: "Trái chín", line: "Từng hiện vật được chăm chút như một trái chín." },
-  { id: "share", chapter: "Chia sẻ", line: "Rồi được chia cho mọi người." },
-  { id: "garden", chapter: "Khu vườn", line: "Nghệ thuật lớn lên như một khu vườn." },
-  { id: "sky", chapter: "Bầu trời", line: "Người xưa nhìn lên trời và kể lại những gì họ thấy." },
-  { id: "couple", chapter: "Vun trồng", line: "Mỗi thế hệ lại tưới thêm một chút.", loop: "couple" },
+  { id: "collection", section: "collection", chapter: "Bộ sưu tập" },
+  { id: "blueprint", section: "gallery", chapter: "Tham quan 3D", light: true },
+  { id: "plan", section: "tickets", chapter: "Đặt vé", light: true },
+  { id: "garden", section: "faq", chapter: "Hỏi đáp" },
+  { id: "sky", section: "map", chapter: "Bản đồ" },
+  { id: "couple", section: "end", chapter: "Sota", loop: "couple" },
 ]
 // SHARED_STEPS[i] carries the story from SHARED[i] to SHARED[i + 1]
 const SHARED_STEPS: Step[] = [
-  { film: "harvest-a" },
-  { film: "harvest-b" },
-  { film: "tree", from: "tree-start" }, // the halves dissolve into the woman picking pears
-  { film: "flysky" },
-  { film: "trans" },
+  { film: "coda", from: "coda-start" }, // the scaffold, down to the drawing in her hands
+  { film: "plan", from: "plan-start" }, // the golden pear on its scaffold, seen from above
+  { film: "tree", from: "tree-start" }, // the woman picking pears, into the tree
+  { film: "flysky" }, // through the leaves and clouds to the stars
+  { film: "trans" }, // the stars down to the couple watering the tree
+]
+const FAQ = [
+  { q: "Mua vé ở đâu?", a: "Ngay trên Sota: chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ còn chỗ rồi thanh toán. Vé có mã QR để quét ở cửa." },
+  { q: "Đặt vé nhiều nơi một lúc được không?", a: "Được. Vé của các bảo tàng và triển lãm nằm chung một giỏ hàng, thanh toán một lần." },
+  { q: "Hiện vật trên Sota lấy từ đâu?", a: "Từ Smithsonian Open Access: ảnh và thông tin hiện vật Smithsonian công bố miễn phí theo giấy phép CC0." },
+  { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi trong trang tài khoản và hủy vé chưa dùng." },
+  { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
 const SEEN_KEY = "sota-intro-seen"
 const FADE = 700 // ms, for dissolves, stepping back and leaving
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
+const markSeen = () => { try { localStorage.setItem(SEEN_KEY, "1") } catch {} }
 
 // read on the client only: skipped (seen before, or reduced motion) and which opening to show
 const noSubscribe = () => () => {}
@@ -56,8 +67,8 @@ export function EvolutionIntro() {
   const skipped = useSyncExternalStore(noSubscribe, readSkipped, () => false)
   const hero = HEROES[useSyncExternalStore(noSubscribe, readHero, () => 0)]
   const { rests, steps } = useMemo(() => ({
-    rests: [{ id: hero.id, chapter: "Mở màn", line: "", loop: hero.id, pos: hero.pos }, ...SHARED] as Rest[],
-    steps: [{ film: `bridge-${hero.id}`, from: `bridge-${hero.id}-start` }, ...SHARED_STEPS] as Step[],
+    rests: [{ id: hero.id, section: "hero", chapter: "Mở màn", loop: hero.id, pos: hero.pos }, ...SHARED] as Rest[],
+    steps: [{ film: `hero-${hero.id}-in`, from: `bridge-${hero.id}-start` }, ...SHARED_STEPS] as Step[],
   }), [hero])
   const N = rests.length
   const [closed, setClosed] = useState(false)
@@ -65,10 +76,13 @@ export function EvolutionIntro() {
   const [at, setAt] = useState(0) // the rest the story is on (or heading to)
   const [moving, setMoving] = useState(false) // a transition is playing
   const [film, setFilm] = useState<number | null>(null) // the step whose film is on screen
+  const [menu, setMenu] = useState(false)
+  const [open, setOpen] = useState<number | null>(null) // the question whose answer shows
   const films = useRef<(HTMLVideoElement | null)[]>([])
   const loops = useRef<Record<string, HTMLVideoElement | null>>({})
   const state = useRef({ at: 0, moving: false, leaving: false })
   const plan = useRef({ steps, N })
+  const jumpTo = useRef<(i: number) => void>(() => {})
   useEffect(() => { plan.current = { steps, N } }, [steps, N])
   const visible = !skipped && !closed
 
@@ -77,7 +91,7 @@ export function EvolutionIntro() {
     if (state.current.leaving) return
     state.current.leaving = true
     setLeaving(true)
-    try { localStorage.setItem(SEEN_KEY, "1") } catch {}
+    markSeen()
     setTimeout(() => setClosed(true), FADE)
   }, [])
 
@@ -111,9 +125,8 @@ export function EvolutionIntro() {
       const s = state.current, { steps, N } = plan.current
       if (s.moving || s.leaving) return
       if (s.at >= N - 1) return leave()
-      const i = s.at, step = steps[i]
-      s.moving = true; setMoving(true)
-      const v = step.film ? films.current[i] : null
+      const i = s.at, step = steps[i], v = films.current[i]
+      s.moving = true; setMoving(true); setMenu(false); setOpen(null)
       if (v) {
         v.currentTime = 0
         if (v.readyState < 3) await new Promise((r) => v.addEventListener("canplay", r, { once: true }))
@@ -121,22 +134,24 @@ export function EvolutionIntro() {
         setFilm(i)
         await v.play().catch(() => {})
         await new Promise((r) => v.addEventListener("ended", r, { once: true }))
-      } else await wait(FADE)
+      }
       // the film holds its last frame until the rest's still (the same frame) has faded in under it
       s.at = i + 1; setAt(i + 1)
-      if (v) await wait(FADE)
+      await wait(FADE)
       setFilm(null)
       s.moving = false; setMoving(false)
     }
-    const back = async () => {
+    // stepping back, or jumping from the menu: a dissolve straight to that rest
+    const jump = async (i: number) => {
       const s = state.current
-      if (s.moving || s.leaving || s.at === 0) return
-      s.moving = true; setMoving(true)
-      s.at -= 1; setAt(s.at)
+      if (s.moving || s.leaving || i === s.at) return
+      s.moving = true; setMoving(true); setMenu(false); setOpen(null)
+      s.at = i; setAt(i)
       await wait(FADE)
       s.moving = false; setMoving(false)
     }
-    const step = (dir: 1 | -1) => (dir > 0 ? forward() : back())
+    jumpTo.current = jump
+    const step = (dir: 1 | -1) => (dir > 0 ? forward() : state.current.at > 0 && jump(state.current.at - 1))
 
     // a trackpad's momentum lands inside the running transition and is ignored
     const onWheel = (e: WheelEvent) => { e.preventDefault(); if (Math.abs(e.deltaY) >= 4) step(e.deltaY > 0 ? 1 : -1) }
@@ -150,22 +165,22 @@ export function EvolutionIntro() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") return leave()
       const dir = ["ArrowDown", "ArrowRight", "PageDown", " ", "Enter"].includes(e.key) ? 1 : ["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key) ? -1 : 0
-      // (on a focused button, Enter and Space press it; the arrows always step)
-      if (!dir || ((e.key === "Enter" || e.key === " ") && (e.target as HTMLElement).closest?.("button"))) return
+      // (on a focused button or link, Enter and Space press it; the arrows always step)
+      if (!dir || ((e.key === "Enter" || e.key === " ") && (e.target as HTMLElement).closest?.("button, a"))) return
       e.preventDefault()
       step(dir)
     }
-    const onClick = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest("button, a")) forward() }
-    // (the opening's own button moves on too)
-    const start = el.querySelector<HTMLButtonElement>("[data-start]")
-    const onStart = () => forward()
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement
+      if (t.closest("[data-start]")) return forward()
+      if (!t.closest("button, a, [data-menu]")) forward()
+    }
     el.addEventListener("wheel", onWheel, { passive: false })
     el.addEventListener("touchstart", onTouchStart, { passive: true })
     el.addEventListener("touchmove", onTouchMove, { passive: false })
     el.addEventListener("touchend", onTouchEnd)
     addEventListener("keydown", onKey)
     el.addEventListener("click", onClick)
-    start?.addEventListener("click", onStart)
     return () => {
       el.removeEventListener("wheel", onWheel)
       el.removeEventListener("touchstart", onTouchStart)
@@ -173,15 +188,17 @@ export function EvolutionIntro() {
       el.removeEventListener("touchend", onTouchEnd)
       removeEventListener("keydown", onKey)
       el.removeEventListener("click", onClick)
-      start?.removeEventListener("click", onStart)
     }
   }, [visible, leave])
 
   if (!visible) return null
-  const last = at === N - 1 && !moving
-  const onHero = at === 0 && !moving
-  const fade = { transition: `opacity ${FADE}ms ease` }
-  const line = "pointer-events-none absolute bg-white/20"
+  const rest = rests[at]
+  const still = !moving // the rest is settled: its words show
+  const ink = !!rest.light && still // pale painting under the chrome: ink instead of white
+  const fade = { transition: `opacity ${FADE}ms ease, color ${FADE}ms ease, border-color ${FADE}ms ease` }
+  const shown = (s: Section) => ({ ...fade, opacity: still && rest.section === s ? 1 : 0, pointerEvents: still && rest.section === s ? undefined : "none" } as React.CSSProperties)
+  const tone = ink ? "text-[#1c1a17]" : "text-white"
+  const rule = ink ? "bg-[#1c1a17]/20" : "bg-white/22"
 
   return (
     <section
@@ -189,12 +206,12 @@ export function EvolutionIntro() {
       role="dialog"
       aria-modal="true"
       aria-label="Phần mở đầu"
-      className="fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#0d4f9e]"
+      className={`fixed inset-0 z-50 cursor-pointer select-none overflow-hidden bg-[#0d4f9e] ${tone}`}
       style={{ ...fade, opacity: leaving ? 0 : 1, pointerEvents: leaving ? "none" : undefined }}
     >
-      {/* the rests: a living painting, or a still (the last frame of the film that led here) */}
+      {/* ---------------------------------------------------------------- the paintings */}
       {rests.map((r, i) => (
-        <div key={r.id} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ ...fade, opacity: i === at ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
+        <div key={r.id} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ transition: `opacity ${FADE}ms ease`, opacity: i === at ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
           {r.loop ? (
             <video ref={(v) => { loops.current[r.loop!] = v }} src={src(r.loop, "mp4")} poster={src(r.id, "jpg")} muted loop playsInline autoPlay={i === 0} preload={i === 0 ? "auto" : "metadata"} className="size-full object-cover" />
           ) : (
@@ -203,81 +220,142 @@ export function EvolutionIntro() {
           )}
         </div>
       ))}
-      {/* a step's first frame, dissolving in over a rest that looks different */}
       {steps.map((s, i) => s.from ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img key={s.from} src={src(s.from, "jpg")} alt="" className="absolute inset-0 size-full object-cover" style={{ ...fade, opacity: moving && at === i ? 1 : 0 }} draggable={false} />
+        <img key={s.from} src={src(s.from, "jpg")} alt="" className="absolute inset-0 size-full object-cover" style={{ transition: `opacity ${FADE}ms ease`, opacity: moving && at === i ? 1 : 0 }} draggable={false} />
       ) : null)}
-      {/* the films, shown only while they play */}
-      {steps.map((s, i) => s.film ? (
+      {steps.map((s, i) => (
         <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: film === i ? 1 : 0 }} />
-      ) : null)}
+      ))}
+      {/* a shade so the words read: dark under white type, pale under ink */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" style={{ ...fade, opacity: ink ? 0 : 1 }} />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#f3ead8]/80 via-[#f3ead8]/25 to-transparent" style={{ ...fade, opacity: ink ? 1 : 0 }} />
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/15" />
+      {/* ---------------------------------------------------------------- the chrome */}
+      <div className={`pointer-events-none absolute inset-y-0 left-14 w-px md:left-[72px] ${rule}`} style={fade} />
+      <div className={`pointer-events-none absolute inset-x-0 top-14 h-px md:top-[72px] ${rule}`} style={fade} />
+      <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
+      <button data-menu onClick={() => setMenu((m) => !m)} aria-label="Các chương" aria-expanded={menu} className="absolute left-0 top-16 grid size-14 place-items-center md:top-20 md:size-[72px]">
+        <span className="grid grid-cols-2 gap-[3px]">{[0, 1, 2, 3].map((k) => <span key={k} className="size-[5px] bg-current" />)}</span>
+      </button>
+      {/* the rail's ticks: one per chapter, the current one long */}
+      <ol aria-hidden className="pointer-events-none absolute left-[calc(3.5rem-1px)] top-40 flex flex-col gap-4 md:left-[71px] md:top-44">
+        {rests.map((r, i) => <li key={r.id} className="h-px bg-current transition-all duration-700" style={{ width: i === at ? 18 : 8, opacity: i === at ? 1 : 0.45 }} />)}
+      </ol>
+      <p className="placard pointer-events-none absolute left-[calc(3.5rem+1.25rem)] top-[calc(3.5rem+1.25rem)] md:left-[calc(72px+1.5rem)] md:top-[calc(72px+1.5rem)]" style={fade}>
+        {String(at + 1).padStart(2, "0")} · {rest.chapter}
+      </p>
+      <Link href="/dang-nhap" onClick={markSeen} className="placard absolute right-4 top-3 inline-flex items-center gap-3 rounded-[3px] bg-[#111] py-1.5 pl-4 pr-1.5 text-white md:right-8 md:top-[18px]">
+        <span className="sm:hidden">Đăng nhập</span><span className="hidden sm:inline">Đăng nhập / Đăng ký</span>
+        <span className="grid size-7 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
+      </Link>
 
-      {/* the opening: a ruled page over the painting, title, line, button, and a word on Sota */}
-      <div className="absolute inset-0" style={{ ...fade, opacity: onHero ? 1 : 0, pointerEvents: onHero ? undefined : "none" }}>
-        {/* on a narrow screen the title sits over the figure: a soft shade behind it */}
+      {/* the menu: every chapter, to jump to */}
+      <nav data-menu aria-label="Các chương" className="absolute left-14 top-14 w-64 border border-white/15 bg-[#0b1c3a]/85 p-5 text-white backdrop-blur-md md:left-[72px] md:top-[72px]" style={{ transition: "opacity 300ms ease, transform 300ms ease", opacity: menu ? 1 : 0, transform: `translateY(${menu ? 0 : -8}px)`, pointerEvents: menu ? undefined : "none" }}>
+        <ol className="space-y-3">
+          {rests.map((r, i) => (
+            <li key={r.id}>
+              <button onClick={() => jumpTo.current(i)} className={`placard flex w-full items-center justify-between transition-opacity ${i === at ? "opacity-100" : "opacity-60 hover:opacity-100"}`}>
+                <span>{String(i + 1).padStart(2, "0")} · {r.chapter}</span>{i === at && <span>●</span>}
+              </button>
+            </li>
+          ))}
+        </ol>
+        <button onClick={leave} className="placard mt-5 w-full border-t border-white/15 pt-4 text-left opacity-60 hover:opacity-100">Bỏ qua phần mở đầu</button>
+      </nav>
+
+      {/* ---------------------------------------------------------------- the sections */}
+      {/* the opening */}
+      <div style={shown("hero")}>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/45 via-black/15 to-transparent md:hidden" />
-        <div className={`${line} inset-y-0 left-[7vw] w-px`} />
-        <div className={`${line} inset-x-0 top-[18vh] h-px`} />
-        <div className={`${line} inset-x-0 top-[74vh] h-px`} />
-        <span className="pointer-events-none absolute left-[7vw] top-[74vh] -translate-x-1/2 -translate-y-1/2 text-sm text-white">✦</span>
-        <span className="pointer-events-none absolute right-[14vw] top-[74vh] hidden -translate-y-1/2 translate-x-1/2 text-sm text-white md:block">✦</span>
-        <div className="absolute left-[10vw] right-5 top-[30vh] md:right-auto">
-          <h1 className="font-heading text-5xl font-light leading-[0.98] tracking-tight text-white [text-shadow:0_2px_30px_rgb(0_0_0/0.25)] sm:text-7xl xl:text-8xl">Space of the Art.</h1>
-          <p className="mt-6 font-heading text-2xl font-light leading-snug text-white sm:text-3xl">
-            Hai mươi mốt bảo tàng Smithsonian,<br />một lối vào.
-          </p>
-          <button data-start className="placard mt-10 inline-flex items-center gap-4 rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white transition-colors hover:bg-black">
+        <div className={`pointer-events-none absolute inset-x-0 top-[74vh] h-px ${rule}`} />
+        <span className="pointer-events-none absolute left-14 top-[74vh] -translate-x-1/2 -translate-y-1/2 text-sm md:left-[72px]">✦</span>
+        <span className="pointer-events-none absolute right-[14vw] top-[74vh] hidden -translate-y-1/2 translate-x-1/2 text-sm md:block">✦</span>
+        <div className="absolute left-[calc(3.5rem+1.25rem)] right-5 top-[28vh] md:left-[calc(72px+4vw)] md:right-auto">
+          <h1 className="font-heading text-5xl font-light leading-[0.98] tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.25)] sm:text-7xl xl:text-[7.5rem]">Space of the Art.</h1>
+          <p className="mt-6 font-heading text-2xl font-light leading-snug sm:text-[2rem]">Hai mươi mốt bảo tàng Smithsonian,<br />một lối vào.</p>
+          <button data-start className="placard mt-10 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
             Bắt đầu tham quan
             <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
           </button>
         </div>
-        <div className="pointer-events-none absolute left-[10vw] right-5 top-[calc(74vh+2.5rem)] hidden gap-16 md:flex">
-          <span className="placard h-fit shrink-0 rounded-[3px] bg-white/12 px-3 py-2 text-white/85">Cụm Smithsonian</span>
-          <p className="max-w-xl text-lg leading-relaxed text-white [text-shadow:0_1px_16px_rgb(0_0_0/0.35)]">
-            Xem hiện vật thật từ bộ sưu tập Smithsonian, dạo phòng trưng bày 3D của từng bảo tàng và đặt vé cho cả ngày tham quan trong một lần thanh toán.
-          </p>
+        <div className="pointer-events-none absolute left-[calc(72px+4vw)] right-5 top-[calc(74vh+2.5rem)] hidden gap-16 md:flex">
+          <span className="placard h-fit shrink-0 rounded-[3px] bg-white/12 px-3 py-2">Cụm Smithsonian</span>
+          <p className="max-w-xl text-lg leading-relaxed [text-shadow:0_1px_16px_rgb(0_0_0/0.35)]">Xem hiện vật thật từ bộ sưu tập Smithsonian, dạo phòng trưng bày 3D của từng bảo tàng và đặt vé cho cả ngày tham quan trong một lần thanh toán.</p>
         </div>
       </div>
 
-      {/* the wordmark, where the header would be */}
-      <p className="pointer-events-none absolute left-5 top-5 flex items-baseline gap-2.5 text-white [text-shadow:0_1px_12px_rgb(0_0_0/0.45)] md:left-8 md:top-6">
-        <span className="font-heading text-2xl font-semibold italic tracking-tight">Sota</span>
-        <span className="placard hidden text-white/75 sm:inline">Space of the Art</span>
-      </p>
+      <Block show={shown("collection")} side="left" title="Hơn 5 triệu hiện vật." lead="Ảnh và thông tin từng hiện vật, lấy thẳng từ Smithsonian Open Access." label="Bộ sưu tập" shade
+        body="Tìm theo tên, tác giả hoặc bảo tàng; mỗi hiện vật có trang riêng với ảnh lớn, mô tả và nơi đang trưng bày." cta={{ href: "/hien-vat", label: "Xem hiện vật" }} />
+      <Block show={shown("gallery")} side="right" title="Bước vào từng bảo tàng." lead="Mỗi bảo tàng có một phòng trưng bày 3D, dựng theo bản vẽ của riêng nó." label="Tham quan 3D"
+        body="Đi giữa các bức tường, bấm vào hiện vật để xem gần, rồi đọc tiếp về nó ở trang hiện vật." cta={{ href: "/bao-tang", label: "Xem các bảo tàng" }} />
+      <Block show={shown("tickets")} side="right" title="Một giỏ hàng, cả ngày tham quan." lead="Chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ còn chỗ." label="Đặt vé" narrow
+        body="Đặt vé cho nhiều nơi rồi thanh toán một lần. Mỗi vé có mã QR để quét ở cửa, xem lại trong Vé của tôi." cta={{ href: "/dat-ve", label: "Đặt vé" }} />
 
-      {/* the line of each later rest */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[14vh] mx-auto max-w-7xl px-5 md:px-8">
-        {rests.map((r, i) => i === 0 ? null : (
-          <div key={r.id} className="absolute inset-x-5 bottom-0 transition-all duration-700 md:inset-x-8" style={{ opacity: i === at && !moving ? 1 : 0, transform: `translateY(${i === at && !moving ? 0 : 14}px)` }} aria-hidden={i !== at}>
-            <p className="placard text-white/75">{String(i + 1).padStart(2, "0")} · {r.chapter}</p>
-            <p className={`mt-3 max-w-3xl font-heading font-light leading-[1.05] tracking-tight text-white [text-shadow:0_1px_28px_rgb(0_0_0/0.4)] ${i === N - 1 ? "text-4xl sm:text-6xl" : "text-3xl sm:text-5xl"}`}>
-              {r.line}
-              {i === N - 1 && <span className="mt-2 block italic">Sota.</span>}
-            </p>
-          </div>
-        ))}
+      {/* questions, round the tree */}
+      <div style={shown("faq")}>
+        <h2 className="pointer-events-none absolute inset-x-0 top-[20vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-8xl">
+          Hỏi trước khi <span className="italic">ghé thăm</span>
+        </h2>
+        <ul className="absolute inset-x-5 top-[38vh] grid gap-3 md:inset-x-[12vw] md:grid-cols-3 md:gap-x-10 md:gap-y-8">
+          {FAQ.map((f, k) => (
+            <li key={f.q} className={k === 1 ? "md:col-start-3" : k === 3 ? "md:col-start-2" : ""}>
+              <button onClick={() => setOpen(open === k ? null : k)} aria-expanded={open === k} className="text-left font-heading text-xl leading-tight [text-shadow:0_1px_16px_rgb(0_0_0/0.45)] md:text-2xl">
+                {f.q}<span className="placard ml-2 align-middle opacity-70">{open === k ? "−" : "+"}</span>
+              </button>
+              <p className="mt-2 max-w-xs text-sm leading-relaxed [text-shadow:0_1px_12px_rgb(0_0_0/0.55)]" style={{ transition: "opacity 300ms ease", opacity: open === k ? 1 : 0 }}>{f.a}</p>
+            </li>
+          ))}
+        </ul>
       </div>
 
-      {/* the chapters down the right edge */}
-      <ol aria-label="Các chương" className="absolute right-5 top-1/2 hidden -translate-y-1/2 flex-col gap-3 [text-shadow:0_1px_10px_rgb(0_0_0/0.55)] md:right-8 md:flex" style={{ ...fade, opacity: onHero ? 0 : 1 }}>
-        {rests.map((r, i) => (
-          <li key={r.id} className={`placard flex items-center justify-end gap-3 transition-colors ${i <= at ? "text-white" : "text-white/40"}`}>
-            {r.chapter}
-            <span className={`size-[7px] rounded-full border border-white/70 shadow-[0_0_6px_rgb(0_0_0/0.5)] ${i <= at ? "bg-white" : "bg-black/20"}`} />
-          </li>
-        ))}
-      </ol>
+      <Block show={shown("map")} side="right" title="Cả cụm bảo tàng, trên một tấm bản đồ." lead="Như người xưa nhìn sao để định hướng." label="Bản đồ"
+        body="Xem bảo tàng nào nằm ở đâu, hôm nay mở cửa tới mấy giờ và đang có triển lãm gì." cta={{ href: "/ban-do", label: "Xem bản đồ" }} />
 
-      <button onClick={leave} className="placard absolute right-5 top-5 rounded-full border border-white/35 bg-black/20 px-4 py-2 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/35 md:right-8 md:top-6">
-        Bỏ qua phần mở đầu
-      </button>
-      <p className="placard pointer-events-none absolute bottom-11 left-1/2 -translate-x-1/2 whitespace-nowrap text-white/60 md:bottom-6" style={{ ...fade, opacity: onHero ? 0 : 1 }}>
-        {last ? "Nhấn để vào Sota" : "Nhấn hoặc cuộn để đi tiếp"}
+      {/* the close: the name, framed by rules, over the couple tending the tree */}
+      <div style={shown("end")}>
+        <div className="pointer-events-none absolute left-1/2 top-[14vh] h-[56vh] w-[min(80vw,42rem)] -translate-x-1/2 border border-white/30">
+          <span className="absolute -left-1.5 -top-2.5 text-sm">✦</span><span className="absolute -right-1.5 -top-2.5 text-sm">✦</span>
+          <p className="mt-[6vh] text-center font-heading text-[clamp(5rem,16vw,12rem)] font-light italic leading-none tracking-tight [text-shadow:0_4px_40px_rgb(0_0_0/0.3)]">sota.</p>
+          <p className="mx-auto mt-4 max-w-sm text-center font-heading text-xl leading-snug [text-shadow:0_1px_16px_rgb(0_0_0/0.45)]">Một lối vào chung cho cụm bảo tàng Smithsonian.</p>
+        </div>
+        <div className="absolute left-1/2 top-[73vh] -translate-x-1/2">
+          <button onClick={leave} className="placard inline-flex items-center gap-4 rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
+            Vào Sota
+            <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
+          </button>
+        </div>
+      </div>
+
+      {/* ---------------------------------------------------------------- along the bottom */}
+      <p className="placard pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap md:bottom-6" style={{ ...fade, opacity: still && at > 0 ? 0.6 : 0 }}>
+        {at === N - 1 ? "Nhấn để vào Sota" : "Nhấn hoặc cuộn để đi tiếp"}
       </p>
-      <p className="pointer-events-none absolute bottom-4 left-5 text-[10px] text-white/50 md:bottom-6 md:left-8">Hình ảnh: Pear (pear.no), tạo bằng AI</p>
+      <p className="pointer-events-none absolute bottom-3 left-[calc(3.5rem+1.25rem)] text-[10px] opacity-55 md:bottom-6 md:left-[calc(72px+1.5rem)]" style={fade}>Hình ảnh: Pear (pear.no), tạo bằng AI</p>
+      <button onClick={leave} className="placard absolute bottom-3 right-4 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8" style={fade}>Bỏ qua</button>
     </section>
+  )
+}
+
+// a feature section like pear.no's: a large title, a lead in the serif, a label and a short text, a button
+function Block({ show, side, title, lead, label, body, cta, narrow, shade }: { show: React.CSSProperties; side: "left" | "right"; title: string; lead: string; label: string; body: string; cta: { href: string; label: string }; narrow?: boolean; shade?: boolean }) {
+  return (
+    <div style={show}>
+      {/* (over a busy painting: a dark wash on the side the words sit) */}
+      {shade && <div className={`pointer-events-none absolute inset-0 from-black/65 via-black/25 to-transparent ${side === "left" ? "bg-gradient-to-r" : "bg-gradient-to-l"}`} />}
+      <div className={`absolute bottom-[16vh] left-[calc(3.5rem+1.25rem)] right-5 md:bottom-auto md:top-[24vh] ${narrow ? "md:w-[min(25vw,24rem)]" : "md:w-[min(40vw,36rem)]"} ${side === "right" ? `md:left-auto ${narrow ? "md:right-[3.5vw]" : "md:right-[8vw]"}` : "md:left-[calc(72px+4vw)] md:right-auto"}`}>
+        <h2 className={`font-heading text-[2.4rem] font-light leading-[1.02] tracking-tight [text-shadow:0_2px_24px_rgb(0_0_0/0.2)] ${narrow ? "sm:text-5xl" : "sm:text-6xl"}`}>{title}</h2>
+        <p className="mt-4 max-w-md font-heading text-lg leading-snug sm:mt-5 sm:text-2xl">{lead}</p>
+        {/* (on a phone the label and the short text give way to the painting) */}
+        <div className="mt-8 hidden gap-8 sm:flex">
+          <span className="placard h-fit shrink-0 rounded-[3px] bg-current/10 px-3 py-2">{label}</span>
+          <p className="max-w-xs text-sm leading-relaxed">{body}</p>
+        </div>
+        <Link href={cta.href} onClick={markSeen} className="placard mt-8 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
+          {cta.label}
+          <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
+        </Link>
+      </div>
+    </div>
   )
 }

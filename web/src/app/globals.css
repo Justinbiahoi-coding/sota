@@ -9,6 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-body);
   --font-heading: var(--font-display);
+  --font-mono: var(--font-label);
   --color-museum: var(--museum-accent);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -138,11 +139,12 @@
 }
 /* the wall label beside an object: small, wide-tracked capitals */
 @utility placard {
-  font-size: 0.7rem;
+  font-family: var(--font-label), ui-monospace, monospace;
+  font-size: 0.68rem;
   line-height: 1.2;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 @keyframes rise {

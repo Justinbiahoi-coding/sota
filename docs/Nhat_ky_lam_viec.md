@@ -286,3 +286,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Thử trên trình duyệt: tải lại ra đủ 3 cảnh mở màn; đi trọn mạch từ mở màn tới cảnh cuối rồi thoát ra trang chủ; khổ điện thoại 375px.
 
 ---
+
+## 2026-10-19, 03:29 — Phần mở đầu dựng lại theo đúng bố cục trang Pear
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 03:29.
+- **Làm việc gì:** Theo ý Thiên, dựng lại phần mở đầu y như trang pear.no: cùng khung giao diện, cùng thứ tự cảnh, đổi nút "Apply" thành "Đăng nhập / Đăng ký", giữ cách điều khiển bấm một lần chạy một đoạn; đổi font cả web theo Pear.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/src/app/layout.tsx`, `web/src/app/globals.css`, `web/public/intro/`.
+- **Tác dụng:** Phần mở đầu là một trang giới thiệu đủ các tính năng của Sota (bộ sưu tập, phòng 3D, đặt vé, hỏi đáp, bản đồ), mỗi phần có nút dẫn tới trang tương ứng.
+- **Làm như thế nào:**
+  - Xem toàn bộ trang Pear: một câu chuyện liền mạch, mỗi cảnh tranh kèm một phần nội dung; khung chung gồm thanh dọc bên trái (ký hiệu, menu, vạch tiến độ), đường kẻ ngang ở đỉnh, nút ở góc phải; font Flecha và GT Standard (font trả phí của Grilli Type) nên thay bằng Newsreader, Hanken Grotesk, Geist Mono (có tiếng Việt).
+  - Dựng lại giao diện bằng code của nhóm (không chép code hay chữ của Pear, vì lời cho phép chỉ nói về hình ảnh và video). Bảy phần: mở màn ngẫu nhiên, Bộ sưu tập (tán lá), Tham quan 3D (bản vẽ), Đặt vé (bản vẽ nhìn từ trên), Hỏi đáp (câu hỏi xếp quanh vòm lá, bấm để xem trả lời), Bản đồ (chòm sao), cảnh kết (chữ "sota." lớn trong khung, nút "Vào Sota"). Menu 4 chấm mở danh sách chương để nhảy tới; chữ đổi sang màu mực ở hai cảnh nền giấy.
+  - Media: ghép đoạn nối của từng cảnh mở màn với đoạn mọc tán lá thành `hero-*-in.mp4`, thêm `coda.mp4`, `plan.mp4` và ảnh dừng; bỏ các đoạn không còn dùng (`bridge-*.mp4`, `harvest-*`); tổng khoảng 37 MB.
+  - Lời dẫn và câu hỏi thường gặp viết tạm, Thiên sửa sau. Các đường dẫn /hien-vat, /bao-tang, /dat-ve, /ban-do, /dang-nhap chưa có trang.
+  - Thử trên trình duyệt: đi hết bảy phần, mở câu trả lời, mở menu chương, thoát ra trang chủ (font mới), khổ điện thoại 375px (rút gọn nút đăng nhập, ẩn nhãn và đoạn mô tả nhỏ).
+
+---
