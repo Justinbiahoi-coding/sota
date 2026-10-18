@@ -257,3 +257,17 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Thử trên trình duyệt: đủ 7 bước tới, lùi, bấm ở cảnh cuối vào trang chính, trang không cuộn khi đang chuyển cảnh; sửa chữ trắng khó đọc ở cảnh nền sáng, dòng nhắc đè dòng ghi nguồn và cảnh mở màn bị cắt mất nhân vật trên điện thoại.
 
 ---
+
+## 2026-10-19, 02:29 — Phần mở đầu thành màn chào toàn màn hình
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 02:29.
+- **Làm việc gì:** Theo ý Thiên, đổi phần mở đầu từ một khúc nằm trong trang chủ thành màn chào phủ kín toàn màn hình (đè lên cả header); xem xong hoặc bỏ qua thì nó mờ đi để lộ trang chủ.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/src/app/page.tsx`.
+- **Tác dụng:** Phần mở đầu là trải nghiệm riêng, không trộn với nội dung trang; trang chủ bắt đầu sạch sau khi thoát.
+- **Làm như thế nào:**
+  - Lớp phủ `fixed inset-0 z-50` (vai trò dialog), có chữ Sota ở góc trên thay cho header; trong lúc mở thì khóa cuộn trang phía dưới.
+  - Thoát ra bằng: bấm hoặc cuộn tiếp ở cảnh cuối, nút "Bỏ qua phần mở đầu", phím Esc; lớp phủ mờ dần trong 0,7 giây rồi gỡ khỏi trang. Ghi nhớ đã xem để lần sau vào thẳng trang chủ.
+  - Người bật "giảm chuyển động" không thấy phần mở đầu (bỏ bản xếp tĩnh). Đọc trạng thái đã xem/giảm chuyển động bằng `useSyncExternalStore` (server luôn coi là chưa xem, không phải gọi setState trong effect).
+  - Thử trên trình duyệt: phủ kín màn hình, khóa cuộn, chuyển cảnh bằng chuột và phím, thoát bằng Esc, nút Bỏ qua và cảnh cuối; tải lại khi đã xem thì không hiện; khổ điện thoại 375px ổn.
+
+---

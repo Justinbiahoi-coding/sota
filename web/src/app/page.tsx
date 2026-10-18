@@ -12,10 +12,10 @@ const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} đến $
 export default function Home() {
   return (
     <>
-      <EvolutionIntro nextId="noi-dung" />
+      <EvolutionIntro />
 
       {/* ---------------------------------------------------------------- hero */}
-      <section id="noi-dung" className="mx-auto scroll-mt-16 grid max-w-7xl items-center gap-10 px-5 pb-16 pt-12 md:px-8 lg:grid-cols-12 lg:pb-24 lg:pt-20">
+      <section className="mx-auto grid max-w-7xl items-center gap-10 px-5 pb-16 pt-12 md:px-8 lg:grid-cols-12 lg:pb-24 lg:pt-20">
         <div className="lg:col-span-5">
           <p className="placard rise text-muted-foreground">Cụm bảo tàng Smithsonian · Washington, D.C.</p>
           <h1 className="rise mt-6 text-5xl font-light leading-[1.02] tracking-tight [animation-delay:80ms] sm:text-6xl xl:text-7xl">
