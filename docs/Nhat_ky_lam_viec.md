@@ -242,3 +242,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Thử trên trình duyệt: bấm, lăn chuột, phím mũi tên, nhảy qua dòng thời gian, cuộn qua cảnh cuối đều đúng.
 
 ---
+
+## 2026-10-19, 02:03 — Làm lại phần mở đầu bằng tranh sống của Pear
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 02:03.
+- **Làm việc gì:** Bỏ bản mở đầu dùng ảnh tự vẽ; làm lại phần mở đầu theo trang pear.no, dùng hình ảnh và video của Pear (Pear cho phép, hình do AI tạo), điều khiển theo kiểu bấm một lần chạy một đoạn.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/public/intro/` (9 video, 9 ảnh), `.gitignore`.
+- **Tác dụng:** Phần mở đầu đẹp như trang Pear nhưng không lag: tải lần đầu chỉ video tấm rèm và video bước kế, mỗi bước là một đoạn video phát bình thường.
+- **Làm như thế nào:**
+  - Tìm hiểu trang Pear: phần lao xuyên cảnh là các chuỗi khung hình WebP (`films/tree`, `flysky`, `trans`, `model/v28`, `model/renaissance`...), vẽ lên canvas WebGL bằng thư viện OGL (mã nguồn mở, MIT) và tua theo thanh cuộn; các điểm dừng là video lặp "tranh sống". Tua từng khung theo thanh cuộn là lý do trang của họ lag.
+  - Ghép các chuỗi khung hình thành 6 video H.264 ngắn (ffmpeg, 1440×810), nén lại 3 video lặp, tách 9 ảnh tĩnh làm khung dừng; tổng khoảng 29 MB.
+  - Câu chuyện 8 điểm dừng: mở màn (kéo rèm), khu vườn, bầu trời, vun trồng, ngọn đuốc, ghép cành, trái chín, "Và giờ, nghệ thuật được chia cho mọi người. Sota." (lời dẫn viết tạm, Thiên sửa sau). Bấm, lăn chuột, vuốt, phím mũi tên để đi tới hoặc lùi; video phát chứ không tua; chỉ tải trước video của bước kế; video giữ khung cuối tới khi ảnh dừng (cùng khung) hiện xong để không chớp; ghi nguồn "Hình ảnh: Pear (pear.no), tạo bằng AI" ở góc dưới.
+  - Hệ thống an toàn ở auto mode chặn việc đưa asset của bên thứ ba vào repo công khai; Thiên tự cho phép bằng cách tắt auto mode và duyệt từng lệnh. File ghi lời cho phép của Pear (và của Vincent's Cats) để riêng trên máy, không commit (`docs/Cho_phep_*.md` trong `.gitignore`), Thiên tự viết license sau.
+  - Thử trên trình duyệt: đủ 7 bước tới, lùi, bấm ở cảnh cuối vào trang chính, trang không cuộn khi đang chuyển cảnh; sửa chữ trắng khó đọc ở cảnh nền sáng, dòng nhắc đè dòng ghi nguồn và cảnh mở màn bị cắt mất nhân vật trên điện thoại.
+
+---

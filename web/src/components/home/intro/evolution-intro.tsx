@@ -1,121 +1,117 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
-// The opening: the evolution of art in six scenes. Each step (a click or tap, one notch of the
-// wheel, a swipe, an arrow key) plays one fixed, eased transition: the camera dives into the material
-// of one era (stone, bronze, ink, oil paint, open space, pixels) until it dissolves into the next,
-// then stops on it. The motion never depends on how smoothly someone scrolls.
-// Everything that moves is a transform or opacity on a pre-rendered image, so it stays on the GPU.
+// The opening: a chain of living paintings (images and films by Pear, pear.no, made with AI).
+// The story rests on one painting at a time; each step (a click or tap, one notch of the wheel,
+// a swipe, an arrow key) plays the short film that carries the camera to the next, then rests
+// again. Films are played, never scrubbed, so the motion stays smooth.
+// Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their last frames).
 
-type Scene = { art: string; era: string; line: string; placard: string; origin: string }
+type Rest = { id: string; chapter: string; line: string; loop?: string; pos?: string } // loop: a living painting while resting; pos: where to crop it on a narrow screen
+type Step = { film?: string; from?: string } // film: the transition; from: its first frame, if the rest before differs
 
-const SCENES: Scene[] = [
-  { art: "stone", era: "Khoảng 40.000 năm trước", line: "Trước chữ viết, con người đã để lại dấu tay trên đá.", placard: "Tiền sử · Bảo tàng Lịch sử Tự nhiên", origin: "65% 46%" },
-  { art: "bronze", era: "Khoảng 1200 TCN", line: "Rồi họ đúc đồng để nói chuyện với tổ tiên.", placard: "Đồ đồng nghi lễ · Bảo tàng Nghệ thuật châu Á", origin: "58% 48%" },
-  { art: "ink", era: "Thế kỷ 8 đến 19", line: "Mực loang trên lụa, một con sóng vẽ bằng một nét.", placard: "Tranh mực · Bảo tàng Nghệ thuật châu Á", origin: "68% 32%" },
-  { art: "oil", era: "Thế kỷ 18 và 19", line: "Gương mặt người được giữ lại bằng sơn dầu.", placard: "Chân dung · Phòng tranh Chân dung Quốc gia", origin: "50% 48%" },
-  { art: "modern", era: "Thế kỷ 20", line: "Nghệ thuật rời khung tranh, bước vào không gian.", placard: "Điêu khắc · Bảo tàng Hirshhorn", origin: "50% 50%" },
-  { art: "pixels", era: "Hôm nay", line: "Và giờ, nghệ thuật đến chỗ bạn.", placard: "Sota · Space of the Art", origin: "50% 50%" },
+const RESTS: Rest[] = [
+  { id: "reveal", chapter: "Mở màn", line: "Mỗi bảo tàng bắt đầu bằng một tấm rèm được kéo lên.", loop: "reveal", pos: "66% 50%" },
+  { id: "garden", chapter: "Khu vườn", line: "Nghệ thuật lớn lên như một khu vườn." },
+  { id: "sky", chapter: "Bầu trời", line: "Người xưa nhìn lên trời và kể lại những gì họ thấy." },
+  { id: "couple", chapter: "Vun trồng", line: "Mỗi thế hệ lại tưới thêm một chút.", loop: "couple" },
+  { id: "signal", chapter: "Ngọn đuốc", line: "Bảo tàng giữ cho câu chuyện ấy còn sáng.", loop: "signal" },
+  { id: "graft", chapter: "Ghép cành", line: "Ở đây, quá khứ được ghép vào hiện tại." },
+  { id: "ripe", chapter: "Trái chín", line: "Từng hiện vật được chăm chút như một trái chín." },
+  { id: "share", chapter: "Sota", line: "Và giờ, nghệ thuật được chia cho mọi người." },
 ]
-
-const N = SCENES.length
+// STEPS[i] carries the story from RESTS[i] to RESTS[i + 1]
+const STEPS: Step[] = [
+  { film: "tree", from: "tree-start" },
+  { film: "flysky" },
+  { film: "trans" },
+  {}, // the couple to the torch: a dissolve
+  { film: "graft", from: "signal" },
+  { film: "harvest-a" },
+  { film: "harvest-b" },
+]
+const N = RESTS.length
 const SEEN_KEY = "sota-intro-seen"
-const DURATION = 1900 // ms per step (going back or jumping several eras takes a little longer)
-const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
-const ease = (t: number) => t * t * (3 - 2 * t)
-const inOut = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2)
-// where the story rests on each scene: a third of the way in, where its line of text peaks
-const rest = (i: number) => (i + (i === N - 1 ? 0.5 : 0.3)) / N
+const FADE = 700 // ms, for dissolves and for stepping back
+const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 
 export function EvolutionIntro({ nextId }: { nextId: string }) {
   const root = useRef<HTMLElement>(null)
-  const layers = useRef<(HTMLDivElement | null)[]>([])
-  const lines = useRef<(HTMLDivElement | null)[]>([])
-  const rail = useRef<HTMLDivElement>(null)
-  const ticks = useRef<(HTMLButtonElement | null)[]>([])
-  const shade = useRef<HTMLDivElement>(null)
-  const go = useRef<(i: number) => void>(() => {})
-  const next = useRef<() => void>(() => {})
+  const [at, setAt] = useState(0) // the rest the story is on (or heading to)
+  const [moving, setMoving] = useState(false) // a transition is playing
+  const [film, setFilm] = useState<number | null>(null) // the step whose film is on screen
+  const films = useRef<(HTMLVideoElement | null)[]>([])
+  const loops = useRef<Record<string, HTMLVideoElement | null>>({})
+  const state = useRef({ at: 0, moving: false })
+
+  // the living painting of the current rest plays; every other loop is paused
+  useEffect(() => {
+    for (const [id, v] of Object.entries(loops.current)) {
+      if (!v) continue
+      // (from its first frame: that is where the film leading here ends)
+      if (id === RESTS[at].loop && !moving) { if (v.paused) v.currentTime = 0; v.play().catch(() => {}) }
+      else v.pause()
+    }
+    // fetch the next film while the visitor reads this rest
+    const next = films.current[at]
+    if (next && next.preload !== "auto") { next.preload = "auto"; next.load() }
+  }, [at, moving])
 
   useEffect(() => {
-    // reduced motion: the stacked version below is shown by CSS, nothing here runs
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return
     const el = root.current!
-    let idx = 0, p = rest(0), raf = 0
-    let anim: { from: number; to: number; t0: number; dur: number } | null = null
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-    // draw the whole story at position p (0..1)
-    const draw = () => {
-      const f = p * N
-      for (let i = 0; i < N; i++) {
-        const u = f - i
-        // entering (u -0.3..0): the material settles from large to its size; holding: a slow drift;
-        // leaving (u 0.62..1): the camera dives into it and it dissolves
-        let s = 1, o = 0
-        if (u >= -0.3 && u < 0) { const t = ease((u + 0.3) / 0.3); s = 3.2 - 2.2 * t; o = t }
-        else if (u >= 0 && u < 0.62) { s = 1 + 0.06 * (u / 0.62); o = 1 }
-        else if (u >= 0.62 && u < 1) { const t = ease((u - 0.62) / 0.38); s = 1.06 + 6 * t * t; o = 1 - t }
-        if (i === 0 && u < 0) { s = 1; o = 1 }
-        if (i === N - 1 && u >= 0.62) { s = 1.06; o = 1 }
-        const L = layers.current[i]
-        if (L) { L.style.transform = `scale(${s.toFixed(4)})`; L.style.opacity = o.toFixed(3); L.style.visibility = o > 0.001 ? "visible" : "hidden" }
-        const T = lines.current[i]
-        if (T) {
-          const a = i === N - 1 ? clamp((u - 0.05) / 0.25) : clamp(1 - Math.abs(u - 0.3) / 0.3)
-          T.style.opacity = a.toFixed(3)
-          T.style.transform = `translateY(${((1 - a) * 18 * Math.sign(u - 0.3)).toFixed(1)}px)`
-        }
-        ticks.current[i]?.toggleAttribute("data-on", f >= i - 0.3)
-      }
-      rail.current?.style.setProperty("transform", `scaleY(${((p - rest(0)) / (rest(N - 1) - rest(0))).toFixed(4)})`)
-      // the last scene is light: lift the dark shade off it and switch the controls to ink
-      shade.current?.style.setProperty("opacity", (1 - clamp((f - (N - 1) + 0.3) / 0.3)).toFixed(3))
-      el.toggleAttribute("data-light", f > N - 1.2)
+    const forward = async () => {
+      const s = state.current
+      if (s.moving || s.at >= N - 1) return
+      const i = s.at, step = STEPS[i]
+      s.moving = true; setMoving(true)
+      const v = step.film ? films.current[i] : null
+      if (v) {
+        v.currentTime = 0
+        if (v.readyState < 3) await new Promise((r) => v.addEventListener("canplay", r, { once: true }))
+        if (step.from) await wait(FADE) // its first frame dissolves in over the rest (see the opacity below)
+        setFilm(i)
+        await v.play().catch(() => {})
+        await new Promise((r) => v.addEventListener("ended", r, { once: true }))
+      } else await wait(FADE)
+      // the film holds its last frame until the rest's still (the same frame) has faded in under it
+      s.at = i + 1; setAt(i + 1)
+      if (v) await wait(FADE)
+      setFilm(null)
+      s.moving = false; setMoving(false)
+      if (s.at === N - 1) { try { localStorage.setItem(SEEN_KEY, "1") } catch {} }
     }
-    const frame = (now: number) => {
-      if (!anim) { raf = 0; return }
-      const k = clamp((now - anim.t0) / anim.dur)
-      p = anim.from + (anim.to - anim.from) * inOut(k)
-      draw()
-      if (k < 1) raf = requestAnimationFrame(frame)
-      else { anim = null; raf = 0 }
+    const back = async () => {
+      const s = state.current
+      if (s.moving || s.at === 0) return
+      s.moving = true; setMoving(true)
+      s.at -= 1; setAt(s.at)
+      await wait(FADE)
+      s.moving = false; setMoving(false)
     }
-    // play the transition to scene i (from wherever the story is now, even mid-transition)
-    const goTo = (i: number) => {
-      i = clamp(i, 0, N - 1)
-      if (i === idx && !anim) return
-      const span = Math.abs(i - idx) || 1
-      idx = i
-      anim = { from: p, to: rest(i), t0: performance.now(), dur: DURATION * (1 + 0.35 * (span - 1)) }
-      if (i === N - 1) { try { localStorage.setItem(SEEN_KEY, "1") } catch {} }
-      if (!raf) raf = requestAnimationFrame(frame)
-    }
-    const busy = () => !!anim
-    go.current = goTo
-    next.current = () => { if (!busy()) goTo(idx + 1) }
-    // the intro owns the input only while it fills the screen (it sits under the header, from the top) and the story is not over
+    // the intro owns the input only while it fills the screen and the story is not over
     const active = () => { const r = el.getBoundingClientRect(); return r.top > -40 && r.top < 40 }
     const step = (dir: 1 | -1) => {
-      if (dir > 0 && idx === N - 1) return false // done: let the page scroll on
-      if (dir < 0 && idx === 0) return false
-      if (!busy()) goTo(idx + dir)
+      const s = state.current
+      if (dir > 0 && s.at === N - 1) return false
+      if (dir < 0 && s.at === 0) return false
+      if (dir > 0) forward(); else back()
       return true
     }
-
-    // wheel and trackpad: one notch is one step; the momentum of a trackpad flick lands inside the
-    // running transition and is swallowed
     const onWheel = (e: WheelEvent) => {
       if (!active() || Math.abs(e.deltaY) < 4) return
+      if (state.current.moving) { e.preventDefault(); return } // a trackpad's momentum lands here and is swallowed
       if (step(e.deltaY > 0 ? 1 : -1)) e.preventDefault()
     }
-    // touch: a swipe up is a step forward, down is back
     let ty = 0
     const onTouchStart = (e: TouchEvent) => { ty = e.touches[0].clientY }
     const onTouchMove = (e: TouchEvent) => {
       if (!active()) return
-      const dy = ty - e.touches[0].clientY
-      if ((dy > 0 && idx < N - 1) || (dy < 0 && idx > 0)) e.preventDefault()
+      const dy = ty - e.touches[0].clientY, s = state.current
+      if (s.moving || (dy > 0 && s.at < N - 1) || (dy < 0 && s.at > 0)) e.preventDefault()
     }
     const onTouchEnd = (e: TouchEvent) => {
       const dy = ty - e.changedTouches[0].clientY
@@ -126,105 +122,106 @@ export function EvolutionIntro({ nextId }: { nextId: string }) {
       const dir = ["ArrowDown", "ArrowRight", "PageDown", " "].includes(e.key) ? 1 : ["ArrowUp", "ArrowLeft", "PageUp"].includes(e.key) ? -1 : 0
       if (dir && step(dir)) e.preventDefault()
     }
+    const onClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("button, a")) return
+      if (state.current.at === N - 1) document.getElementById(nextId)?.scrollIntoView({ behavior: "smooth" })
+      else forward()
+    }
     addEventListener("wheel", onWheel, { passive: false })
     el.addEventListener("touchstart", onTouchStart, { passive: true })
     el.addEventListener("touchmove", onTouchMove, { passive: false })
     el.addEventListener("touchend", onTouchEnd)
     addEventListener("keydown", onKey)
-
-    // a visitor who has watched it once lands past it next time (unless they came back on purpose)
+    el.addEventListener("click", onClick)
+    // a visitor who has watched it once lands past it next time
     try {
       if (localStorage.getItem(SEEN_KEY) && scrollY === 0 && !location.hash)
         document.getElementById(nextId)?.scrollIntoView({ behavior: "instant" })
     } catch {}
-    draw()
     return () => {
       removeEventListener("wheel", onWheel)
       el.removeEventListener("touchstart", onTouchStart)
       el.removeEventListener("touchmove", onTouchMove)
       el.removeEventListener("touchend", onTouchEnd)
       removeEventListener("keydown", onKey)
-      cancelAnimationFrame(raf)
+      el.removeEventListener("click", onClick)
     }
   }, [nextId])
 
   const skip = () => document.getElementById(nextId)?.scrollIntoView({ behavior: "smooth" })
-  // a click anywhere on the picture moves on; on the last scene it opens the site
-  const onStageClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("button, a")) return
-    if (root.current?.hasAttribute("data-light")) skip()
-    else next.current()
-  }
-
-  const stacked = (
-    <section aria-label="Hành trình của nghệ thuật" className="hidden motion-reduce:block">
-      {SCENES.map((sc) => (
-        <figure key={sc.art} className="relative h-[80vh] overflow-hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`/intro-art/${sc.art}.webp`} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />
-          <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-8 text-white">
-            <p className="placard opacity-80">{sc.era}</p>
-            <p className="mt-2 font-heading text-3xl">{sc.line}</p>
-          </figcaption>
-        </figure>
-      ))}
-    </section>
-  )
+  const last = at === N - 1 && !moving
+  const fade = { transition: `opacity ${FADE}ms ease` }
 
   return (
     <>
-      {stacked}
-      <section ref={root} aria-label="Hành trình của nghệ thuật" onClick={onStageClick} className="group/intro relative -mt-16 h-[100svh] cursor-pointer select-none overflow-hidden bg-[#1b1611] motion-reduce:hidden">
-        {SCENES.map((sc, i) => (
-          <div key={sc.art} ref={(d) => { layers.current[i] = d }} className="absolute inset-0 will-change-transform" style={{ transformOrigin: sc.origin, opacity: i === 0 ? 1 : 0, visibility: i === 0 ? "visible" : "hidden" }}>
+      {/* reduced motion: the paintings stacked, nothing plays */}
+      <section aria-label="Phần mở đầu" className="hidden motion-reduce:block">
+        {RESTS.map((r) => (
+          <figure key={r.id} className="relative aspect-video max-h-[80vh] w-full overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`/intro-art/${sc.art}.webp`} alt="" decoding="async" fetchPriority={i < 2 ? "high" : "low"} className="size-full object-cover" draggable={false} />
+            <img src={src(r.id, "jpg")} alt="" loading="lazy" className="absolute inset-0 size-full object-cover" />
+            <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 p-8 text-white">
+              <p className="placard opacity-80">{r.chapter}</p>
+              <p className="mt-2 font-heading text-3xl">{r.line}</p>
+            </figcaption>
+          </figure>
+        ))}
+      </section>
+
+      <section ref={root} aria-label="Phần mở đầu" className="relative -mt-16 h-[100svh] cursor-pointer select-none overflow-hidden bg-[#0d4f9e] motion-reduce:hidden">
+        {/* the rests: a still (the last frame of the film that led here) or a living painting */}
+        {RESTS.map((r, i) => (
+          <div key={r.id} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ ...fade, opacity: i === at ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
+            {r.loop ? (
+              <video ref={(v) => { loops.current[r.loop!] = v }} src={src(r.loop, "mp4")} poster={src(r.id, "jpg")} muted loop playsInline preload={i === 0 ? "auto" : "metadata"} className="size-full object-cover" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src(r.id, "jpg")} alt="" loading={i < 2 ? "eager" : "lazy"} className="size-full object-cover" draggable={false} />
+            )}
           </div>
         ))}
-        {/* a soft darkening at the bottom so the line of text always reads */}
-        <div ref={shade} className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/15" />
+        {/* a step's first frame, dissolving in over a rest that looks different */}
+        {STEPS.map((s, i) => s.from && s.from !== RESTS[i].loop ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img key={s.from} src={src(s.from, "jpg")} alt="" className="absolute inset-0 size-full object-cover" style={{ ...fade, opacity: moving && at === i ? 1 : 0 }} draggable={false} />
+        ) : null)}
+        {/* the films, shown only while they play */}
+        {STEPS.map((s, i) => s.film ? (
+          <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: film === i ? 1 : 0 }} />
+        ) : null)}
 
-        {/* the line for each era */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-[16vh] mx-auto max-w-7xl px-5 md:px-8">
-          {SCENES.map((sc, i) => (
-            <div key={sc.art} ref={(d) => { lines.current[i] = d }} className="absolute inset-x-5 bottom-0 md:inset-x-8" style={{ opacity: i === 0 ? 1 : 0 }} aria-live={i === 0 ? undefined : "polite"}>
-              <p className={`placard ${i === N - 1 ? "text-[#1c1a17]/60" : "text-white/75"}`}>{sc.era}</p>
-              {i === N - 1 ? (
-                <p className="mt-3 max-w-3xl font-heading text-5xl font-light leading-[1.02] tracking-tight text-[#1c1a17] sm:text-7xl">
-                  {sc.line}<span className="mt-2 block italic">Sota.</span>
-                </p>
-              ) : (
-                <p className="mt-3 max-w-2xl font-heading text-3xl font-light leading-tight text-white [text-shadow:0_1px_24px_rgb(0_0_0/0.45)] sm:text-5xl">{sc.line}</p>
-              )}
-              <p className={`placard mt-6 ${i === N - 1 ? "text-[#1c1a17]/60" : "text-white/60"}`}>{sc.placard}</p>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+
+        {/* the line of the current rest */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-[14vh] mx-auto max-w-7xl px-5 md:px-8">
+          {RESTS.map((r, i) => (
+            <div key={r.id} className="absolute inset-x-5 bottom-0 transition-all duration-700 md:inset-x-8" style={{ opacity: i === at && !moving ? 1 : 0, transform: `translateY(${i === at && !moving ? 0 : 14}px)` }} aria-hidden={i !== at}>
+              <p className="placard text-white/75">{String(i + 1).padStart(2, "0")} · {r.chapter}</p>
+              <p className={`mt-3 max-w-3xl font-heading font-light leading-[1.05] tracking-tight text-white [text-shadow:0_1px_28px_rgb(0_0_0/0.4)] ${i === N - 1 ? "text-5xl sm:text-7xl" : "text-3xl sm:text-5xl"}`}>
+                {r.line}
+                {i === N - 1 && <span className="mt-2 block italic">Sota.</span>}
+              </p>
             </div>
           ))}
         </div>
 
-        {/* the timeline down the right edge: each era is a button that jumps to it */}
-        <nav aria-label="Các thời kỳ" className="absolute right-5 top-1/2 hidden -translate-y-1/2 md:right-8 md:block">
-          <div className="absolute right-[3px] top-0 h-full w-px bg-white/25 group-data-[light]/intro:bg-black/15">
-            <div ref={rail} className="h-full w-full origin-top bg-white group-data-[light]/intro:bg-[#1c1a17]" style={{ transform: "scaleY(0)" }} />
-          </div>
-          <ol className="relative flex h-[46vh] flex-col justify-between">
-            {SCENES.map((sc, i) => (
-              <li key={sc.art}>
-                <button ref={(d) => { ticks.current[i] = d }} onClick={() => go.current(i)} className="group flex items-center justify-end gap-3" data-on={i === 0 ? "" : undefined}>
-                  <span className="placard text-white/40 transition-colors hover:text-white group-data-[on]:text-white group-data-[light]/intro:text-black/35 group-data-[light]/intro:group-data-[on]:text-[#1c1a17]">{sc.era}</span>
-                  <span className="size-[7px] rounded-full border border-white/50 bg-[#1b1611] transition-colors group-data-[on]:bg-white group-data-[light]/intro:border-black/40 group-data-[light]/intro:bg-[#f6f3ec] group-data-[light]/intro:group-data-[on]:bg-[#1c1a17]" />
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
+        {/* the chapters down the right edge */}
+        <ol aria-label="Các chương" className="absolute right-5 top-1/2 hidden -translate-y-1/2 flex-col gap-3 [text-shadow:0_1px_10px_rgb(0_0_0/0.55)] md:right-8 md:flex">
+          {RESTS.map((r, i) => (
+            <li key={r.id} className={`placard flex items-center justify-end gap-3 transition-colors ${i <= at ? "text-white" : "text-white/40"}`}>
+              {r.chapter}
+              <span className={`size-[7px] rounded-full border border-white/70 shadow-[0_0_6px_rgb(0_0_0/0.5)] ${i <= at ? "bg-white" : "bg-black/20"}`} />
+            </li>
+          ))}
+        </ol>
 
-        <button onClick={skip} className="placard absolute right-5 top-20 rounded-full border border-white/30 px-4 py-2 text-white/80 backdrop-blur-sm transition-colors hover:bg-white/10 group-data-[light]/intro:border-black/25 group-data-[light]/intro:text-[#1c1a17] md:right-8">
+        <button onClick={skip} className="placard absolute right-5 top-20 rounded-full border border-white/35 bg-black/20 px-4 py-2 text-white/90 backdrop-blur-sm transition-colors hover:bg-black/35 md:right-8">
           Bỏ qua phần mở đầu
         </button>
-        <p className="placard pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-white/55 group-data-[light]/intro:text-black/50">
-          <span className="group-data-[light]/intro:hidden">Nhấn hoặc cuộn để đi tiếp</span>
-          <span className="hidden group-data-[light]/intro:inline">Nhấn để vào Sota</span>
+        <p className="placard pointer-events-none absolute bottom-11 left-1/2 -translate-x-1/2 whitespace-nowrap text-white/60 md:bottom-6">
+          {last ? "Nhấn để vào Sota" : "Nhấn hoặc cuộn để đi tiếp"}
         </p>
+        <p className="pointer-events-none absolute bottom-4 left-5 text-[10px] text-white/50 md:bottom-6 md:left-8">Hình ảnh: Pear (pear.no), tạo bằng AI</p>
       </section>
     </>
   )

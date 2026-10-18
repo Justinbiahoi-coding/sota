@@ -45,3 +45,6 @@ yarn-error.log*
 next-env.d.ts
 
 web/src/generated/prisma
+
+# permission notes from third parties (kept local; the team writes the licence notes itself)
+docs/Cho_phep_*.md
