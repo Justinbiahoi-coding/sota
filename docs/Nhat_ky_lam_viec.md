@@ -227,3 +227,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Còn lại: thay ảnh tạm bằng ảnh Smithsonian thật (cần API key), Thiên và nhóm duyệt lời dẫn 6 cảnh.
 
 ---
+
+## 2026-10-19, 01:04 — Đổi phần mở đầu sang điều khiển từng bước
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 01:04.
+- **Làm việc gì:** Theo ý Thiên, đổi phần mở đầu từ "cuộn tới đâu chạy tới đó" sang "bấm một lần, chạy hết một đoạn chuyển cảnh rồi dừng".
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`.
+- **Tác dụng:** Chuyển cảnh lúc nào cũng mượt dù người dùng cuộn giật cục; người xem dừng ở từng cảnh để đọc như lật trang.
+- **Làm như thế nào:**
+  - Mỗi bước là một đoạn hoạt ảnh cố định khoảng 1,9 giây với đường cong êm (ease in out); nhảy qua nhiều thời kỳ thì đoạn chuyển dài thêm một chút. Câu chuyện dừng ở chỗ chữ của mỗi cảnh hiện rõ nhất.
+  - Bước tới: bấm hoặc chạm vào tranh, lăn chuột một nấc, vuốt lên, phím mũi tên xuống/phải, phím cách. Lùi: lăn ngược, vuốt xuống, mũi tên lên/trái. Các mốc trên dòng thời gian thành nút bấm để nhảy thẳng. Quán tính lăn của trackpad rơi vào đoạn chuyển cảnh đang chạy nên không bị nhảy hai bước.
+  - Phần mở đầu chỉ giữ thao tác khi nó đang phủ màn hình và chưa tới cảnh cuối; ở cảnh cuối lăn chuột là xuống trang chính, bấm vào tranh cũng vào trang chính.
+  - Sửa lỗi lăn chuột và phím không ăn: phần mở đầu nằm dưới header 64px nên phép kiểm tra "đang phủ màn hình" luôn sai; đẩy phần mở đầu lên nằm dưới header (`-mt-16`).
+  - Thử trên trình duyệt: bấm, lăn chuột, phím mũi tên, nhảy qua dòng thời gian, cuộn qua cảnh cuối đều đúng.
+
+---
