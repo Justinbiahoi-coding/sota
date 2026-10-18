@@ -42,6 +42,7 @@ Dữ liệu hiện vật lấy thật từ [Smithsonian Open Access API](https:/
 ## Bắt đầu phát triển
 
 ```bash
+cd web
 npm install
 cp .env.example .env   # điền NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
                         # DATABASE_URL, STRIPE_SECRET_KEY, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
@@ -53,14 +54,18 @@ npm run dev
 
 ```
 sota/
-├── prisma/
-│   └── schema.prisma   # Toàn bộ model + quan hệ CSDL
-├── src/
-│   ├── app/            # Route Next.js (App Router)
-│   ├── components/ui/  # Component shadcn/ui
-│   └── lib/
-│       ├── supabase/   # Client kết nối Supabase (browser + server)
-│       └── stripe.ts   # Client Stripe phía server
+├── docs/                   # Tài liệu nhóm (kế hoạch, phân công, nhật ký)
+└── web/                    # Frontend Next.js (chạy mọi lệnh npm trong thư mục này)
+    ├── prisma/
+    │   └── schema.prisma   # Toàn bộ model + quan hệ CSDL
+    └── src/
+        ├── app/            # Route Next.js (App Router)
+        ├── components/ui/  # Component shadcn/ui
+        └── lib/
+            ├── supabase/   # Client kết nối Supabase (browser + server)
+            └── stripe.ts   # Client Stripe phía server
 ```
+
+Backend Express sẽ nằm ở `api/` cạnh `web/`.
 
 Quy ước cấu trúc thư mục & tài liệu chi tiết hơn (mỗi thư mục con cần README riêng khi thêm module): xem `CONTRIBUTING.md`.

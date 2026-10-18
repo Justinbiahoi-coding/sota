@@ -187,3 +187,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Giải nén từng file docx, thay chữ trực tiếp trong `word/document.xml` (mỗi đoạn chỉ có một run nên giữ nguyên định dạng): SDP sửa phần phân công, số tính năng (21 thành 20, 4 Nâng cao thành 3) và rủi ro; Vision sửa phần mở đầu, so sánh sản phẩm, nhu cầu (đổi "Tìm đường" thành "Biết vị trí các bảo tàng trong cụm"), giả định và phụ thuộc. Xóa dòng F07 trong bảng tính năng của Vision, đánh lại F08–F21 thành F07–F20, rồi đánh lại số tương ứng trong `Bang_tinh_nang.md` (bỏ dòng "Đã bỏ" ghi ở lần trước). Đóng gói lại và kiểm tra cấu trúc bảng bằng python-docx.
 
 ---
+
+## 2026-10-18, 20:49 — Chốt hướng giao diện 3D, dời app vào web/
+
+- **Thời gian làm việc:** 18/10/2026, ghi nhận lúc 20:49.
+- **Làm việc gì:** Chốt hướng giao diện frontend (web có điểm nhấn 3D, mỗi bảo tàng một phòng trưng bày 3D, tông tường trắng gallery) và dời app Next.js vào thư mục `web/`.
+- **Ứng dụng/module:** cấu trúc repo (`web/`), `.gitignore`, `README.md`, `CONTRIBUTING.md`.
+- **Tác dụng:** Repo sẵn sàng cho cấu trúc `api/` (backend Express) và `web/` (frontend) như kế hoạch của nhóm; bên backend thêm `api/` mà không đụng phần frontend.
+- **Làm như thế nào:** Thiên chọn mức 2 trong 3 mức 3D (trang chủ có cảnh 3D cụm bảo tàng, mỗi bảo tàng một phòng trưng bày 3D, đặt vé/giỏ hàng/admin giữ 2D) và tông sáng tường trắng. `git mv` toàn bộ phần app vào `web/`; giữ `docs/`, README, CONTRIBUTING ở gốc; đổi các mẫu trong `.gitignore` đang neo theo gốc (`/node_modules`, `/.next/`, `/src/generated/prisma`); sửa đường dẫn và lệnh trong README, CONTRIBUTING. Kiểm tra: `npm run build` trong `web/` chạy sạch.
+
+---
