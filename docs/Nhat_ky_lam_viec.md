@@ -212,3 +212,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Kiểm tra: build và lint sạch; xem trên trình duyệt ở khổ máy tính và khổ điện thoại 375px, sửa danh sách bảo tàng và tiêu đề mục bị chật trên điện thoại.
 
 ---
+
+## 2026-10-19, 00:40 — Bản thử phần mở đầu "Hành trình của nghệ thuật"
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 00:40.
+- **Làm việc gì:** Làm bản thử phần mở đầu trang chủ: 6 cảnh kể sự tiến hóa của nghệ thuật (tiền sử, đồ đồng, mực trên lụa, chân dung sơn dầu, điêu khắc hiện đại, điểm ảnh), cuộn chuột thì camera lao vào chất liệu của thời kỳ này cho tới khi nó tan thành thời kỳ sau; kết bằng câu "Và giờ, nghệ thuật đến chỗ bạn. Sota."
+- **Ứng dụng/module:** `web/src/components/home/intro/` (evolution-intro.tsx, textures.ts), `web/scripts/intro-art.ts`, `web/public/intro-art/*.webp`, `web/src/app/page.tsx`, `web/tsconfig.json`.
+- **Tác dụng:** Phần mở đầu giới thiệu đúng tinh thần "Space of the Art" và dẫn vào trang chủ; ý tưởng lấy từ trang pear.no nhưng tránh được chỗ lag của trang đó.
+- **Làm như thế nào:**
+  - Mỗi cảnh là một ảnh, chỉ đổi `transform: scale` và `opacity` theo thanh cuộn (một vòng `requestAnimationFrame` làm mượt, không thư viện). Cảnh vào thì từ phóng to kết lại, cảnh ra thì phóng to tới ×7 rồi mờ đi. Có dòng thời gian bên phải, nút "Bỏ qua phần mở đầu", nhớ người đã xem (lần sau vào thẳng trang chính), và bản xếp tĩnh cho người bật giảm chuyển động.
+  - Ảnh tạm vẽ bằng SVG (thớ đá có dấu tay, đồng có vòng đúc và gỉ, sóng mực có con dấu, chân dung trong khung vàng, điêu khắc treo, lưới điểm ảnh), render sang WebP bằng sharp (`node scripts/intro-art.ts`). Lần đầu dùng thẳng SVG thì trình duyệt treo, vì ảnh vector bị vẽ lại kèm bộ lọc ở mỗi mức phóng; ảnh bitmap thì chỉ phóng trên GPU. Tổng 6 ảnh khoảng 450 KB (pear.no tải 11,9 MB).
+  - Đo khi cuộn hết 6 cảnh: không có tác vụ dài, khung hình khi cuộn bằng lúc đứng yên (cửa sổ Chrome tự động hóa bị giới hạn 30 fps cả lúc đứng yên). Xem ở khổ máy tính và điện thoại 375px; sửa chữ cảnh đầu không hiện, chữ trắng khó đọc trên nền lụa, giao diện trắng lẫn vào cảnh cuối nền sáng.
+  - Lưu ý: chạy `npm run build` khi dev server đang bật làm hai bên giẫm thư mục `.next`, trang tự tải lại liên tục; phải tắt dev server, xóa `.next` rồi bật lại.
+  - Còn lại: thay ảnh tạm bằng ảnh Smithsonian thật (cần API key), Thiên và nhóm duyệt lời dẫn 6 cảnh.
+
+---
