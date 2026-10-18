@@ -271,3 +271,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Thử trên trình duyệt: phủ kín màn hình, khóa cuộn, chuyển cảnh bằng chuột và phím, thoát bằng Esc, nút Bỏ qua và cảnh cuối; tải lại khi đã xem thì không hiện; khổ điện thoại 375px ổn.
 
 ---
+
+## 2026-10-19, 03:06 — Sắp xếp lại phần mở đầu theo cấu trúc của Pear: 3 cảnh mở màn
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 03:06.
+- **Làm việc gì:** Thiên thấy trang pear.no có nhiều cảnh mở màn khác nhau; tìm hiểu cách họ làm rồi sắp xếp lại câu chuyện phần mở đầu cho hợp lý, kèm bố cục cảnh mở màn theo kiểu trang Pear.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/public/intro/` (thêm `colossus`, `bridge-colossus`, `bridge-reveal`; đổi `graft.mp4` thành `bridge-signal.mp4`).
+- **Tác dụng:** Mỗi lần vào trang là một cảnh mở màn khác (như Pear), câu chuyện sau đó liền mạch, không còn chỗ chen ngang.
+- **Làm như thế nào:**
+  - Đọc code của pear.no: có 3 cảnh mở màn chọn ngẫu nhiên (tượng cầm đuốc `signal`, quả lê vàng `colossus`, kéo rèm `reveal`), mỗi cảnh có một đoạn nối riêng (`v28`, `v51`, `v61`), cả ba đoạn nối cùng kết thúc ở cận cảnh đôi tay ghép cành.
+  - Câu chuyện mới: mở màn ngẫu nhiên, đoạn nối, ghép cành, trái chín, chia đôi quả lê, khu vườn, bầu trời, vun trồng (video lặp đôi nam nữ, cảnh cuối, "Sota."). Cảnh mở màn được chọn ngay trên trình duyệt bằng `useSyncExternalStore` để không lệch giữa server và client.
+  - Cảnh mở màn bố cục theo kiểu Pear: đường kẻ mảnh, dấu ✦, tiêu đề "Space of the Art.", dòng "Hai mươi mốt bảo tàng Smithsonian, một lối vào.", nút "Bắt đầu tham quan", nhãn và đoạn giới thiệu dưới đường kẻ (chữ của Sota). Danh sách chương ẩn ở cảnh mở màn để không đè lên tranh.
+  - Sửa lỗi phím mũi tên không ăn sau khi bấm nút "Bắt đầu tham quan" (nút còn giữ focus, đoạn xử lý phím bỏ qua mọi phím khi focus ở nút; giờ chỉ bỏ qua Enter và phím cách). Thêm lớp tối nhẹ sau tiêu đề trên điện thoại, giảm cỡ chữ cảnh cuối để không che nhân vật.
+  - Thử trên trình duyệt: tải lại ra đủ 3 cảnh mở màn; đi trọn mạch từ mở màn tới cảnh cuối rồi thoát ra trang chủ; khổ điện thoại 375px.
+
+---
