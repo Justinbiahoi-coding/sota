@@ -197,3 +197,18 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Làm như thế nào:** Thiên chọn mức 2 trong 3 mức 3D (trang chủ có cảnh 3D cụm bảo tàng, mỗi bảo tàng một phòng trưng bày 3D, đặt vé/giỏ hàng/admin giữ 2D) và tông sáng tường trắng. `git mv` toàn bộ phần app vào `web/`; giữ `docs/`, README, CONTRIBUTING ở gốc; đổi các mẫu trong `.gitignore` đang neo theo gốc (`/node_modules`, `/.next/`, `/src/generated/prisma`); sửa đường dẫn và lệnh trong README, CONTRIBUTING. Kiểm tra: `npm run build` trong `web/` chạy sạch.
 
 ---
+
+## 2026-10-18, 20:59 — Dựng khung giao diện chung và trang chủ
+
+- **Thời gian làm việc:** 18/10/2026, ghi nhận lúc 20:59.
+- **Làm việc gì:** Làm card "Khởi tạo Next.js + theme chung + skeleton": bộ màu và font, header, footer, trang chủ dùng dữ liệu mẫu.
+- **Ứng dụng/module:** `web/src/app/globals.css`, `web/src/app/layout.tsx`, `web/src/app/page.tsx`, `web/src/components/site/` (header, footer, menu), `web/src/components/home/iso-cluster.tsx`, `web/src/lib/mock-data.ts`.
+- **Tác dụng:** Mọi trang sau dùng chung khung và theme; trang chủ đã có cảm giác 3D trước khi có cảnh React Three Fiber thật.
+- **Làm như thế nào:**
+  - Theme "white cube": nền trắng ngà có lớp hạt giấy rất nhẹ, chữ mực, viền mảnh; biến `--museum-accent` để mỗi bảo tàng có màu nhấn riêng (lớp Tailwind `bg-museum`, `text-museum`); tiện ích `placard` cho nhãn chữ nhỏ giãn rộng như thẻ ghi chú cạnh hiện vật.
+  - Font Fraunces (tiêu đề) và Be Vietnam Pro (nội dung), đều có bộ tiếng Việt, tải qua `next/font`.
+  - Header dính trên đầu, đánh dấu mục đang mở; menu điện thoại dùng thẻ `<details>` có sẵn của HTML, không cần JavaScript. Danh sách mục menu để ở `nav.ts` vì footer là server component, không import được dữ liệu từ file `"use client"`.
+  - Trang chủ: hero với bản đồ isometric cụm bảo tàng bằng SVG (rê chuột khối nhà nhấc lên và đổi màu bảo tàng, bấm vào sang trang bảo tàng), danh sách "Hôm nay mở cửa", thẻ triển lãm. Dữ liệu mẫu gom ở `mock-data.ts` để sau đổi sang API.
+  - Kiểm tra: build và lint sạch; xem trên trình duyệt ở khổ máy tính và khổ điện thoại 375px, sửa danh sách bảo tàng và tiêu đề mục bị chật trên điện thoại.
+
+---
