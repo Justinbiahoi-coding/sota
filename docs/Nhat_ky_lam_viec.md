@@ -301,3 +301,16 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Thử trên trình duyệt: đi hết bảy phần, mở câu trả lời, mở menu chương, thoát ra trang chủ (font mới), khổ điện thoại 375px (rút gọn nút đăng nhập, ẩn nhãn và đoạn mô tả nhỏ).
 
 ---
+
+## 2026-10-19, 03:37 — Phần mở đầu: cuộn để lướt như Pear, bấm để tự chạy
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 03:37.
+- **Làm việc gì:** Theo ý Thiên, giữ lại kiểu lướt bằng cuộn chuột như trang Pear (phim chạy theo tay, tới lui, dừng ở đâu hình đứng ở đó) và vẫn có kiểu bấm một lần tự chạy tới cảnh sau.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/public/intro/` (nén lại 8 phim chuyển cảnh).
+- **Tác dụng:** Người xem chọn được cách đi qua phần mở đầu; cuộn vẫn mượt (60 khung hình/giây), không lag như trang gốc.
+- **Làm như thế nào:**
+  - Tiến độ câu chuyện là một số p từ 0 tới số cảnh trừ 1; mỗi số nguyên là một điểm dừng, mỗi khoảng giữa hai điểm dừng giữ ảnh dừng ở 14% đầu và cuối, phần giữa là phim. Cuộn chuột, trackpad, kéo trên điện thoại đổi đích đến của p, p trôi êm về đích, phim được tua tới đúng khung (mỗi lần chỉ tua khi lần trước xong). Bấm, chạm, phím mũi tên thì phim phát bình thường tới điểm dừng sau; cuộn giữa lúc đang phát thì chuyển sang tua ngay tại khung đó. Cuộn quá cảnh cuối thêm nửa đoạn thì thoát ra trang chủ. Phim có khung đầu khác ảnh dừng thì tự hiện dần lên (bỏ 6 ảnh khung đầu không còn cần).
+  - Nén lại phim chuyển cảnh với khung đầy đủ cứ 3 khung một lần (ffmpeg `-g 3 -bf 0`), tua tới đâu chỉ cần giải mã tối đa 2 khung; mỗi phim nặng hơn khoảng 15%, cả thư mục khoảng 49 MB.
+  - Đo khi tua liên tục qua một đoạn phim: 60 khung hình/giây (trung vị 16,7 ms, chậm nhất 18 ms), không có tác vụ dài. Thử thêm: cuộn tới, cuộn lùi, bấm để tự chạy tới cảnh sau, nhảy bằng menu, cuộn quá cảnh cuối để thoát.
+
+---

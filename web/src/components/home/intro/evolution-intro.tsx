@@ -9,14 +9,17 @@ import { ArrowRight } from "lucide-react"
 // top, the sign-in button top right. Each visit opens on one of three living paintings, picked at
 // random; each has its own film into the pear tree, where the story runs on through Sota's features:
 // the collection, the 3D galleries, tickets, questions, the map, and a closing scene.
-// Each step (a click or tap, one notch of the wheel, a swipe, an arrow key) plays the short film
-// that carries the camera to the next painting, then rests. Films are played, never scrubbed.
+// Two ways through it, as the visitor likes: scrolling (wheel, trackpad, a drag on a phone) runs the
+// films with the hand, like pear.no, forward and back, stopping wherever the hand stops; a click, a
+// tap or an arrow key plays the film on to the next painting by itself and rests there. Scrolling
+// during a playing film takes over from the frame it is on. The films are encoded with a keyframe
+// every third frame, so a seek decodes at most two frames.
 // Leaving (the last scene, "Bỏ qua", Esc, or any link) fades it away and remembers it was seen.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
 type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
 type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean } // light: a pale painting, ink type over it
-type Step = { film: string; from?: string } // from: the film's first frame, dissolved in over the rest before it
+type Step = { film: string; fade?: boolean } // fade: the film's first frame differs from the rest before it, so it dissolves in
 
 // the three openings (pos: where the figure stands, kept in frame on a narrow screen)
 const HEROES = [
@@ -35,9 +38,9 @@ const SHARED: Rest[] = [
 ]
 // SHARED_STEPS[i] carries the story from SHARED[i] to SHARED[i + 1]
 const SHARED_STEPS: Step[] = [
-  { film: "coda", from: "coda-start" }, // the scaffold, down to the drawing in her hands
-  { film: "plan", from: "plan-start" }, // the golden pear on its scaffold, seen from above
-  { film: "tree", from: "tree-start" }, // the woman picking pears, into the tree
+  { film: "coda", fade: true }, // the scaffold, down to the drawing in her hands
+  { film: "plan", fade: true }, // the golden pear on its scaffold, seen from above
+  { film: "tree", fade: true }, // the woman picking pears, into the tree
   { film: "flysky" }, // through the leaves and clouds to the stars
   { film: "trans" }, // the stars down to the couple watering the tree
 ]
@@ -49,7 +52,10 @@ const FAQ = [
   { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
 const SEEN_KEY = "sota-intro-seen"
-const FADE = 700 // ms, for dissolves, stepping back and leaving
+const FADE = 700 // ms, for the words, leaving and jumping
+const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
+const SCROLL = 1200 // px of wheel per gap
+const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 const markSeen = () => { try { localStorage.setItem(SEEN_KEY, "1") } catch {} }
 
@@ -68,28 +74,26 @@ export function EvolutionIntro() {
   const hero = HEROES[useSyncExternalStore(noSubscribe, readHero, () => 0)]
   const { rests, steps } = useMemo(() => ({
     rests: [{ id: hero.id, section: "hero", chapter: "Mở màn", loop: hero.id, pos: hero.pos }, ...SHARED] as Rest[],
-    steps: [{ film: `hero-${hero.id}-in`, from: `bridge-${hero.id}-start` }, ...SHARED_STEPS] as Step[],
+    steps: [{ film: `hero-${hero.id}-in`, fade: true }, ...SHARED_STEPS] as Step[],
   }), [hero])
   const N = rests.length
   const [closed, setClosed] = useState(false)
   const [leaving, setLeaving] = useState(false)
-  const [at, setAt] = useState(0) // the rest the story is on (or heading to)
-  const [moving, setMoving] = useState(false) // a transition is playing
-  const [film, setFilm] = useState<number | null>(null) // the step whose film is on screen
+  const [at, setAt] = useState(0) // the rest nearest to where the story is
+  const [still, setStill] = useState(true) // the story is resting on it: its words show
   const [menu, setMenu] = useState(false)
   const [open, setOpen] = useState<number | null>(null) // the question whose answer shows
   const films = useRef<(HTMLVideoElement | null)[]>([])
+  const layers = useRef<(HTMLDivElement | null)[]>([])
   const loops = useRef<Record<string, HTMLVideoElement | null>>({})
-  const state = useRef({ at: 0, moving: false, leaving: false })
-  const plan = useRef({ steps, N })
+  const left = useRef(false)
   const jumpTo = useRef<(i: number) => void>(() => {})
-  useEffect(() => { plan.current = { steps, N } }, [steps, N])
   const visible = !skipped && !closed
 
   // fade away onto the home page, and remember it was seen
   const leave = useCallback(() => {
-    if (state.current.leaving) return
-    state.current.leaving = true
+    if (left.current) return
+    left.current = true
     setLeaving(true)
     markSeen()
     setTimeout(() => setClosed(true), FADE)
@@ -103,64 +107,102 @@ export function EvolutionIntro() {
     return () => { html.style.overflow = before }
   }, [visible])
 
-  // the living painting of the current rest plays; every other loop is paused
+  // while resting, the living painting there plays (from its first frame, where the film leading
+  // here ends); the films either side of the rest are fetched
   useEffect(() => {
     for (const [id, v] of Object.entries(loops.current)) {
       if (!v) continue
-      // (from its first frame: that is where the film leading here ends)
-      if (id === rests[at].loop && !moving) { if (v.paused && at > 0) v.currentTime = 0; v.play().catch(() => {}) }
+      if (id === rests[at].loop && still) { if (v.paused && at > 0) v.currentTime = 0; v.play().catch(() => {}) }
       else v.pause()
     }
-    // fetch the next film while the visitor reads this rest
-    const next = films.current[at]
-    if (next && next.preload !== "auto") { next.preload = "auto"; next.load() }
-  }, [at, moving, visible, rests])
+    for (const v of [films.current[at], films.current[at - 1]]) if (v && v.preload !== "auto") { v.preload = "auto"; v.load() }
+  }, [at, still, visible, rests])
 
+  // the story engine: p runs from 0 to N - 1, each whole number a rest, the films in between
   useEffect(() => {
     if (!visible) return
-    const el = root.current!
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms))
+    const el = root.current!, vids = films.current, rest = layers.current
+    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true
+    const through = (u: number) => clamp((u - HOLD) / (1 - 2 * HOLD)) // how far into the film, at u into the gap
 
-    const forward = async () => {
-      const s = state.current, { steps, N } = plan.current
-      if (s.moving || s.leaving) return
-      if (s.at >= N - 1) return leave()
-      const i = s.at, step = steps[i], v = films.current[i]
-      s.moving = true; setMoving(true); setMenu(false); setOpen(null)
-      if (v) {
-        v.currentTime = 0
-        if (v.readyState < 3) await new Promise((r) => v.addEventListener("canplay", r, { once: true }))
-        if (step.from) await wait(FADE) // its first frame dissolves in over the rest (see the opacity below)
-        setFilm(i)
-        await v.play().catch(() => {})
-        await new Promise((r) => v.addEventListener("ended", r, { once: true }))
+    const draw = () => {
+      const i = Math.min(Math.floor(p), N - 1), u = p - i
+      const show = i < N - 1 && u > HOLD && u < 1 - HOLD ? i : -1 // the film on screen
+      const f = through(u), lit = i < N - 1 && u >= 1 - HOLD ? i + 1 : i // the rest on screen when no film is
+      rest.forEach((L, k) => {
+        if (!L) return
+        // under a film: the rest it leaves while it dissolves in, the rest it reaches once it covers
+        const on = show < 0 ? k === lit : (k === i && f < 0.15) || (k === i + 1 && f >= 0.12)
+        L.style.opacity = on ? "1" : "0"
+      })
+      vids.forEach((v, k) => {
+        if (!v) return
+        if (k !== show) { v.style.opacity = "0"; return }
+        v.style.opacity = String(steps[k].fade ? clamp(f / 0.12) : 1)
+        // scrubbing: seek to the frame, one seek at a time (a playing film runs on its own)
+        if (playing !== k && v.duration && !v.seeking && Math.abs(v.currentTime - f * v.duration) > 0.012) v.currentTime = f * v.duration
+      })
+      const r = Math.round(p), rested = Math.abs(p - r) < HOLD
+      if (r !== near) { near = r; setAt(r) }
+      if (rested !== resting) { resting = rested; setStill(rested) }
+    }
+    const frame = () => {
+      raf = 0
+      if (playing >= 0) {
+        const v = vids[playing]!, f = v.duration ? v.currentTime / v.duration : 0
+        if (v.ended || f >= 0.998) { p = target = playing + 1; playing = -1 }
+        else p = target = playing + HOLD + f * (1 - 2 * HOLD)
+      } else {
+        p += (target - p) * 0.16
+        if (Math.abs(target - p) < 0.0005) p = target
       }
-      // the film holds its last frame until the rest's still (the same frame) has faded in under it
-      s.at = i + 1; setAt(i + 1)
-      await wait(FADE)
-      setFilm(null)
-      s.moving = false; setMoving(false)
+      draw()
+      if (playing >= 0 || p !== target) raf = requestAnimationFrame(frame)
+    }
+    const kick = () => { if (!raf) raf = requestAnimationFrame(frame) }
+    const stop = () => { if (playing >= 0) { vids[playing]?.pause(); playing = -1 } }
+
+    // a click, a tap, an arrow: play on to the next rest (from the frame the story is on)
+    const forward = () => {
+      if (left.current || playing >= 0) return
+      const r = Math.round(p), seg = Math.abs(p - r) < HOLD ? r : Math.floor(p)
+      if (seg >= N - 1) return leave()
+      const v = vids[seg]
+      if (!v) return
+      setMenu(false); setOpen(null)
+      const f = through(p - seg)
+      p = target = seg + HOLD + 0.0001 + f * (1 - 2 * HOLD)
+      if (v.duration) v.currentTime = f * v.duration
+      playing = seg
+      v.play().catch(() => { playing = -1 })
+      kick()
     }
     // stepping back, or jumping from the menu: a dissolve straight to that rest
-    const jump = async (i: number) => {
-      const s = state.current
-      if (s.moving || s.leaving || i === s.at) return
-      s.moving = true; setMoving(true); setMenu(false); setOpen(null)
-      s.at = i; setAt(i)
-      await wait(FADE)
-      s.moving = false; setMoving(false)
+    const jump = (i: number) => {
+      if (left.current) return
+      stop(); setMenu(false); setOpen(null)
+      p = target = clamp(i, 0, N - 1)
+      draw()
     }
     jumpTo.current = jump
-    const step = (dir: 1 | -1) => (dir > 0 ? forward() : state.current.at > 0 && jump(state.current.at - 1))
+    const back = () => { const r = Math.round(p); jump(Math.abs(p - r) < HOLD ? r - 1 : Math.floor(p)) }
 
-    // a trackpad's momentum lands inside the running transition and is ignored
-    const onWheel = (e: WheelEvent) => { e.preventDefault(); if (Math.abs(e.deltaY) >= 4) step(e.deltaY > 0 ? 1 : -1) }
-    let ty = 0
-    const onTouchStart = (e: TouchEvent) => { ty = e.touches[0].clientY }
-    const onTouchMove = (e: TouchEvent) => e.preventDefault()
-    const onTouchEnd = (e: TouchEvent) => {
-      const dy = ty - e.changedTouches[0].clientY
-      if (Math.abs(dy) > 40) step(dy > 0 ? 1 : -1)
+    // scrolling runs the films with the hand; scrolling on past the last rest leaves
+    const scrub = (d: number) => {
+      if (left.current) return
+      stop()
+      if (target >= N - 1 && d > 0) { overflow += d; if (overflow > SCROLL * 0.5) leave(); return }
+      overflow = 0
+      target = clamp(target + d / SCROLL, 0, N - 1)
+      kick()
+    }
+    const onWheel = (e: WheelEvent) => { e.preventDefault(); scrub(e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY) }
+    let ty = 0, moved = false
+    const onTouchStart = (e: TouchEvent) => { ty = e.touches[0].clientY; moved = false }
+    const onTouchMove = (e: TouchEvent) => {
+      e.preventDefault()
+      const y = e.touches[0].clientY
+      if (Math.abs(y - ty) > 2) { scrub((ty - y) * 2.4); ty = y; moved = true }
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") return leave()
@@ -168,32 +210,32 @@ export function EvolutionIntro() {
       // (on a focused button or link, Enter and Space press it; the arrows always step)
       if (!dir || ((e.key === "Enter" || e.key === " ") && (e.target as HTMLElement).closest?.("button, a"))) return
       e.preventDefault()
-      step(dir)
+      if (dir > 0) forward(); else back()
     }
     const onClick = (e: MouseEvent) => {
       const t = e.target as HTMLElement
-      if (t.closest("[data-start]")) return forward()
-      if (!t.closest("button, a, [data-menu]")) forward()
+      if (moved) { moved = false; return } // the end of a drag, not a tap
+      if (t.closest("[data-start]") || !t.closest("button, a, [data-menu]")) forward()
     }
     el.addEventListener("wheel", onWheel, { passive: false })
     el.addEventListener("touchstart", onTouchStart, { passive: true })
     el.addEventListener("touchmove", onTouchMove, { passive: false })
-    el.addEventListener("touchend", onTouchEnd)
     addEventListener("keydown", onKey)
     el.addEventListener("click", onClick)
+    draw()
     return () => {
       el.removeEventListener("wheel", onWheel)
       el.removeEventListener("touchstart", onTouchStart)
       el.removeEventListener("touchmove", onTouchMove)
-      el.removeEventListener("touchend", onTouchEnd)
       removeEventListener("keydown", onKey)
       el.removeEventListener("click", onClick)
+      cancelAnimationFrame(raf)
+      stop()
     }
-  }, [visible, leave])
+  }, [visible, leave, N, steps])
 
   if (!visible) return null
   const rest = rests[at]
-  const still = !moving // the rest is settled: its words show
   const ink = !!rest.light && still // pale painting under the chrome: ink instead of white
   const fade = { transition: `opacity ${FADE}ms ease, color ${FADE}ms ease, border-color ${FADE}ms ease` }
   const shown = (s: Section) => ({ ...fade, opacity: still && rest.section === s ? 1 : 0, pointerEvents: still && rest.section === s ? undefined : "none" } as React.CSSProperties)
@@ -210,8 +252,9 @@ export function EvolutionIntro() {
       style={{ ...fade, opacity: leaving ? 0 : 1, pointerEvents: leaving ? "none" : undefined }}
     >
       {/* ---------------------------------------------------------------- the paintings */}
+      {/* (their opacity is set by the engine, frame by frame; the transition softens jumps) */}
       {rests.map((r, i) => (
-        <div key={r.id} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ transition: `opacity ${FADE}ms ease`, opacity: i === at ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
+        <div key={r.id} ref={(d) => { layers.current[i] = d }} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ transition: "opacity 400ms ease", opacity: i === 0 ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
           {r.loop ? (
             <video ref={(v) => { loops.current[r.loop!] = v }} src={src(r.loop, "mp4")} poster={src(r.id, "jpg")} muted loop playsInline autoPlay={i === 0} preload={i === 0 ? "auto" : "metadata"} className="size-full object-cover" />
           ) : (
@@ -220,12 +263,8 @@ export function EvolutionIntro() {
           )}
         </div>
       ))}
-      {steps.map((s, i) => s.from ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={s.from} src={src(s.from, "jpg")} alt="" className="absolute inset-0 size-full object-cover" style={{ transition: `opacity ${FADE}ms ease`, opacity: moving && at === i ? 1 : 0 }} draggable={false} />
-      ) : null)}
       {steps.map((s, i) => (
-        <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: film === i ? 1 : 0 }} />
+        <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: 0 }} />
       ))}
       {/* a shade so the words read: dark under white type, pale under ink */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" style={{ ...fade, opacity: ink ? 0 : 1 }} />
@@ -329,7 +368,7 @@ export function EvolutionIntro() {
 
       {/* ---------------------------------------------------------------- along the bottom */}
       <p className="placard pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap md:bottom-6" style={{ ...fade, opacity: still && at > 0 ? 0.6 : 0 }}>
-        {at === N - 1 ? "Nhấn để vào Sota" : "Nhấn hoặc cuộn để đi tiếp"}
+        {at === N - 1 ? "Nhấn hoặc cuộn để vào Sota" : "Cuộn hoặc nhấn để đi tiếp"}
       </p>
       <p className="pointer-events-none absolute bottom-3 left-[calc(3.5rem+1.25rem)] text-[10px] opacity-55 md:bottom-6 md:left-[calc(72px+1.5rem)]" style={fade}>Hình ảnh: Pear (pear.no), tạo bằng AI</p>
       <button onClick={leave} className="placard absolute bottom-3 right-4 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8" style={fade}>Bỏ qua</button>
