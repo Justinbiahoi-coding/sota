@@ -169,8 +169,14 @@ export function EvolutionIntro() {
   useEffect(() => {
     if (!visible) return
     const el = root.current!, vids = films.current, rest = layers.current, cv = canvas.current!
-    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true, veiled = false
+    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true, live = false
+    // a click on a rest whose film opens with the ring: the ring runs first (the film held on its first
+    // frame, as pear.no does), then the film plays
+    let ramp: { k: number; from: number; to: number; t0: number; dur: number } | null = null
     const through = (u: number) => clamp((u - HOLD) / (1 - 2 * HOLD)) // how far into the film, at u into the gap
+    // the ring holds its film on the first frame; the film then runs over the rest of the gap
+    const lead = (k: number) => (steps[k]?.veil === "signal" ? VEIL : 0)
+    const filmAt = (k: number, f: number) => clamp((f - lead(k)) / (1 - lead(k)))
     const veil = makeVeil(cv)
     veil?.size()
     const wide = matchMedia("(min-width: 768px)")
@@ -185,11 +191,15 @@ export function EvolutionIntro() {
       const i = Math.min(Math.floor(p), N - 1), u = p - i
       const show = i < N - 1 && u > HOLD && u < 1 - HOLD ? i : -1 // the film on screen
       const f = through(u), lit = i < N - 1 && u >= 1 - HOLD ? i + 1 : i // the rest on screen when no film is
-      // the hand-over in WebGL, over both, while it lasts
-      const mode = show >= 0 && veil ? steps[show].veil : undefined
-      const from = rest[i]?.firstElementChild as HTMLImageElement | HTMLVideoElement | null, to = vids[show]
-      veiled = !!mode && f < VEIL && ready(from) && ready(to)
-      if (veiled) veil!.draw(from!, to!, f / VEIL, mode!, rests[i].glow ?? [0.5, 0.5], posOf(rests[i]))
+      // the hand-over in WebGL, over both, while it lasts; a rest whose film opens with the ring keeps
+      // it breathing at its point of light (t = 0) while the story rests there
+      const k = show >= 0 ? show : lit, t = show >= 0 ? f / VEIL : 0
+      const mode = veil && (show >= 0 ? f < VEIL : steps[lit]?.veil === "signal") ? steps[k]?.veil : undefined
+      const from = rest[show >= 0 ? i : lit]?.firstElementChild as HTMLImageElement | HTMLVideoElement | null, to = vids[k]
+      if (show < 0 && mode && to && !to.seeking && to.currentTime > 0.01) to.currentTime = 0
+      live = !!mode
+      const veiled = live && ready(from) && ready(to)
+      if (veiled) veil!.draw(from!, to!, t, mode!, rests[show >= 0 ? i : lit].glow ?? [0.5, 0.5], posOf(rests[show >= 0 ? i : lit]))
       cv.style.opacity = veiled ? "1" : "0"
       rest.forEach((L, k) => {
         if (!L) return
@@ -202,43 +212,58 @@ export function EvolutionIntro() {
         if (k !== show) { v.style.opacity = "0"; return }
         v.style.opacity = String(steps[k].fade && !(veil && steps[k].veil) ? clamp(f / 0.12) : 1)
         // scrubbing: seek to the frame, one seek at a time (a playing film runs on its own)
-        if (playing !== k && v.duration && !v.seeking && Math.abs(v.currentTime - f * v.duration) > 0.012) v.currentTime = f * v.duration
+        const at = filmAt(k, f) * v.duration
+        if (playing !== k && v.duration && !v.seeking && Math.abs(v.currentTime - at) > 0.012) v.currentTime = at
       })
       const r = Math.round(p), rested = Math.abs(p - r) < HOLD
       if (r !== near) { near = r; setAt(r) }
       if (rested !== resting) { resting = rested; setStill(rested) }
     }
-    const frame = () => {
+    const frame = (now: number) => {
       raf = 0
-      if (playing >= 0) {
-        const v = vids[playing]!, f = v.duration ? v.currentTime / v.duration : 0
-        if (v.ended || f >= 0.998) { p = target = playing + 1; playing = -1 }
-        else p = target = playing + HOLD + f * (1 - 2 * HOLD)
+      if (ramp) {
+        const e = clamp((now - ramp.t0) / ramp.dur)
+        p = target = ramp.from + (ramp.to - ramp.from) * e * e * (3 - 2 * e)
+        if (e >= 1) { const k = ramp.k; ramp = null; play(k, 0) }
+      } else if (playing >= 0) {
+        const v = vids[playing]!, fv = v.duration ? v.currentTime / v.duration : 0
+        if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
+        else p = target = playing + HOLD + (lead(playing) + fv * (1 - lead(playing))) * (1 - 2 * HOLD)
       } else {
         p += (target - p) * 0.16
         if (Math.abs(target - p) < 0.0005) p = target
       }
       draw()
       // (a veil keeps moving while it is on screen, even with the hand still)
-      if (playing >= 0 || p !== target || veiled) raf = requestAnimationFrame(frame)
+      if (playing >= 0 || ramp || p !== target || live) raf = requestAnimationFrame(frame)
     }
     const kick = () => { if (!raf) raf = requestAnimationFrame(frame) }
-    const stop = () => { if (playing >= 0) { vids[playing]?.pause(); playing = -1 } }
+    const stop = () => { ramp = null; if (playing >= 0) { vids[playing]?.pause(); playing = -1 } }
+    // play film k on from fv (0..1 of the film)
+    const play = (k: number, fv: number) => {
+      const v = vids[k]
+      if (!v) return
+      p = target = k + HOLD + 0.0001 + (lead(k) + fv * (1 - lead(k))) * (1 - 2 * HOLD)
+      if (v.duration) v.currentTime = fv * v.duration
+      playing = k
+      v.play().catch(() => { playing = -1 })
+      kick()
+    }
 
     // a click, a tap, an arrow: play on to the next rest (from the frame the story is on)
     const forward = () => {
-      if (left.current || playing >= 0 || !ready_.current) return
+      if (left.current || playing >= 0 || ramp || !ready_.current) return
       const r = Math.round(p), seg = Math.abs(p - r) < HOLD ? r : Math.floor(p)
       if (seg >= N - 1) return leave()
-      const v = vids[seg]
-      if (!v) return
+      if (!vids[seg]) return
       setMenu(false); setOpen(null)
       const f = through(p - seg)
-      p = target = seg + HOLD + 0.0001 + f * (1 - 2 * HOLD)
-      if (v.duration) v.currentTime = f * v.duration
-      playing = seg
-      v.play().catch(() => { playing = -1 })
-      kick()
+      if (f < lead(seg)) {
+        // (about a second and a half for the whole ring, less for what is left of it)
+        ramp = { k: seg, from: p, to: seg + HOLD + lead(seg) * (1 - 2 * HOLD), t0: performance.now(), dur: 1500 * (1 - f / lead(seg)) }
+        return kick()
+      }
+      play(seg, filmAt(seg, f))
     }
     // stepping back, or jumping from the menu: a dissolve straight to that rest
     const jump = (i: number) => {
@@ -288,6 +313,7 @@ export function EvolutionIntro() {
     const onResize = () => { veil?.size(); draw() }
     addEventListener("resize", onResize)
     draw()
+    kick() // (the ring breathes at rest)
     return () => {
       el.removeEventListener("wheel", onWheel)
       el.removeEventListener("touchstart", onTouchStart)

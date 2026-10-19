@@ -1,10 +1,12 @@
 // The transitions between a resting painting and the film leaving it, drawn on one WebGL canvas
 // over both, in the manner of pear.no: never a plain dissolve.
-//   signal: the picture fails like a broadcast. A front opens from a point of light in the painting
-//           (the pear held up, the glint on the gold); on its crest the frame breaks into a mosaic,
-//           splits its colours and stipples through an ordered dither, and the crest flares warm.
-//           Round the crest the picture disperses into grains, posterises through the dither and
-//           shows a screen's lit dots; at the start a bloom of light rays out of that point: the flash.
+//   signal: pear.no's ring. The picture fails like a broadcast along a lobed front that leaves from
+//           the point of light in the painting (the pear held up, the glint on the gold) and clears
+//           the frame. Where the front is, the break-up follows the painting's own ring cadence: the
+//           frame tears outward and along its rows, snaps to blocks of two sizes that each hand over
+//           at their own moment, splits its colours along the radius, and at the heart of the crest
+//           re-renders as bright type; the crest carries a warm flare. At rest (t = 0) the front
+//           still breathes at the point of light. Late in the pass every 3px block jitters sideways.
 //   burn:   a diagonal cut bent by noise eats the old frame; the side about to go chars, the cut
 //           glows like an ember.
 //   soak:   the new picture soaks in from the middle in patches, like ink taking to paper.
@@ -30,13 +32,33 @@ float noise(vec2 p){
   vec2 i = floor(p), f = fract(p); f = f*f*(3.0 - 2.0*f);
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + 1.0), f.x), f.y);
 }
-float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int k = 0; k < 4; k++){ s += a*noise(p); p = p*2.03 + 7.1; a *= 0.5; } return s; }
+float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int k = 0; k < 4; k++){ s += a*noise(p); p = p*2.03 + 7.1; a *= 0.5; } return s/0.9375; }
 // 4x4 ordered dither threshold, 0..1
 float bayer(vec2 px){
   vec2 q = mod(floor(px), 4.0);
   float a = mod(q.x, 2.0), b = mod(q.y, 2.0), c = floor(q.x/2.0), d = floor(q.y/2.0);
   float m = 4.0*(2.0*a*(1.0 - b) + a*b + 3.0*(1.0 - a)*b) + (2.0*c*(1.0 - d) + c*d + 3.0*(1.0 - c)*d);
   return (m + 0.5) / 16.0;
+}
+// a 5x5 bitmap type, lightest to heaviest: ' ' . : - + = * % # @  (each row 5 bits, bit 0 leftmost)
+float rowOf(float i, float y){
+  vec4 a = vec4(0.0), b = vec4(0.0);  // rows 0-3, and row 4 in b.x
+  if (i > 0.5 && i < 1.5) { b.x = 4.0; }
+  else if (i < 2.5 && i > 1.5) { a = vec4(0.0, 4.0, 0.0, 4.0); }
+  else if (i < 3.5 && i > 2.5) { a = vec4(0.0, 0.0, 14.0, 0.0); }
+  else if (i < 4.5 && i > 3.5) { a = vec4(0.0, 4.0, 14.0, 4.0); }
+  else if (i < 5.5 && i > 4.5) { a = vec4(0.0, 14.0, 0.0, 14.0); }
+  else if (i < 6.5 && i > 5.5) { a = vec4(4.0, 21.0, 14.0, 21.0); b.x = 4.0; }
+  else if (i < 7.5 && i > 6.5) { a = vec4(17.0, 8.0, 4.0, 2.0); b.x = 17.0; }
+  else if (i < 8.5 && i > 7.5) { a = vec4(10.0, 31.0, 10.0, 31.0); b.x = 10.0; }
+  else if (i > 8.5) { a = vec4(31.0, 17.0, 21.0, 29.0); b.x = 31.0; }
+  return y < 0.5 ? a.x : y < 1.5 ? a.y : y < 2.5 ? a.z : y < 3.5 ? a.w : b.x;
+}
+// q: where in its cell, -0.5..0.5; 1 where the glyph has ink
+float glyph(float i, vec2 q){
+  q = floor(q*vec2(5.0, -5.0) + 2.5);
+  if (q.x < 0.0 || q.x > 4.0 || q.y < 0.0 || q.y > 4.0) return 0.0;
+  return mod(floor(rowOf(i, q.y)/exp2(q.x)), 2.0);
 }
 vec3 A(vec2 uv){ return texture2D(uA, clamp(uv*uFitA.xy + uFitA.zw, 0.001, 0.999)).rgb; }
 vec3 B(vec2 uv){ return texture2D(uB, clamp(uv*uFitB.xy + uFitB.zw, 0.001, 0.999)).rgb; }
@@ -46,11 +68,8 @@ void main(){
   vec2 uv = v, ar = vec2(uRes.x/uRes.y, 1.0), px = uv*uRes;
   float t = uT, w = 0.11;            // the crest's width
   float e;                            // signed distance to the front: < 0 behind it (the new picture)
-  if (uMode < 0.5) {                  // signal: a lobed front out of the point of light
-    vec2 d = (uv - uO)*ar;
-    float ang = atan(d.y, d.x), r = length(d);
-    float wob = (fbm(vec2(ang*1.7 + 3.0, uTime*0.25)) - 0.5) + (fbm(vec2(ang*4.9, uTime*0.4)) - 0.5)*0.5;
-    e = r + wob*0.28 - mix(-0.25, 2.1, t);
+  if (uMode < 0.5) {                  // signal: worked out in full below
+    e = 1.0;
   } else if (uMode < 1.5) {           // burn: a diagonal cut, bent and torn
     float d = dot(uv - 0.5, normalize(vec2(-1.0, 0.55)))*1.15;
     e = d + (fbm(uv*vec2(3.0, 5.0) + 2.0) - 0.5)*0.42 + (fbm(uv*14.0) - 0.5)*0.08 - mix(-0.95, 0.95, t);
@@ -65,40 +84,52 @@ void main(){
 
   vec3 col;
   if (uMode < 0.5) {
-    // a wide zone round the crest where the picture comes apart; the crest itself is its heart
-    float zone = 1.0 - smoothstep(0.0, 0.5, abs(e));
-    vec2 dir = normalize((uv - uO)*ar + 1e-4)/ar;
-    // mosaic on the crest: the sampling snaps to a grid that is coarse at the crest's heart
-    float cell = floor(mix(1.0, 22.0, band));
-    vec2 su = (floor(px/cell) + 0.5)*cell/uRes;
-    // a tear: rows slide sideways where the crest passes
-    float row = floor(px.y/mix(3.0, 18.0, band));
-    su.x += (hash(vec2(row, floor(uTime*24.0))) - 0.5)*0.06*band;
-    // sand: across the zone every pixel samples from a little way off, thrown outward with the
-    // front, so the picture disperses into grains rather than fading
-    vec2 g = vec2(hash(px + floor(uTime*20.0)), hash(px.yx + 17.0 + floor(uTime*20.0))) - 0.5;
-    su += (g*0.05 + dir*hash(px*0.7)*0.06)*zone*zone;
-    // the colours split along the front
-    vec2 cs = dir*0.012*band;
-    vec3 a = vec3(A(su + cs).r, A(su).g, A(su - cs).b);
-    vec3 b = vec3(B(su + cs).r, B(su).g, B(su - cs).b);
-    // stippled hand-over: an ordered dither decides, pixel by pixel, which picture shows
-    float th = bayer(px)*0.75 + hash(px + floor(uTime*30.0))*0.25;
-    col = smoothstep(w*2.5, -w*1.2, e) > th ? b : a;
-    // posterised through the dither, so the zone breaks into a print screen rather than flat bands
-    float lv = mix(48.0, 4.0, zone*zone);
-    col = mix(col, floor(col*lv + bayer(px))/lv, zone);
-    // a screen's lit dots show through the tear
-    float dots = 1.0 - smoothstep(0.16, 0.3, length(fract(px/5.0) - 0.5));
-    col = screen(col, vec3(dots*band*0.32));
-    // the crest flares, screen-blended warm, and the whole frame blooms out of the point at first,
-    // in rays
-    vec3 flare = vec3(1.0, 0.94, 0.80)*pow(band, 4.0)*0.55;
-    float r = length((uv - uO)*ar), ang = atan((uv - uO).y*ar.y, (uv - uO).x*ar.x);
-    float rays = pow(noise(vec2(ang*22.0, uTime*0.35)), 3.0);
-    float flash = sin(clamp(t*1.6, 0.0, 1.0)*3.14159);
-    vec3 bloom = vec3(1.0, 0.97, 0.9)*flash*(exp(-r*3.2)*0.85 + (0.06 + 0.5*rays)*exp(-r*1.1));
-    col = screen(screen(col, flare), bloom);
+    // the front, measured from the point of light and scaled by the furthest corner, so at t = 1 it
+    // has cleared the frame from wherever the point is
+    vec2 d = (uv - uO)*ar;
+    float far = max(max(length(-uO*ar), length((vec2(1.0, 0.0) - uO)*ar)), max(length((vec2(0.0, 1.0) - uO)*ar), length((1.0 - uO)*ar)));
+    float r = length(d)/far, ang = atan(d.y, d.x);
+    // two angular harmonics lobe it and keep it breathing
+    float wob = (fbm(vec2(ang*1.9 + 3.0, uTime*0.2)) - 0.5) + (fbm(vec2(ang*5.3, uTime*0.38)) - 0.5)*0.55;
+    float W = 0.3, ph = r - (t*(1.0 + 2.0*W) - W + wob*0.3);
+    float pass = smoothstep(W, -W, ph);               // how far the front has gone past here
+    float crest = clamp(1.0 - abs(ph)/W, 0.0, 1.0);
+    crest = crest*crest*(3.0 - 2.0*crest);
+    // where it breaks up: a field carrying the painting's own ring cadence
+    float rings = 0.5 + 0.5*sin(r*46.0 - uTime*1.1);
+    float fld = fbm(uv*3.4 + vec2(uTime*0.06, uTime*0.31))*0.72 + rings*0.28;
+    float brk = smoothstep(0.62 - crest*0.26, 0.8 - crest*0.18, fld)*crest;
+    // late in the pass, every 3px block jitters sideways
+    float late = sin(3.14159*clamp((t - 0.4)/0.6, 0.0, 1.0));
+    vec2 jit = vec2((hash(floor(px/3.0) + floor(uTime*26.0)) - 0.5)*0.05*late, 0.0);
+    // the tear: outward in steps, ring by ring, and rows sliding under it
+    vec2 dir = normalize(d + 1e-5)/ar;
+    float out_ = floor((hash(vec2(floor(r*90.0), floor(uTime*15.0))) - 0.5)*7.0)/7.0;
+    float row = hash(vec2(floor(px.y/7.0), floor(uTime*13.0))) - 0.5;
+    vec2 tuv = uv + dir*out_*0.17*brk + vec2(row*0.09*brk, 0.0);
+    // blocks of two sizes, mostly the small ones; each hands over at its own moment
+    float size = (step(0.24, hash(floor(uv*15.0) + floor(uTime*5.0))) > 0.5 ? 11.0*0.28 : 11.0);
+    vec2 blk = floor(tuv*uRes/size);
+    vec2 puv = mix(tuv, (blk + 0.5)*size/uRes, brk) + jit;
+    float hb = hash(blk);
+    float m = smoothstep(hb*0.55, hb*0.55 + 0.45, pass);
+    vec3 c = mix(A(puv), B(puv), m);
+    // the channels come apart along the radius
+    vec2 cs = dir*13.0*brk/uRes.x;
+    c.r = mix(A(puv + cs), B(puv + cs), m).r;
+    c.b = mix(A(puv - cs), B(puv - cs), m).b;
+    // at the heart of the crest the picture prints itself as bright type
+    float cell = 9.0;
+    vec2 gp = floor(px/cell), gc = (gp + 0.5)*cell/uRes;
+    float hg = hash(gp);
+    vec3 gcol = mix(A(gc), B(gc), smoothstep(hg*0.55, hg*0.55 + 0.45, pass));
+    float lum = clamp(dot(gcol, vec3(0.299, 0.587, 0.114)) + (hash(gp + floor(uTime*10.0)) - 0.5)*0.1, 0.0, 1.0);
+    float ink = glyph(floor(lum*9.99), fract(px/cell) - 0.5);
+    vec3 type = mix(gcol*0.58 + 0.3, gcol*1.1 + 0.48, ink);
+    type = mix(type, vec3(1.0, 0.98, 0.93)*hash(floor(px) + floor(uTime*26.0)), 0.16*brk);  // light static
+    col = mix(c, type, smoothstep(0.5, 0.95, brk));
+    // and the crest flares warm
+    col = screen(col, vec3(1.0, 0.94, 0.8)*crest*crest*0.62);
   } else if (uMode < 1.5) {
     vec2 g = (vec2(hash(px + floor(uTime*20.0)), hash(px.yx + 5.0)) - 0.5)*0.025*band;   // grains at the cut
     vec3 a = A(uv + g), b = B(uv + g + vec2(-0.03, 0.0)*band);  // the new picture arrives still moving

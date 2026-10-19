@@ -381,3 +381,14 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Điện thoại: không nghiêng, chữ và form xếp dọc, trang cuộn được, ảnh nền đứng yên.
   - Gặp lỗi: dev server (Turbopack) giữ bản `globals.css` cũ trong bộ nhớ đệm trên ổ đĩa, kể cả sau khi khởi động lại (lần sửa hạt nhiễu trước cũng chỉ ăn phần JS). Dừng server, xoá `.next`, chạy lại thì nhận bản mới.
   - Thử trên Chrome: khổ 1459 px và 375 px (iframe), nhập email/mật khẩu thử rồi gửi.
+
+## 2026-10-19, 21:20 — Phần mở đầu: làm lại chuyển cảnh mở màn đúng kiểu "ring" của pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 21:20.
+- **Làm việc gì:** Thiên thấy 3 kiểu mở màn còn thiếu, nhiễu hạt mỗi cảnh một khác. Đối chiếu kỹ với mã của Pear: cả 3 cảnh dùng chung một shader `ring` (kèm lớp `fine`), thông số giống nhau (khối 11 px, ô chữ 9 px, glow 0,62); mỗi cảnh trông khác nhau là do nội dung tranh và vị trí điểm sáng. Bản cũ của mình là tự chế gần đúng, thiếu nhiều phần, thêm vài thứ Pear không có. Phim cầu nối (v28, v51, v61) mình đã lấy đủ 121 khung, nhưng renaissance chỉ lấy tới khung 100 trên 362 (đã cắt bớt từ trước).
+- **Ứng dụng/module:** `web/src/components/home/intro/veil.ts`, `evolution-intro.tsx`.
+- **Tác dụng:** Chuyển cảnh mở màn của cả 3 cảnh giờ giống trang gốc: tranh vỡ khối, xé dòng, tan hạt, mép vòng in thành chữ ASCII sáng; vòng sáng thở quanh điểm sáng cả khi đứng yên.
+- **Làm như thế nào:**
+  - Viết lại kiểu `signal` theo thuật toán ring: bán kính chuẩn hoá theo góc xa nhất; mép vòng nhiều thùy theo hai hoà âm góc; vùng vỡ theo nhịp các vòng tròn trong tranh (sin(r*46)) trộn nhiễu fbm; xé hướng tâm theo từng vòng, xé dòng 7 px; khối hai cỡ (11 px và 3 px), mỗi khối chuyển cảnh ở một thời điểm riêng theo hash; tách màu theo bán kính 13 px; giữa mép vòng in lại thành chữ bằng font bitmap 5x5 tự viết (' .:-+=*%#@') kèm nhiễu sáng; loé ấm ở mép; cuối đoạn từng khối 3 px giật ngang. Bỏ quầng tia sáng, hạt cát, ép màu, lưới chấm mình tự thêm trước đây.
+  - Engine: phim cầu nối đứng ở khung đầu trong lúc vòng loang (35% đầu đoạn), xong mới chạy; khi bấm thì cho vòng chạy khoảng 1,5 giây rồi mới phát phim; khi đứng ở cảnh mở màn canvas vẫn vẽ ở t = 0 để vòng thở quanh điểm sáng.
+  - Thử trên Chrome cả 3 cảnh (signal, reveal, colossus), so với ảnh chụp từ pear.no; đo lúc đứng yên: trung vị 16,7 ms, chậm nhất 17,2 ms.
