@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { ArrowRight } from "lucide-react"
 import { makeVeil, ready, type Veil } from "./veil"
+import { readGrain } from "@/lib/grain"
 
 // The opening, laid out like pear.no: a full-screen story over the whole site (images and films by
 // Pear, pear.no, made with AI). A rail down the left (mark, menu, progress ticks), a rule across the
@@ -69,21 +70,6 @@ const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 const noSubscribe = () => () => {}
 const readSkipped = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 let pick = -1
-// a tile of white noise, one value per device pixel, for the film grain (made once, on the client)
-let tile = ""
-const grainTile = () => {
-  if (tile) return tile
-  const c = document.createElement("canvas"), n = 256
-  c.width = c.height = n
-  const ctx = c.getContext("2d")!, img = ctx.createImageData(n, n)
-  for (let k = 0; k < n * n; k++) {
-    const g = Math.random() * 255
-    img.data.set([g, g, g, 255], k * 4)
-  }
-  ctx.putImageData(img, 0, 0)
-  return (tile = c.toDataURL())
-}
-const readGrain = () => `url(${grainTile()}) 0 0 / ${256 / Math.min(devicePixelRatio || 1, 3)}px`
 const readHero = () => (pick < 0 ? (pick = Math.floor(Math.random() * HEROES.length)) : pick)
 
 export function EvolutionIntro() {

@@ -367,3 +367,17 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Canvas WebGL vẽ theo đúng devicePixelRatio (tối đa 2).
   - Lớp hạt: tạo một lần trên trình duyệt một ô 256x256 nhiễu trắng (mỗi điểm ảnh một giá trị ngẫu nhiên) bằng canvas 2D, đặt làm nền với kích thước 256/devicePixelRatio px để mỗi hạt đúng một điểm ảnh thật; `image-rendering: pixelated`; nhảy bằng background-position theo số px nguyên; độ đậm 0,12, trộn overlay.
   - Thử trên Chrome: phóng to nền trời lúc đứng yên và chỗ chuyển cảnh; đo lúc canvas vẽ ở 3456 px: trung vị 16,7 ms, chậm nhất 17,7 ms.
+
+## 2026-10-19, 20:52 — Trang đăng nhập / đăng ký kiểu "The application" của pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 20:52.
+- **Làm việc gì:** Làm trang `/dang-nhap` và `/dang-ky` giống phần đăng ký của pear.no: nhà thiên văn chỉ tay lên chòm sao, form là các ô kính nổi trên trời, nghiêng 3D theo con trỏ, viền sáng xoay theo góc nghiêng, sao lấp lánh, hai vòng quỹ đạo nét đứt xoay chậm, có lớp hạt nhiễu như phần mở đầu.
+- **Ứng dụng/module:** `web/src/components/auth/auth-scene.tsx` (mới), `web/src/app/dang-nhap/page.tsx`, `web/src/app/dang-ky/page.tsx`, `web/src/lib/grain.ts` (tách từ phần mở đầu để dùng chung), `web/src/app/globals.css`, `web/public/auth/sky.jpg`.
+- **Tác dụng:** Nút "Đăng nhập / Đăng ký" ở phần mở đầu đã có trang để tới; giao diện khớp với phần mở đầu.
+- **Làm như thế nào:**
+  - Xem trang Pear: ảnh nền là khung đầu của chuỗi `films/trans` (đã có trong bản tải về), lấy ở 1920 px. Đọc style của các ô (nền gradient kính, bóng đổ bên trong, viền bằng conic-gradient, mặt phẳng có perspective 1700px nghiêng bằng matrix3d) rồi tự viết lại bằng CSS: `.glass`, `.rim` (vòng 1px bằng mask-composite exclude, góc sáng theo biến `--a`), `.glint` (quầng sáng và 4 tia, nhấp nháy), `.orbit`.
+  - Sao lấp lánh đặt đúng các ngôi sao trong tranh: một khung cùng kích thước với ảnh khi cover-fit (max(100vw, 177.78vh)), sao đặt theo % trong khung đó.
+  - Form: đăng nhập (email, mật khẩu, "Quên mật khẩu?"), đăng ký (họ tên, email, mật khẩu từ 8 ký tự, nhập lại); kiểm tra bằng thuộc tính HTML (required, type=email, minLength) và kiểm tra hai mật khẩu khớp. Backend chưa có API tài khoản nên khi gửi, trang báo rõ là chưa gửi được.
+  - Điện thoại: không nghiêng, chữ và form xếp dọc, trang cuộn được, ảnh nền đứng yên.
+  - Gặp lỗi: dev server (Turbopack) giữ bản `globals.css` cũ trong bộ nhớ đệm trên ổ đĩa, kể cả sau khi khởi động lại (lần sửa hạt nhiễu trước cũng chỉ ăn phần JS). Dừng server, xoá `.next`, chạy lại thì nhận bản mới.
+  - Thử trên Chrome: khổ 1459 px và 375 px (iframe), nhập email/mật khẩu thử rồi gửi.
