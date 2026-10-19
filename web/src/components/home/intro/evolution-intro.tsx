@@ -69,12 +69,28 @@ const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 const noSubscribe = () => () => {}
 const readSkipped = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 let pick = -1
+// a tile of white noise, one value per device pixel, for the film grain (made once, on the client)
+let tile = ""
+const grainTile = () => {
+  if (tile) return tile
+  const c = document.createElement("canvas"), n = 256
+  c.width = c.height = n
+  const ctx = c.getContext("2d")!, img = ctx.createImageData(n, n)
+  for (let k = 0; k < n * n; k++) {
+    const g = Math.random() * 255
+    img.data.set([g, g, g, 255], k * 4)
+  }
+  ctx.putImageData(img, 0, 0)
+  return (tile = c.toDataURL())
+}
+const readGrain = () => `url(${grainTile()}) 0 0 / ${256 / Math.min(devicePixelRatio || 1, 3)}px`
 const readHero = () => (pick < 0 ? (pick = Math.floor(Math.random() * HEROES.length)) : pick)
 
 export function EvolutionIntro() {
   const root = useRef<HTMLElement>(null)
   const skipped = useSyncExternalStore(noSubscribe, readSkipped, () => false)
   const hero = HEROES[useSyncExternalStore(noSubscribe, readHero, () => 0)]
+  const grain = useSyncExternalStore(noSubscribe, readGrain, () => "none")
   const { rests, steps } = useMemo(() => ({
     rests: [{ id: hero.id, section: "hero", chapter: "Mở màn", loop: hero.id, pos: hero.pos, glow: [...hero.glow] }, ...SHARED] as Rest[],
     steps: [{ film: `hero-${hero.id}-in`, fade: true, veil: "signal" }, ...SHARED_STEPS] as Step[],
@@ -343,7 +359,7 @@ export function EvolutionIntro() {
         Phim đang tải<b className="ml-3 font-normal text-white/85">{loaded}%</b>
       </p>
       {/* the grain over the whole picture, like pear.no's */}
-      <div aria-hidden className="film-grain pointer-events-none absolute -inset-[15%]" />
+      <div aria-hidden className="film-grain pointer-events-none absolute inset-0" style={{ background: grain }} />
       {/* a shade so the words read: dark under white type, pale under ink */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" style={{ ...fade, opacity: ink ? 0 : 1 }} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#f3ead8]/80 via-[#f3ead8]/25 to-transparent" style={{ ...fade, opacity: ink ? 1 : 0 }} />

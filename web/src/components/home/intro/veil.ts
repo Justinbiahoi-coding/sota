@@ -163,9 +163,9 @@ export function makeVeil(canvas: HTMLCanvasElement): { draw: VeilDraw; size: () 
   const MODE = { signal: 0, burn: 1, soak: 2 }
   const t0 = performance.now()
 
-  // ponytail: the canvas renders at most 1.5x device pixels; the stipple is meant to be coarse
+  // at the screen's own pixels (up to 2x), so the stipple and the grains are one pixel sharp
   const size = () => {
-    const k = Math.min(devicePixelRatio || 1, 1.5)
+    const k = Math.min(devicePixelRatio || 1, 2)
     canvas.width = Math.round(canvas.clientWidth * k)
     canvas.height = Math.round(canvas.clientHeight * k)
     gl.viewport(0, 0, canvas.width, canvas.height)

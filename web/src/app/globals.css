@@ -158,19 +158,20 @@
   .rise { animation: none; }
 }
 
-/* the intro's film grain: a tile of noise over everything, jumping a few times a second */
+/* the intro's film grain: a tile of noise at the screen's own pixels (drawn by the intro, see
+   grainTile), over everything, jumping a few times a second by whole pixels so it stays sharp */
 @keyframes grain {
-  0% { transform: translate(0, 0); }
-  20% { transform: translate(-7%, 4%); }
-  40% { transform: translate(5%, -9%); }
-  60% { transform: translate(-3%, 8%); }
-  80% { transform: translate(9%, 2%); }
+  0% { background-position: 0 0; }
+  20% { background-position: -37px 19px; }
+  40% { background-position: 23px -41px; }
+  60% { background-position: -11px 53px; }
+  80% { background-position: 47px 7px; }
 }
 @utility film-grain {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncR type='linear' slope='3.2' intercept='-1.1'/%3E%3CfeFuncG type='linear' slope='3.2' intercept='-1.1'/%3E%3CfeFuncB type='linear' slope='3.2' intercept='-1.1'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode: overlay;
-  opacity: 0.42;
-  animation: grain 0.6s steps(1) infinite;
+  opacity: 0.12;
+  image-rendering: pixelated;
+  animation: grain 0.5s steps(1) infinite;
 }
 
 /* words arriving like ink taking to paper (the intro): blurred, then drawn in from the left.

@@ -356,3 +356,14 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Xem trang Pear lúc tải (chụp màn hình, đọc CSS `.boot` và đoạn mã điều khiển): ảnh poster blur 26px, saturate 0,62, brightness 0,92, scale 1,06; tiến độ lấy theo phần video đã buffer (tối đa 92% tới khi canplaythrough), tăng tối đa 0,55 mỗi giây.
   - Một ảnh `boot` (ảnh tĩnh của cảnh mở màn) nằm trên tranh; một vòng requestAnimationFrame đọc `buffered` của video lặp mở màn, nội suy filter/transform theo tiến độ (làm mềm bằng smoothstep), xong thì mờ ảnh đi trong 0,6 giây. Sau 6 giây thôi chờ phim. Trong lúc chờ không nhận cuộn/bấm; phần khung giao diện bọc trong một lớp ẩn tới khi xong, riêng chữ S vẫn hiện.
   - Thử trên Chrome: tải lại trang, chụp lúc 17%, lúc gần xong và lúc chữ đã hiện; không có lỗi trong console.
+
+## 2026-10-19, 20:36 — Phần mở đầu: hạt nhiễu sắc nét như pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 20:36.
+- **Làm việc gì:** Thiên thấy nhiễu của Pear đẹp và nét hơn. So kỹ thì thấy hai chỗ: canvas chuyển cảnh của mình vẽ ở 1,5x trên màn hình 2x nên chấm dither và hạt cát bị phóng to, nhòe; lớp hạt nhiễu là nhiễu fractal SVG vẽ theo pixel CSS, hạt mềm, to 2x2 điểm ảnh, lại bị dịch theo % nên bị nội suy.
+- **Ứng dụng/module:** `web/src/components/home/intro/veil.ts`, `evolution-intro.tsx`, `web/src/app/globals.css`.
+- **Tác dụng:** Hạt nhiễu và các chấm ở chỗ chuyển cảnh sắc từng điểm ảnh thật như trang gốc.
+- **Làm như thế nào:**
+  - Canvas WebGL vẽ theo đúng devicePixelRatio (tối đa 2).
+  - Lớp hạt: tạo một lần trên trình duyệt một ô 256x256 nhiễu trắng (mỗi điểm ảnh một giá trị ngẫu nhiên) bằng canvas 2D, đặt làm nền với kích thước 256/devicePixelRatio px để mỗi hạt đúng một điểm ảnh thật; `image-rendering: pixelated`; nhảy bằng background-position theo số px nguyên; độ đậm 0,12, trộn overlay.
+  - Thử trên Chrome: phóng to nền trời lúc đứng yên và chỗ chuyển cảnh; đo lúc canvas vẽ ở 3456 px: trung vị 16,7 ms, chậm nhất 17,7 ms.
