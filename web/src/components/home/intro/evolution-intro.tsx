@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { ArrowRight } from "lucide-react"
+import { makeVeil, ready, type Veil } from "./veil"
 
 // The opening, laid out like pear.no: a full-screen story over the whole site (images and films by
 // Pear, pear.no, made with AI). A rail down the left (mark, menu, progress ticks), a rule across the
@@ -13,20 +14,22 @@ import { ArrowRight } from "lucide-react"
 // films with the hand, like pear.no, forward and back, stopping wherever the hand stops; a click, a
 // tap or an arrow key plays the film on to the next painting by itself and rests there. Scrolling
 // during a playing film takes over from the frame it is on. The films are encoded with a keyframe
-// every third frame, so a seek decodes at most two frames.
+// every third frame, so a seek decodes at most two frames. Where one painting gives way to a film that
+// starts elsewhere, the hand-over is drawn in WebGL (veil.ts): the signal break with its flash out of the
+// opening, a burn, a soak; without WebGL the film simply dissolves in.
 // It shows on every visit, like pear.no; leaving (the last scene, "Bỏ qua", Esc) fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
 type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
-type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean } // light: a pale painting, ink type over it
-type Step = { film: string; fade?: boolean } // fade: the film's first frame differs from the rest before it, so it dissolves in
+type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean; glow?: [number, number] } // light: a pale painting, ink type over it; glow: its point of light
+type Step = { film: string; fade?: boolean; veil?: Veil } // fade: the film's first frame differs from the rest before it, so it dissolves in; veil: how, in WebGL
 
 // the three openings (pos: where the figure stands, kept in frame on a narrow screen)
 const HEROES = [
-  { id: "signal", pos: "70% 60%" }, // the statue raising a torch over a crowd
-  { id: "colossus", pos: "73% 54%" }, // the golden pear on its plinth
-  { id: "reveal", pos: "68% 50%" }, // the youth drawing a curtain
-]
+  { id: "signal", pos: "70% 60%", glow: [0.715, 0.075] }, // the statue raising a pear of light over a crowd
+  { id: "colossus", pos: "73% 54%", glow: [0.73, 0.48] }, // the golden pear on its plinth (the glint on it)
+  { id: "reveal", pos: "68% 50%", glow: [0.85, 0.37] }, // the youth drawing a curtain (the glint at its edge)
+] as const
 // the story after the opening, shared by every opening
 const SHARED: Rest[] = [
   { id: "collection", section: "collection", chapter: "Bộ sưu tập" },
@@ -38,9 +41,9 @@ const SHARED: Rest[] = [
 ]
 // SHARED_STEPS[i] carries the story from SHARED[i] to SHARED[i + 1]
 const SHARED_STEPS: Step[] = [
-  { film: "coda", fade: true }, // the scaffold, down to the drawing in her hands
-  { film: "plan", fade: true }, // the golden pear on its scaffold, seen from above
-  { film: "tree", fade: true }, // the woman picking pears, into the tree
+  { film: "coda", fade: true, veil: "burn" }, // the scaffold, down to the drawing in her hands
+  { film: "plan", fade: true, veil: "soak" }, // the golden pear on its scaffold, seen from above
+  { film: "tree", fade: true, veil: "burn" }, // the woman picking pears, into the tree
   { film: "flysky" }, // through the leaves and clouds to the stars
   { film: "trans" }, // the stars down to the couple watering the tree
 ]
@@ -54,6 +57,7 @@ const FAQ = [
 const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
 const SCROLL = 1200 // px of wheel per gap
+const VEIL = 0.35 // of a film with a veil, the stretch the hand-over takes
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 
@@ -68,8 +72,8 @@ export function EvolutionIntro() {
   const skipped = useSyncExternalStore(noSubscribe, readSkipped, () => false)
   const hero = HEROES[useSyncExternalStore(noSubscribe, readHero, () => 0)]
   const { rests, steps } = useMemo(() => ({
-    rests: [{ id: hero.id, section: "hero", chapter: "Mở màn", loop: hero.id, pos: hero.pos }, ...SHARED] as Rest[],
-    steps: [{ film: `hero-${hero.id}-in`, fade: true }, ...SHARED_STEPS] as Step[],
+    rests: [{ id: hero.id, section: "hero", chapter: "Mở màn", loop: hero.id, pos: hero.pos, glow: [...hero.glow] }, ...SHARED] as Rest[],
+    steps: [{ film: `hero-${hero.id}-in`, fade: true, veil: "signal" }, ...SHARED_STEPS] as Step[],
   }), [hero])
   const N = rests.length
   const [closed, setClosed] = useState(false)
@@ -81,6 +85,7 @@ export function EvolutionIntro() {
   const films = useRef<(HTMLVideoElement | null)[]>([])
   const layers = useRef<(HTMLDivElement | null)[]>([])
   const loops = useRef<Record<string, HTMLVideoElement | null>>({})
+  const canvas = useRef<HTMLCanvasElement>(null)
   const left = useRef(false)
   const jumpTo = useRef<(i: number) => void>(() => {})
   const visible = !skipped && !closed
@@ -115,14 +120,29 @@ export function EvolutionIntro() {
   // the story engine: p runs from 0 to N - 1, each whole number a rest, the films in between
   useEffect(() => {
     if (!visible) return
-    const el = root.current!, vids = films.current, rest = layers.current
-    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true
+    const el = root.current!, vids = films.current, rest = layers.current, cv = canvas.current!
+    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true, veiled = false
     const through = (u: number) => clamp((u - HOLD) / (1 - 2 * HOLD)) // how far into the film, at u into the gap
+    const veil = makeVeil(cv)
+    veil?.size()
+    const wide = matchMedia("(min-width: 768px)")
+    // a rest's object-position as fractions (the layers drop it on a wide screen)
+    const posOf = (r: Rest): [number, number] => {
+      if (wide.matches || !r.pos) return [0.5, 0.5]
+      const [x, y] = r.pos.split(" ").map((q) => parseFloat(q) / 100)
+      return [x, y]
+    }
 
     const draw = () => {
       const i = Math.min(Math.floor(p), N - 1), u = p - i
       const show = i < N - 1 && u > HOLD && u < 1 - HOLD ? i : -1 // the film on screen
       const f = through(u), lit = i < N - 1 && u >= 1 - HOLD ? i + 1 : i // the rest on screen when no film is
+      // the hand-over in WebGL, over both, while it lasts
+      const mode = show >= 0 && veil ? steps[show].veil : undefined
+      const from = rest[i]?.firstElementChild as HTMLImageElement | HTMLVideoElement | null, to = vids[show]
+      veiled = !!mode && f < VEIL && ready(from) && ready(to)
+      if (veiled) veil!.draw(from!, to!, f / VEIL, mode!, rests[i].glow ?? [0.5, 0.5], posOf(rests[i]))
+      cv.style.opacity = veiled ? "1" : "0"
       rest.forEach((L, k) => {
         if (!L) return
         // under a film: the rest it leaves while it dissolves in, the rest it reaches once it covers
@@ -132,7 +152,7 @@ export function EvolutionIntro() {
       vids.forEach((v, k) => {
         if (!v) return
         if (k !== show) { v.style.opacity = "0"; return }
-        v.style.opacity = String(steps[k].fade ? clamp(f / 0.12) : 1)
+        v.style.opacity = String(steps[k].fade && !(veil && steps[k].veil) ? clamp(f / 0.12) : 1)
         // scrubbing: seek to the frame, one seek at a time (a playing film runs on its own)
         if (playing !== k && v.duration && !v.seeking && Math.abs(v.currentTime - f * v.duration) > 0.012) v.currentTime = f * v.duration
       })
@@ -151,7 +171,8 @@ export function EvolutionIntro() {
         if (Math.abs(target - p) < 0.0005) p = target
       }
       draw()
-      if (playing >= 0 || p !== target) raf = requestAnimationFrame(frame)
+      // (a veil keeps moving while it is on screen, even with the hand still)
+      if (playing >= 0 || p !== target || veiled) raf = requestAnimationFrame(frame)
     }
     const kick = () => { if (!raf) raf = requestAnimationFrame(frame) }
     const stop = () => { if (playing >= 0) { vids[playing]?.pause(); playing = -1 } }
@@ -216,6 +237,8 @@ export function EvolutionIntro() {
     el.addEventListener("touchmove", onTouchMove, { passive: false })
     addEventListener("keydown", onKey)
     el.addEventListener("click", onClick)
+    const onResize = () => { veil?.size(); draw() }
+    addEventListener("resize", onResize)
     draw()
     return () => {
       el.removeEventListener("wheel", onWheel)
@@ -223,16 +246,21 @@ export function EvolutionIntro() {
       el.removeEventListener("touchmove", onTouchMove)
       removeEventListener("keydown", onKey)
       el.removeEventListener("click", onClick)
+      removeEventListener("resize", onResize)
       cancelAnimationFrame(raf)
       stop()
     }
-  }, [visible, leave, N, steps])
+  }, [visible, leave, N, steps, rests])
 
   if (!visible) return null
   const rest = rests[at]
   const ink = !!rest.light && still // pale painting under the chrome: ink instead of white
   const fade = { transition: `opacity ${FADE}ms ease, color ${FADE}ms ease, border-color ${FADE}ms ease` }
-  const shown = (s: Section) => ({ ...fade, opacity: still && rest.section === s ? 1 : 0, pointerEvents: still && rest.section === s ? undefined : "none" } as React.CSSProperties)
+  // a section's wrapper: shown while the story rests on it (data-on starts its words' ink)
+  const shown = (s: Section) => {
+    const on = still && rest.section === s
+    return { "data-on": on, style: { ...fade, opacity: on ? 1 : 0, pointerEvents: on ? undefined : "none" } as React.CSSProperties }
+  }
   const tone = ink ? "text-[#1c1a17]" : "text-white"
   const rule = ink ? "bg-[#1c1a17]/20" : "bg-white/22"
 
@@ -260,6 +288,7 @@ export function EvolutionIntro() {
       {steps.map((s, i) => (
         <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: 0 }} />
       ))}
+      <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 size-full" style={{ opacity: 0 }} />
       {/* a shade so the words read: dark under white type, pale under ink */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" style={{ ...fade, opacity: ink ? 0 : 1 }} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#f3ead8]/80 via-[#f3ead8]/25 to-transparent" style={{ ...fade, opacity: ink ? 1 : 0 }} />
@@ -299,14 +328,14 @@ export function EvolutionIntro() {
 
       {/* ---------------------------------------------------------------- the sections */}
       {/* the opening */}
-      <div style={shown("hero")}>
+      <div {...shown("hero")}>
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/45 via-black/15 to-transparent md:hidden" />
         <div className={`pointer-events-none absolute inset-x-0 top-[74vh] h-px ${rule}`} />
         <span className="pointer-events-none absolute left-14 top-[74vh] -translate-x-1/2 -translate-y-1/2 text-sm md:left-[72px]">✦</span>
         <span className="pointer-events-none absolute right-[14vw] top-[74vh] hidden -translate-y-1/2 translate-x-1/2 text-sm md:block">✦</span>
         <div className="absolute left-[calc(3.5rem+1.25rem)] right-5 top-[28vh] md:left-[calc(72px+4vw)] md:right-auto">
-          <h1 className="font-heading text-5xl font-light leading-[0.98] tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.25)] sm:text-7xl xl:text-[7.5rem]">Space of the Art.</h1>
-          <p className="mt-6 font-heading text-2xl font-light leading-snug sm:text-[2rem]">Hai mươi mốt bảo tàng Smithsonian,<br />một lối vào.</p>
+          <h1 className="ink font-heading text-5xl font-light leading-[0.98] tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.25)] sm:text-7xl xl:text-[7.5rem]">Space of the Art.</h1>
+          <p className="ink mt-6 font-heading text-2xl font-light leading-snug [animation-delay:150ms] sm:text-[2rem]">Hai mươi mốt bảo tàng Smithsonian,<br />một lối vào.</p>
           <button data-start className="placard mt-10 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
             Bắt đầu tham quan
             <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
@@ -314,7 +343,7 @@ export function EvolutionIntro() {
         </div>
         <div className="pointer-events-none absolute left-[calc(72px+4vw)] right-5 top-[calc(74vh+2.5rem)] hidden gap-16 md:flex">
           <span className="placard h-fit shrink-0 rounded-[3px] bg-white/12 px-3 py-2">Cụm Smithsonian</span>
-          <p className="max-w-xl text-lg leading-relaxed [text-shadow:0_1px_16px_rgb(0_0_0/0.35)]">Xem hiện vật thật từ bộ sưu tập Smithsonian, dạo phòng trưng bày 3D của từng bảo tàng và đặt vé cho cả ngày tham quan trong một lần thanh toán.</p>
+          <p className="ink max-w-xl text-lg leading-relaxed [animation-delay:300ms] [text-shadow:0_1px_16px_rgb(0_0_0/0.35)]">Xem hiện vật thật từ bộ sưu tập Smithsonian, dạo phòng trưng bày 3D của từng bảo tàng và đặt vé cho cả ngày tham quan trong một lần thanh toán.</p>
         </div>
       </div>
 
@@ -326,8 +355,8 @@ export function EvolutionIntro() {
         body="Đặt vé cho nhiều nơi rồi thanh toán một lần. Mỗi vé có mã QR để quét ở cửa, xem lại trong Vé của tôi." cta={{ href: "/dat-ve", label: "Đặt vé" }} />
 
       {/* questions, round the tree */}
-      <div style={shown("faq")}>
-        <h2 className="pointer-events-none absolute inset-x-0 top-[20vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-8xl">
+      <div {...shown("faq")}>
+        <h2 className="ink pointer-events-none absolute inset-x-0 top-[20vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-8xl">
           Hỏi trước khi <span className="italic">ghé thăm</span>
         </h2>
         <ul className="absolute inset-x-5 top-[38vh] grid gap-3 md:inset-x-[12vw] md:grid-cols-3 md:gap-x-10 md:gap-y-8">
@@ -346,11 +375,11 @@ export function EvolutionIntro() {
         body="Xem bảo tàng nào nằm ở đâu, hôm nay mở cửa tới mấy giờ và đang có triển lãm gì." cta={{ href: "/ban-do", label: "Xem bản đồ" }} />
 
       {/* the close: the name, framed by rules, over the couple tending the tree */}
-      <div style={shown("end")}>
+      <div {...shown("end")}>
         <div className="pointer-events-none absolute left-1/2 top-[14vh] h-[56vh] w-[min(80vw,42rem)] -translate-x-1/2 border border-white/30">
           <span className="absolute -left-1.5 -top-2.5 text-sm">✦</span><span className="absolute -right-1.5 -top-2.5 text-sm">✦</span>
-          <p className="mt-[6vh] text-center font-heading text-[clamp(5rem,16vw,12rem)] font-light italic leading-none tracking-tight [text-shadow:0_4px_40px_rgb(0_0_0/0.3)]">sota.</p>
-          <p className="mx-auto mt-4 max-w-sm text-center font-heading text-xl leading-snug [text-shadow:0_1px_16px_rgb(0_0_0/0.45)]">Một lối vào chung cho cụm bảo tàng Smithsonian.</p>
+          <p className="ink mt-[6vh] text-center font-heading text-[clamp(5rem,16vw,12rem)] font-light italic leading-none tracking-tight [text-shadow:0_4px_40px_rgb(0_0_0/0.3)]">sota.</p>
+          <p className="ink mx-auto mt-4 max-w-sm text-center font-heading [animation-delay:200ms] text-xl leading-snug [text-shadow:0_1px_16px_rgb(0_0_0/0.45)]">Một lối vào chung cho cụm bảo tàng Smithsonian.</p>
         </div>
         <div className="absolute left-1/2 top-[73vh] -translate-x-1/2">
           <button onClick={leave} className="placard inline-flex items-center gap-4 rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
@@ -371,18 +400,18 @@ export function EvolutionIntro() {
 }
 
 // a feature section like pear.no's: a large title, a lead in the serif, a label and a short text, a button
-function Block({ show, side, title, lead, label, body, cta, narrow, shade }: { show: React.CSSProperties; side: "left" | "right"; title: string; lead: string; label: string; body: string; cta: { href: string; label: string }; narrow?: boolean; shade?: boolean }) {
+function Block({ show, side, title, lead, label, body, cta, narrow, shade }: { show: { "data-on": boolean; style: React.CSSProperties }; side: "left" | "right"; title: string; lead: string; label: string; body: string; cta: { href: string; label: string }; narrow?: boolean; shade?: boolean }) {
   return (
-    <div style={show}>
+    <div {...show}>
       {/* (over a busy painting: a dark wash on the side the words sit) */}
       {shade && <div className={`pointer-events-none absolute inset-0 from-black/65 via-black/25 to-transparent ${side === "left" ? "bg-gradient-to-r" : "bg-gradient-to-l"}`} />}
       <div className={`absolute bottom-[16vh] left-[calc(3.5rem+1.25rem)] right-5 md:bottom-auto md:top-[24vh] ${narrow ? "md:w-[min(25vw,24rem)]" : "md:w-[min(40vw,36rem)]"} ${side === "right" ? `md:left-auto ${narrow ? "md:right-[3.5vw]" : "md:right-[8vw]"}` : "md:left-[calc(72px+4vw)] md:right-auto"}`}>
-        <h2 className={`font-heading text-[2.4rem] font-light leading-[1.02] tracking-tight [text-shadow:0_2px_24px_rgb(0_0_0/0.2)] ${narrow ? "sm:text-5xl" : "sm:text-6xl"}`}>{title}</h2>
-        <p className="mt-4 max-w-md font-heading text-lg leading-snug sm:mt-5 sm:text-2xl">{lead}</p>
+        <h2 className={`ink font-heading text-[2.4rem] font-light leading-[1.02] tracking-tight [text-shadow:0_2px_24px_rgb(0_0_0/0.2)] ${narrow ? "sm:text-5xl" : "sm:text-6xl"}`}>{title}</h2>
+        <p className="ink mt-4 max-w-md font-heading text-lg leading-snug [animation-delay:150ms] sm:mt-5 sm:text-2xl">{lead}</p>
         {/* (on a phone the label and the short text give way to the painting) */}
         <div className="mt-8 hidden gap-8 sm:flex">
           <span className="placard h-fit shrink-0 rounded-[3px] bg-current/10 px-3 py-2">{label}</span>
-          <p className="max-w-xs text-sm leading-relaxed">{body}</p>
+          <p className="ink max-w-xs text-sm leading-relaxed [animation-delay:300ms]">{body}</p>
         </div>
         <Link href={cta.href} className="placard mt-8 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
           {cta.label}

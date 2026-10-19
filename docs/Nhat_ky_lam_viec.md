@@ -322,3 +322,15 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`.
 - **Tác dụng:** Ai vào trang cũng thấy phần mở đầu; vẫn thoát được bằng cảnh cuối, nút "Bỏ qua" hoặc phím Esc. Máy bật chế độ giảm chuyển động thì bỏ qua luôn.
 - **Làm như thế nào:** Bỏ khóa `sota-intro-seen` trong localStorage và hàm đánh dấu đã xem; điều kiện bỏ qua chỉ còn `prefers-reduced-motion`. Thử trên Chrome: tải trang, Esc đóng, tải lại thì phần mở đầu hiện lại.
+
+## 2026-10-19, 19:28 — Phần mở đầu: hiệu ứng chuyển cảnh và chớp sáng như pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 19:28.
+- **Làm việc gì:** Xem kỹ pear.no (cuộn từng đoạn, đọc phần chú thích shader trong mã của họ) để tìm các hiệu ứng còn thiếu, rồi tự viết lại: chỗ rời cảnh mở màn "vỡ tín hiệu" kèm chớp sáng, vết cháy có viền than hồng, mảng loang từ giữa, chữ hiện ra như mực thấm.
+- **Ứng dụng/module:** `web/src/components/home/intro/veil.ts` (mới), `evolution-intro.tsx`, `web/src/app/globals.css`.
+- **Tác dụng:** Các đoạn chuyển cảnh không còn là mờ dần đơn thuần mà có hiệu ứng giống trang gốc; vẫn 60 khung hình/giây.
+- **Làm như thế nào:**
+  - Một canvas WebGL phủ lên tranh và phim, chỉ vẽ trong 35% đầu của các phim chuyển cảnh, mỗi khung đưa ảnh/video cảnh cũ và phim mới vào làm hai texture. Shader tự viết, ba kiểu: signal (vòng sáng lượn sóng loang ra từ điểm sáng trong tranh như quả lê trên tay tượng; ở mép vòng hình vỡ ô, xé dòng, tách màu, đổi cảnh theo từng chấm dither Bayer 4x4, mép loé sáng; lúc đầu có quầng chớp sáng từ điểm đó), burn (vết cắt chéo răng cưa bằng nhiễu fbm, phía trước cháy xém, mép than hồng) và soak (cảnh mới thấm ra từ giữa thành từng mảng). Không có WebGL thì phim mờ dần như cũ.
+  - Chữ của từng phần: thêm keyframes `ink` (mờ nhòe rồi rõ dần từ trái sang phải bằng mask-image) chạy mỗi lần phần đó hiện (`data-on`).
+  - Lỗi gặp khi thử: ở chế độ dev React chạy effect hai lần, lần dọn dẹp gọi `loseContext()` làm canvas mất ngữ cảnh WebGL vĩnh viễn; bỏ lời gọi đó.
+  - Thử trên Chrome: cuộn qua từng chuyển cảnh (mở màn → bộ sưu tập, bộ sưu tập → tham quan 3D, → đặt vé), đo khung hình lúc canvas đang vẽ: trung vị 16,7 ms, chậm nhất 17,6 ms.
