@@ -24,7 +24,7 @@ import { readGrain } from "@/lib/grain"
 // fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
-type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
+type Section = "hero" | "collection" | "shop" | "account" | "gallery" | "tickets" | "faq" | "map" | "end"
 type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean; glow?: [number, number] } // light: a pale painting, ink type over it; glow: its point of light
 type Step = { film: string; fade?: boolean; veil?: Veil } // fade: the film's first frame differs from the rest before it, so it dissolves in; veil: how, in WebGL
 
@@ -37,6 +37,8 @@ const HEROES = [
 // the story after the opening, shared by every opening
 const SHARED: Rest[] = [
   { id: "collection", section: "collection", chapter: "Bộ sưu tập" },
+  { id: "shop", section: "shop", chapter: "Cửa hàng" },
+  { id: "share", section: "account", chapter: "Tài khoản", light: true },
   { id: "blueprint", section: "gallery", chapter: "Tham quan 3D", light: true },
   { id: "plan", section: "tickets", chapter: "Đặt vé", light: true },
   { id: "garden", section: "faq", chapter: "Hỏi đáp" },
@@ -45,6 +47,8 @@ const SHARED: Rest[] = [
 ]
 // SHARED_STEPS[i] carries the story from SHARED[i] to SHARED[i + 1]
 const SHARED_STEPS: Step[] = [
+  { film: "harvest" }, // up into the tree, a hand reaching for the golden pear
+  { film: "share" }, // the youth with the pear, cutting it, the halves handed across
   { film: "coda", fade: true, veil: "burn" }, // the scaffold, down to the drawing in her hands
   { film: "plan", fade: true, veil: "soak" }, // the golden pear on its scaffold, seen from above
   { film: "tree", fade: true, veil: "burn" }, // the woman picking pears, into the tree
@@ -433,6 +437,10 @@ export function EvolutionIntro() {
 
       <Block show={shown("collection")} side="left" title="Hơn 5 triệu hiện vật." lead="Ảnh và thông tin từng hiện vật, lấy thẳng từ Smithsonian Open Access." label="Bộ sưu tập" shade
         body="Tìm theo tên, tác giả hoặc bảo tàng; mỗi hiện vật có trang riêng với ảnh lớn, mô tả và nơi đang trưng bày." cta={{ href: "/hien-vat", label: "Xem hiện vật" }} />
+      <Block show={shown("shop")} side="right" title="Mang một món về nhà." lead="Quà lưu niệm từ các bảo tàng Smithsonian: bản in, sách, đồ chơi khoa học." label="Cửa hàng" narrow shade
+        body="Chọn món, cho vào chung giỏ với vé tham quan rồi thanh toán một lần; đơn quà được giao tận nơi." cta={{ href: "/cua-hang", label: "Vào cửa hàng" }} />
+      <Block show={shown("account")} side="right" title="Của bạn, ở một chỗ." lead="Vé, đơn hàng và những hiện vật bạn đã lưu, trong một tài khoản." label="Tài khoản" narrow
+        body="Xem lại vé có mã QR, theo dõi đơn quà lưu niệm và mở lại hiện vật bạn thích trên bất kỳ máy nào." cta={{ href: "/dang-ky", label: "Tạo tài khoản" }} />
       <Block show={shown("gallery")} side="right" title="Bước vào từng bảo tàng." lead="Mỗi bảo tàng có một phòng trưng bày 3D, dựng theo bản vẽ của riêng nó." label="Tham quan 3D"
         body="Đi giữa các bức tường, bấm vào hiện vật để xem gần, rồi đọc tiếp về nó ở trang hiện vật." cta={{ href: "/bao-tang", label: "Xem các bảo tàng" }} />
       <Block show={shown("tickets")} side="right" title="Một giỏ hàng, cả ngày tham quan." lead="Chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ còn chỗ." label="Đặt vé" narrow

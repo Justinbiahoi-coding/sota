@@ -392,3 +392,15 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Viết lại kiểu `signal` theo thuật toán ring: bán kính chuẩn hoá theo góc xa nhất; mép vòng nhiều thùy theo hai hoà âm góc; vùng vỡ theo nhịp các vòng tròn trong tranh (sin(r*46)) trộn nhiễu fbm; xé hướng tâm theo từng vòng, xé dòng 7 px; khối hai cỡ (11 px và 3 px), mỗi khối chuyển cảnh ở một thời điểm riêng theo hash; tách màu theo bán kính 13 px; giữa mép vòng in lại thành chữ bằng font bitmap 5x5 tự viết (' .:-+=*%#@') kèm nhiễu sáng; loé ấm ở mép; cuối đoạn từng khối 3 px giật ngang. Bỏ quầng tia sáng, hạt cát, ép màu, lưới chấm mình tự thêm trước đây.
   - Engine: phim cầu nối đứng ở khung đầu trong lúc vòng loang (35% đầu đoạn), xong mới chạy; khi bấm thì cho vòng chạy khoảng 1,5 giây rồi mới phát phim; khi đứng ở cảnh mở màn canvas vẫn vẽ ở t = 0 để vòng thở quanh điểm sáng.
   - Thử trên Chrome cả 3 cảnh (signal, reveal, colossus), so với ảnh chụp từ pear.no; đo lúc đứng yên: trung vị 16,7 ms, chậm nhất 17,2 ms.
+
+## 2026-10-19, 21:27 — Phần mở đầu: thêm lại đoạn renaissance đã cắt, 2 chương mới
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 21:27.
+- **Làm việc gì:** Thêm lại khung 100 đến 362 của phim renaissance (trước đây chỉ dùng tới khung 100) thành 2 chương mới giữa "Bộ sưu tập" và "Tham quan 3D": "Cửa hàng" (bàn tay hái quả lê vàng) và "Tài khoản" (hai bàn tay trao hai nửa quả lê). Hiệu ứng cháy sang cảnh giàn giáo giờ bắt đầu từ cảnh hai nửa quả lê, đúng thứ tự như pear.no.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/public/intro/` (`harvest.mp4`, `share.mp4`, `shop.jpg`, `share.jpg`).
+- **Tác dụng:** Phần mở đầu có đủ đoạn phim như trang gốc và giới thiệu thêm hai tính năng của Sota: cửa hàng quà lưu niệm và tài khoản.
+- **Làm như thế nào:**
+  - Xem contact sheet khung 100–362 để chọn điểm dừng: khung 172 (hái quả lê) và khung 362 (trao hai nửa).
+  - Nén 2 phim từ chuỗi khung hình như các phim khác (48 khung/giây, 1440 px, crf 25, keyframe mỗi 3 khung): `harvest` (khung 100–172) và `share` (khung 172–362). Ảnh tĩnh là khung cuối của mỗi phim nên không cần mờ dần khi chuyển.
+  - Thêm 2 rest và 2 step vào danh sách chương; chữ Cửa hàng ở cột hẹp bên phải có lớp tối (nền lá dày), chữ Tài khoản màu mực ở cột hẹp bên phải trên nền giấy sáng; nút trỏ tới `/cua-hang` và `/dang-ky`.
+  - Thử trên Chrome: bấm qua Bộ sưu tập → Cửa hàng → Tài khoản → cháy sang Tham quan 3D.
