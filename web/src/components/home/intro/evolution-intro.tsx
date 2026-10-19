@@ -14,7 +14,7 @@ import { ArrowRight } from "lucide-react"
 // tap or an arrow key plays the film on to the next painting by itself and rests there. Scrolling
 // during a playing film takes over from the frame it is on. The films are encoded with a keyframe
 // every third frame, so a seek decodes at most two frames.
-// Leaving (the last scene, "Bỏ qua", Esc, or any link) fades it away and remembers it was seen.
+// It shows on every visit, like pear.no; leaving (the last scene, "Bỏ qua", Esc) fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
 type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
@@ -51,20 +51,15 @@ const FAQ = [
   { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi trong trang tài khoản và hủy vé chưa dùng." },
   { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
-const SEEN_KEY = "sota-intro-seen"
 const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
 const SCROLL = 1200 // px of wheel per gap
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
-const markSeen = () => { try { localStorage.setItem(SEEN_KEY, "1") } catch {} }
 
-// read on the client only: skipped (seen before, or reduced motion) and which opening to show
+// read on the client only: skipped (reduced motion) and which opening to show
 const noSubscribe = () => () => {}
-const readSkipped = () => {
-  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return true
-  try { return !!localStorage.getItem(SEEN_KEY) } catch { return false }
-}
+const readSkipped = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 let pick = -1
 const readHero = () => (pick < 0 ? (pick = Math.floor(Math.random() * HEROES.length)) : pick)
 
@@ -90,12 +85,11 @@ export function EvolutionIntro() {
   const jumpTo = useRef<(i: number) => void>(() => {})
   const visible = !skipped && !closed
 
-  // fade away onto the home page, and remember it was seen
+  // fade away onto the home page
   const leave = useCallback(() => {
     if (left.current) return
     left.current = true
     setLeaving(true)
-    markSeen()
     setTimeout(() => setClosed(true), FADE)
   }, [])
 
@@ -284,7 +278,7 @@ export function EvolutionIntro() {
       <p className="placard pointer-events-none absolute left-[calc(3.5rem+1.25rem)] top-[calc(3.5rem+1.25rem)] md:left-[calc(72px+1.5rem)] md:top-[calc(72px+1.5rem)]" style={fade}>
         {String(at + 1).padStart(2, "0")} · {rest.chapter}
       </p>
-      <Link href="/dang-nhap" onClick={markSeen} className="placard absolute right-4 top-3 inline-flex items-center gap-3 rounded-[3px] bg-[#111] py-1.5 pl-4 pr-1.5 text-white md:right-8 md:top-[18px]">
+      <Link href="/dang-nhap" className="placard absolute right-4 top-3 inline-flex items-center gap-3 rounded-[3px] bg-[#111] py-1.5 pl-4 pr-1.5 text-white md:right-8 md:top-[18px]">
         <span className="sm:hidden">Đăng nhập</span><span className="hidden sm:inline">Đăng nhập / Đăng ký</span>
         <span className="grid size-7 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
       </Link>
@@ -390,7 +384,7 @@ function Block({ show, side, title, lead, label, body, cta, narrow, shade }: { s
           <span className="placard h-fit shrink-0 rounded-[3px] bg-current/10 px-3 py-2">{label}</span>
           <p className="max-w-xs text-sm leading-relaxed">{body}</p>
         </div>
-        <Link href={cta.href} onClick={markSeen} className="placard mt-8 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
+        <Link href={cta.href} className="placard mt-8 inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
           {cta.label}
           <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
         </Link>

@@ -314,3 +314,11 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Đo khi tua liên tục qua một đoạn phim: 60 khung hình/giây (trung vị 16,7 ms, chậm nhất 18 ms), không có tác vụ dài. Thử thêm: cuộn tới, cuộn lùi, bấm để tự chạy tới cảnh sau, nhảy bằng menu, cuộn quá cảnh cuối để thoát.
 
 ---
+
+## 2026-10-19, 19:10 — Phần mở đầu hiện ở mọi lần vào trang
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 19:10.
+- **Làm việc gì:** Theo ý Thiên, phần mở đầu hiện lại mỗi lần vào trang chủ như pear.no, thay vì chỉ hiện lần đầu.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`.
+- **Tác dụng:** Ai vào trang cũng thấy phần mở đầu; vẫn thoát được bằng cảnh cuối, nút "Bỏ qua" hoặc phím Esc. Máy bật chế độ giảm chuyển động thì bỏ qua luôn.
+- **Làm như thế nào:** Bỏ khóa `sota-intro-seen` trong localStorage và hàm đánh dấu đã xem; điều kiện bỏ qua chỉ còn `prefers-reduced-motion`. Thử trên Chrome: tải trang, Esc đóng, tải lại thì phần mở đầu hiện lại.
