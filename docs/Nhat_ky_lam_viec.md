@@ -345,3 +345,14 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Shader kiểu signal: thêm một vùng rộng quanh mép vòng, trong đó mỗi điểm ảnh lấy mẫu lệch đi một chút theo nhiễu và theo hướng vòng loang (thành hạt cát), ép màu qua dither Bayer (càng gần mép càng ít bậc màu), phủ lưới chấm sáng ở mép, quầng chớp sáng có thêm tia sáng (nhiễu theo góc). Kiểu burn có thêm hạt ở vết cắt.
   - Lớp hạt nhiễu: utility `film-grain` (một ô nhiễu SVG feTurbulence đã kéo giãn độ tương phản, trộn overlay, nhảy vị trí vài lần mỗi giây bằng keyframes `grain`), phủ toàn bộ phần mở đầu.
   - Thử trên Chrome: phóng to chỗ chuyển cảnh và nền trời/giấy lúc đứng yên; đo khung hình lúc canvas vẽ: trung vị 16,7 ms, chậm nhất 17,7 ms.
+
+## 2026-10-19, 20:19 — Phần mở đầu: ảnh mờ rồi rõ dần lúc mới vào trang, như pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 20:19.
+- **Làm việc gì:** Thêm màn chờ lúc vào trang giống pear.no: tranh mở màn hiện ra nhòe, nhạt màu, hơi phóng to; rõ dần theo phần trăm phim đã tải, góc dưới có dòng "Phim đang tải N%"; chữ, đường kẻ, menu, nút đăng nhập chỉ hiện sau khi tranh rõ hẳn.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`.
+- **Tác dụng:** Người xem không thấy khung hình trống hay phim giật lúc đang tải; vào trang có một nhịp mở đầu như trang gốc.
+- **Làm như thế nào:**
+  - Xem trang Pear lúc tải (chụp màn hình, đọc CSS `.boot` và đoạn mã điều khiển): ảnh poster blur 26px, saturate 0,62, brightness 0,92, scale 1,06; tiến độ lấy theo phần video đã buffer (tối đa 92% tới khi canplaythrough), tăng tối đa 0,55 mỗi giây.
+  - Một ảnh `boot` (ảnh tĩnh của cảnh mở màn) nằm trên tranh; một vòng requestAnimationFrame đọc `buffered` của video lặp mở màn, nội suy filter/transform theo tiến độ (làm mềm bằng smoothstep), xong thì mờ ảnh đi trong 0,6 giây. Sau 6 giây thôi chờ phim. Trong lúc chờ không nhận cuộn/bấm; phần khung giao diện bọc trong một lớp ẩn tới khi xong, riêng chữ S vẫn hiện.
+  - Thử trên Chrome: tải lại trang, chụp lúc 17%, lúc gần xong và lúc chữ đã hiện; không có lỗi trong console.

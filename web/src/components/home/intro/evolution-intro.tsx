@@ -17,7 +17,10 @@ import { makeVeil, ready, type Veil } from "./veil"
 // every third frame, so a seek decodes at most two frames. Where one painting gives way to a film that
 // starts elsewhere, the hand-over is drawn in WebGL (veil.ts): the signal break with its flash out of the
 // opening, a burn, a soak; without WebGL the film simply dissolves in.
-// It shows on every visit, like pear.no; leaving (the last scene, "Bỏ qua", Esc) fades it away.
+// It shows on every visit, like pear.no, and arrives the same way: the opening painting first, out of
+// focus, drained and held close, coming into focus as its film loads (with the percentage along the
+// bottom); the words and the chrome follow once it is sharp. Leaving (the last scene, "Bỏ qua", Esc)
+// fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
 type Section = "hero" | "collection" | "gallery" | "tickets" | "faq" | "map" | "end"
@@ -58,6 +61,7 @@ const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
 const SCROLL = 1200 // px of wheel per gap
 const VEIL = 0.35 // of a film with a veil, the stretch the hand-over takes
+const BOOT = 6000 // ms: the arrival gives up waiting on the film after this
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 
@@ -82,6 +86,10 @@ export function EvolutionIntro() {
   const [still, setStill] = useState(true) // the story is resting on it: its words show
   const [menu, setMenu] = useState(false)
   const [open, setOpen] = useState<number | null>(null) // the question whose answer shows
+  const [booted, setBooted] = useState(false) // the opening painting has come into focus
+  const [loaded, setLoaded] = useState(0) // how much of its film is in, 0..100
+  const boot = useRef<HTMLImageElement>(null)
+  const ready_ = useRef(false)
   const films = useRef<(HTMLVideoElement | null)[]>([])
   const layers = useRef<(HTMLDivElement | null)[]>([])
   const loops = useRef<Record<string, HTMLVideoElement | null>>({})
@@ -97,6 +105,44 @@ export function EvolutionIntro() {
     setLeaving(true)
     setTimeout(() => setClosed(true), FADE)
   }, [])
+
+  // the arrival: the painting sharpens as its film comes in (never faster than about two seconds), then
+  // the blurred copy fades off it
+  useEffect(() => {
+    if (!visible) return
+    const img = boot.current!, v = loops.current[rests[0].loop!]!
+    let u = 0, m = 0, last = 0, raf = 0, pct = -1
+    const progress = () => {
+      try { if (v.duration && v.buffered.length) u = Math.max(u, Math.min(0.92, v.buffered.end(v.buffered.length - 1) / v.duration)) } catch {}
+    }
+    const full = () => { u = 1 }
+    v.addEventListener("progress", progress)
+    v.addEventListener("loadedmetadata", progress)
+    v.addEventListener("canplaythrough", full)
+    v.addEventListener("playing", full)
+    if (v.readyState >= 4) full()
+    const give = setTimeout(full, BOOT)
+    const tick = (now: number) => {
+      const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.016
+      last = now
+      m = Math.min(u, m + dt * 0.55)
+      const k = m * m * (3 - 2 * m)
+      img.style.filter = `blur(${((1 - k) * 26).toFixed(1)}px) saturate(${(0.62 + 0.38 * k).toFixed(3)}) brightness(${(0.92 + 0.08 * k).toFixed(3)})`
+      img.style.transform = `scale(${(1.06 - 0.06 * k).toFixed(4)})`
+      const p = Math.round(m * 100)
+      if (p !== pct) { pct = p; setLoaded(p) }
+      if (m >= 1) { ready_.current = true; setBooted(true); return }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => {
+      cancelAnimationFrame(raf); clearTimeout(give)
+      v.removeEventListener("progress", progress)
+      v.removeEventListener("loadedmetadata", progress)
+      v.removeEventListener("canplaythrough", full)
+      v.removeEventListener("playing", full)
+    }
+  }, [visible, rests])
 
   // the page underneath does not scroll while the intro is up
   useEffect(() => {
@@ -179,7 +225,7 @@ export function EvolutionIntro() {
 
     // a click, a tap, an arrow: play on to the next rest (from the frame the story is on)
     const forward = () => {
-      if (left.current || playing >= 0) return
+      if (left.current || playing >= 0 || !ready_.current) return
       const r = Math.round(p), seg = Math.abs(p - r) < HOLD ? r : Math.floor(p)
       if (seg >= N - 1) return leave()
       const v = vids[seg]
@@ -204,7 +250,7 @@ export function EvolutionIntro() {
 
     // scrolling runs the films with the hand; scrolling on past the last rest leaves
     const scrub = (d: number) => {
-      if (left.current) return
+      if (left.current || !ready_.current) return
       stop()
       if (target >= N - 1 && d > 0) { overflow += d; if (overflow > SCROLL * 0.5) leave(); return }
       overflow = 0
@@ -258,7 +304,7 @@ export function EvolutionIntro() {
   const fade = { transition: `opacity ${FADE}ms ease, color ${FADE}ms ease, border-color ${FADE}ms ease` }
   // a section's wrapper: shown while the story rests on it (data-on starts its words' ink)
   const shown = (s: Section) => {
-    const on = still && rest.section === s
+    const on = booted && still && rest.section === s
     return { "data-on": on, style: { ...fade, opacity: on ? 1 : 0, pointerEvents: on ? undefined : "none" } as React.CSSProperties }
   }
   const tone = ink ? "text-[#1c1a17]" : "text-white"
@@ -289,6 +335,13 @@ export function EvolutionIntro() {
         <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: 0 }} />
       ))}
       <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 size-full" style={{ opacity: 0 }} />
+      {/* the arrival: the opening painting, out of focus until its film is in */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img ref={boot} src={src(rests[0].id, "jpg")} alt="" aria-hidden className="pointer-events-none absolute inset-0 size-full object-cover [object-position:var(--pos)] md:[object-position:center]"
+        style={{ "--pos": rests[0].pos, filter: "blur(26px) saturate(0.62) brightness(0.92)", transform: "scale(1.06)", transition: "opacity 600ms ease", opacity: booted ? 0 : 1 } as React.CSSProperties} />
+      <p aria-hidden className="placard pointer-events-none absolute bottom-6 left-[calc(3.5rem+1.25rem)] text-white/55 md:left-[calc(72px+1.5rem)]" style={{ transition: "opacity 700ms ease", opacity: booted ? 0 : 1 }}>
+        Phim đang tải<b className="ml-3 font-normal text-white/85">{loaded}%</b>
+      </p>
       {/* the grain over the whole picture, like pear.no's */}
       <div aria-hidden className="film-grain pointer-events-none absolute -inset-[15%]" />
       {/* a shade so the words read: dark under white type, pale under ink */}
@@ -296,9 +349,10 @@ export function EvolutionIntro() {
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#f3ead8]/80 via-[#f3ead8]/25 to-transparent" style={{ ...fade, opacity: ink ? 1 : 0 }} />
 
       {/* ---------------------------------------------------------------- the chrome */}
+      {/* (everything but the mark waits for the arrival) */}
+      <div style={{ transition: `opacity ${FADE}ms ease`, opacity: booted ? 1 : 0, visibility: booted ? undefined : "hidden" }}>
       <div className={`pointer-events-none absolute inset-y-0 left-14 w-px md:left-[72px] ${rule}`} style={fade} />
       <div className={`pointer-events-none absolute inset-x-0 top-14 h-px md:top-[72px] ${rule}`} style={fade} />
-      <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
       <button data-menu onClick={() => setMenu((m) => !m)} aria-label="Các chương" aria-expanded={menu} className="absolute left-0 top-16 grid size-14 place-items-center md:top-20 md:size-[72px]">
         <span className="grid grid-cols-2 gap-[3px]">{[0, 1, 2, 3].map((k) => <span key={k} className="size-[5px] bg-current" />)}</span>
       </button>
@@ -397,6 +451,8 @@ export function EvolutionIntro() {
       </p>
       <p className="pointer-events-none absolute bottom-3 left-[calc(3.5rem+1.25rem)] text-[10px] opacity-55 md:bottom-6 md:left-[calc(72px+1.5rem)]" style={fade}>Hình ảnh: Pear (pear.no), tạo bằng AI</p>
       <button onClick={leave} className="placard absolute bottom-3 right-4 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8" style={fade}>Bỏ qua</button>
+      </div>
+      <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
     </section>
   )
 }
