@@ -334,3 +334,14 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Chữ của từng phần: thêm keyframes `ink` (mờ nhòe rồi rõ dần từ trái sang phải bằng mask-image) chạy mỗi lần phần đó hiện (`data-on`).
   - Lỗi gặp khi thử: ở chế độ dev React chạy effect hai lần, lần dọn dẹp gọi `loseContext()` làm canvas mất ngữ cảnh WebGL vĩnh viễn; bỏ lời gọi đó.
   - Thử trên Chrome: cuộn qua từng chuyển cảnh (mở màn → bộ sưu tập, bộ sưu tập → tham quan 3D, → đặt vé), đo khung hình lúc canvas đang vẽ: trung vị 16,7 ms, chậm nhất 17,6 ms.
+
+## 2026-10-19, 19:55 — Phần mở đầu: nhiễu hạt, hạt cát, tia sáng như pear.no
+
+- **Thời gian làm việc:** 19/10/2026, ghi nhận lúc 19:55.
+- **Làm việc gì:** Thiên thấy còn thiếu hiệu ứng nhiễu hạt. Phóng to pear.no và đọc lại mã của họ: chỗ chuyển cảnh hình tan thành hạt như cát trên một vùng rộng, màu ép bậc qua dither, lưới chấm sáng ở dải xé, tia sáng tỏa ra từ điểm sáng; lúc đứng yên có lớp hạt mịn trên khung hình.
+- **Ứng dụng/module:** `web/src/components/home/intro/veil.ts`, `evolution-intro.tsx`, `web/src/app/globals.css`.
+- **Tác dụng:** Phần mở đầu có cảm giác phim/bản in như trang gốc, cả lúc chuyển cảnh lẫn lúc đứng yên; vẫn 60 khung hình/giây.
+- **Làm như thế nào:**
+  - Shader kiểu signal: thêm một vùng rộng quanh mép vòng, trong đó mỗi điểm ảnh lấy mẫu lệch đi một chút theo nhiễu và theo hướng vòng loang (thành hạt cát), ép màu qua dither Bayer (càng gần mép càng ít bậc màu), phủ lưới chấm sáng ở mép, quầng chớp sáng có thêm tia sáng (nhiễu theo góc). Kiểu burn có thêm hạt ở vết cắt.
+  - Lớp hạt nhiễu: utility `film-grain` (một ô nhiễu SVG feTurbulence đã kéo giãn độ tương phản, trộn overlay, nhảy vị trí vài lần mỗi giây bằng keyframes `grain`), phủ toàn bộ phần mở đầu.
+  - Thử trên Chrome: phóng to chỗ chuyển cảnh và nền trời/giấy lúc đứng yên; đo khung hình lúc canvas vẽ: trung vị 16,7 ms, chậm nhất 17,7 ms.

@@ -289,6 +289,8 @@ export function EvolutionIntro() {
         <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: 0 }} />
       ))}
       <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 size-full" style={{ opacity: 0 }} />
+      {/* the grain over the whole picture, like pear.no's */}
+      <div aria-hidden className="film-grain pointer-events-none absolute -inset-[15%]" />
       {/* a shade so the words read: dark under white type, pale under ink */}
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" style={{ ...fade, opacity: ink ? 0 : 1 }} />
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-l from-[#f3ead8]/80 via-[#f3ead8]/25 to-transparent" style={{ ...fade, opacity: ink ? 1 : 0 }} />

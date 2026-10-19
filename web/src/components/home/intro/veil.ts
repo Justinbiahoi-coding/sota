@@ -3,7 +3,8 @@
 //   signal: the picture fails like a broadcast. A front opens from a point of light in the painting
 //           (the pear held up, the glint on the gold); on its crest the frame breaks into a mosaic,
 //           splits its colours and stipples through an ordered dither, and the crest flares warm.
-//           At the start a bloom of light spreads from that point: the flash.
+//           Round the crest the picture disperses into grains, posterises through the dither and
+//           shows a screen's lit dots; at the start a bloom of light rays out of that point: the flash.
 //   burn:   a diagonal cut bent by noise eats the old frame; the side about to go chars, the cut
 //           glows like an ember.
 //   soak:   the new picture soaks in from the middle in patches, like ink taking to paper.
@@ -64,27 +65,43 @@ void main(){
 
   vec3 col;
   if (uMode < 0.5) {
+    // a wide zone round the crest where the picture comes apart; the crest itself is its heart
+    float zone = 1.0 - smoothstep(0.0, 0.5, abs(e));
+    vec2 dir = normalize((uv - uO)*ar + 1e-4)/ar;
     // mosaic on the crest: the sampling snaps to a grid that is coarse at the crest's heart
     float cell = floor(mix(1.0, 22.0, band));
     vec2 su = (floor(px/cell) + 0.5)*cell/uRes;
     // a tear: rows slide sideways where the crest passes
     float row = floor(px.y/mix(3.0, 18.0, band));
     su.x += (hash(vec2(row, floor(uTime*24.0))) - 0.5)*0.06*band;
+    // sand: across the zone every pixel samples from a little way off, thrown outward with the
+    // front, so the picture disperses into grains rather than fading
+    vec2 g = vec2(hash(px + floor(uTime*20.0)), hash(px.yx + 17.0 + floor(uTime*20.0))) - 0.5;
+    su += (g*0.05 + dir*hash(px*0.7)*0.06)*zone*zone;
     // the colours split along the front
-    vec2 cs = normalize((uv - uO)*ar + 1e-4)*0.012*band/ar;
+    vec2 cs = dir*0.012*band;
     vec3 a = vec3(A(su + cs).r, A(su).g, A(su - cs).b);
     vec3 b = vec3(B(su + cs).r, B(su).g, B(su - cs).b);
     // stippled hand-over: an ordered dither decides, pixel by pixel, which picture shows
-    float th = bayer(px) * 0.85 + hash(px + floor(uTime*30.0))*0.15;
-    col = behind > th ? b : a;
-    // the crest flares, screen-blended warm, and the whole frame blooms out of the point at first
+    float th = bayer(px)*0.75 + hash(px + floor(uTime*30.0))*0.25;
+    col = smoothstep(w*2.5, -w*1.2, e) > th ? b : a;
+    // posterised through the dither, so the zone breaks into a print screen rather than flat bands
+    float lv = mix(48.0, 4.0, zone*zone);
+    col = mix(col, floor(col*lv + bayer(px))/lv, zone);
+    // a screen's lit dots show through the tear
+    float dots = 1.0 - smoothstep(0.16, 0.3, length(fract(px/5.0) - 0.5));
+    col = screen(col, vec3(dots*band*0.32));
+    // the crest flares, screen-blended warm, and the whole frame blooms out of the point at first,
+    // in rays
     vec3 flare = vec3(1.0, 0.94, 0.80)*pow(band, 4.0)*0.55;
-    float r = length((uv - uO)*ar);
+    float r = length((uv - uO)*ar), ang = atan((uv - uO).y*ar.y, (uv - uO).x*ar.x);
+    float rays = pow(noise(vec2(ang*22.0, uTime*0.35)), 3.0);
     float flash = sin(clamp(t*1.6, 0.0, 1.0)*3.14159);
-    vec3 bloom = vec3(1.0, 0.97, 0.9)*flash*(exp(-r*3.2)*0.85 + 0.08);
+    vec3 bloom = vec3(1.0, 0.97, 0.9)*flash*(exp(-r*3.2)*0.85 + (0.06 + 0.5*rays)*exp(-r*1.1));
     col = screen(screen(col, flare), bloom);
   } else if (uMode < 1.5) {
-    vec3 a = A(uv), b = B(uv + vec2(-0.03, 0.0)*band);  // the new picture arrives still moving
+    vec2 g = (vec2(hash(px + floor(uTime*20.0)), hash(px.yx + 5.0)) - 0.5)*0.025*band;   // grains at the cut
+    vec3 a = A(uv + g), b = B(uv + g + vec2(-0.03, 0.0)*band);  // the new picture arrives still moving
     float th = bayer(px)*0.7 + hash(px)*0.3;
     float covr = smoothstep(0.0, w*1.6, e)*(1.0 - smoothstep(w*1.6, w*4.0, e));  // the scorch rides ahead of the cut
     vec3 charred = a*mix(vec3(1.0), vec3(0.28, 0.16, 0.08), clamp(covr*1.4, 0.0, 1.0)*step(th*0.6, covr));
