@@ -251,3 +251,45 @@
 @media (prefers-reduced-motion: reduce) {
   .glint::before, .glint::after, .orbit { animation: none; }
 }
+
+/* the intro's questions (components/home/intro): panes on a ring, as pear.no's */
+.fq {
+  box-sizing: border-box;
+  width: 260px;
+  height: 330px;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform;
+  text-shadow: 0 1px 12px rgb(10 16 4 / 0.7), 0 0 3px rgb(10 16 4 / 0.55);
+}
+.fq .fr { position: absolute; inset: 6.5px; border: 1px solid rgb(255 255 255 / 0.1); }
+.fq .st { position: absolute; width: 12.5px; height: 12.5px; transform: scale(0); transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1); }
+.fq .st.a { left: 0; top: 0; }
+.fq .st.b { right: 0; bottom: 0; }
+.fq.on .st { transform: scale(1); }
+.fq.on .st.b { transition-delay: 0.1s; }
+.fq .st svg { display: block; width: 100%; height: 100%; fill: #fff; animation: shine 7s ease infinite; }
+.fq .st.b svg { animation-delay: 3.5s; }
+.fq:not(.on) .st svg { animation-play-state: paused; }
+@keyframes shine {
+  0%, 86%, 100% { opacity: 0.92; transform: scale(1) rotate(0); }
+  90% { opacity: 1; transform: scale(1.55) rotate(38deg); }
+  94% { opacity: 0.8; transform: scale(0.9) rotate(62deg); }
+  97% { opacity: 0.96; transform: scale(1.06) rotate(90deg); }
+}
+.fq h3 { position: absolute; left: 30px; top: 40px; width: 200px; margin: 0; font-family: var(--font-display); font-size: 26px; font-weight: 400; line-height: 1.02; letter-spacing: -0.02em; }
+.fq p { position: absolute; left: 30px; top: 182px; width: 207px; margin: 0; font-size: 12.8px; line-height: 1.32; opacity: 0; transition: opacity 0.45s; }
+.fq.on p { opacity: 1; }
+.faq-lead { filter: drop-shadow(0 0 3px rgb(12 18 6 / 0.55)); }
+.faq-lead line { stroke: #fff; stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.faq-lead rect { fill: #fff; }
+/* on the way out the panes break into a screen of shrinking dots */
+.faq.out .fq, .faq.out .faq-lead {
+  mask-image: radial-gradient(circle, #000 var(--go, 80%), transparent calc(var(--go, 80%) + 7%));
+  mask-size: 5px 5px;
+  mask-repeat: repeat;
+}
+/* the script word writes itself in, left to right, once the questions are in */
+@keyframes write { from { mask-position: 100% 0; } to { mask-position: 0 0; } }
+.write { display: inline-block; padding-right: 0.15em; mask-image: linear-gradient(90deg, #000 45%, transparent 55%); mask-size: 220% 100%; mask-position: 100% 0; }
+.writing .write { animation: write 1.6s cubic-bezier(0.45, 0.05, 0.3, 1) 0.35s both; }

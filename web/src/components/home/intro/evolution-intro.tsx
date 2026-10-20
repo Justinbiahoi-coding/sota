@@ -31,7 +31,8 @@ type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?
 // film: what plays between two rests (fade: its first frame differs from the rest before it, so it
 // dissolves in); with no film the step hands one still over to the next, through its veil (WebGL), or
 // pans down a tall plate from one rest's framing to the next
-type Step = { film?: string; fade?: boolean; veil?: Veil; pan?: boolean }
+// (spin: the questions' ring turns one place, over the same painting)
+type Step = { film?: string; fade?: boolean; veil?: Veil; pan?: boolean; spin?: boolean }
 
 // the three openings (pos: where the figure stands, kept in frame on a narrow screen)
 const HEROES = [
@@ -49,7 +50,8 @@ const SHARED: Rest[] = [
   { id: "blueprint", section: "gallery", chapter: "Tham quan 3D", light: true },
   { id: "plan", section: "tickets", chapter: "Đặt vé", light: true },
   { id: "terms", section: "notes", chapter: "Lưu ý" },
-  { id: "garden", section: "faq", chapter: "Hỏi đáp" },
+  // the questions: one rest per question over the same painting, the ring turning between them
+  ...Array.from({ length: 5 }, (_, k): Rest => ({ id: k ? `garden-${k}` : "garden", img: "garden", section: "faq", chapter: "Hỏi đáp" })),
   { id: "sky", section: "map", chapter: "Bản đồ" },
   { id: "couple", section: "end", chapter: "Sota", loop: "couple" },
 ]
@@ -63,6 +65,7 @@ const SHARED_STEPS: Step[] = [
   { film: "plan", fade: true, veil: "soak" }, // the golden pear on its scaffold, seen from above
   { veil: "burn" }, // the plan burns away onto the woman with the shears by her pear tree
   { film: "tree" }, // the pear she cuts falls, through a ring of light, into the tree
+  ...Array.from({ length: 4 }, (): Step => ({ spin: true })),
   { film: "flysky" }, // through the leaves and clouds to the stars
   { film: "trans" }, // the stars down to the couple watering the tree
 ]
@@ -73,8 +76,8 @@ const FAQ = [
   { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi trong trang tài khoản và hủy vé chưa dùng." },
   { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
-const DEPTH = [0, 1.6, 0.7, 2.3, 1.2] // px of blur on each question pane, wide screens
-const LIFT = [0, 7, -2, 4, 5] // vh each pane sits lower, so they do not read as a table
+// where each question's line starts: a pear in the tree, as a fraction of the painting (pear.no's)
+const ANCHORS: [number, number][] = [[0.26, 0.534], [0.709, 0.354], [0.259, 0.907], [0.718, 0.815], [0.27, 0.236]]
 const CLOUDS: [string, string, string, string][] = [["7%", "60%", "13vw", "38s"], ["68%", "74%", "18vw", "47s"], ["36%", "20%", "9vw", "31s"]] // left, top, width, drift time
 const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
@@ -100,12 +103,16 @@ export function EvolutionIntro() {
     steps: [{ film: `hero-${hero.id}-in`, fade: true, veil: "signal" }, ...SHARED_STEPS] as Step[],
   }), [hero])
   const N = rests.length
+  // the chapters, as the menu and the rail count them: where each section starts (the questions span
+  // several rests and count once)
+  const heads = useMemo(() => rests.map((_, i) => i).filter((i) => i === 0 || rests[i - 1].section !== rests[i].section), [rests])
   const [closed, setClosed] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [at, setAt] = useState(0) // the rest nearest to where the story is
   const [still, setStill] = useState(true) // the story is resting on it: its words show
   const [menu, setMenu] = useState(false)
-  const [open, setOpen] = useState<number | null>(null) // the question whose answer shows
+  const faq = useRef<HTMLDivElement>(null)
+  const cards = useRef<(HTMLDivElement | null)[]>([])
   const [booted, setBooted] = useState(false) // the opening painting has come into focus
   const [loaded, setLoaded] = useState(0) // how much of its film is in, 0..100
   const boot = useRef<HTMLImageElement>(null)
@@ -191,6 +198,52 @@ export function EvolutionIntro() {
     // a click on a rest whose film opens with the ring: the ring runs first (the film held on its first
     // frame, as pear.no does), then the film plays
     let ramp: { k: number; from: number; to: number; t0: number; dur: number } | null = null
+    // the pointer, eased (the questions lean toward it)
+    let mx = 0, my = 0, aimX = 0, aimY = 0
+    const qa = rests.findIndex((r) => r.section === "faq"), qb = rests.findLastIndex((r) => r.section === "faq")
+    // the questions' ring at this point of the story (rho: how far it has turned, in places)
+    const ring = (enter: number, out: number, rho: number) => {
+      const box = faq.current!, W = innerWidth, H = innerHeight, n = FAQ.length, step = 360 / n
+      const narrow = W <= 720, R = narrow ? W * 0.36 : Math.min(360, W * 0.26), fit = narrow ? Math.min(1, W / 560) : 1
+      let front = 0, best = -2
+      cards.current.forEach((c, k) => {
+        if (!c) return
+        const ang = ((((k - rho) * step) % 360) + 360) % 360, a = (ang * Math.PI) / 180, o = (Math.cos(a) + 1) / 2
+        if (Math.cos(a) > best) { best = Math.cos(a); front = k }
+        const r = clamp((enter - k * 0.06) / 0.7), rr = r * r * (3 - 2 * r) // they arrive one after another
+        c.style.top = `${(H * 0.602).toFixed(0)}px`
+        c.style.transform = `translate(${(-50 + mx * 2.4).toFixed(2)}%,${(-50 + my * 2).toFixed(2)}%) rotateY(${ang.toFixed(2)}deg) translateZ(${R}px) rotateY(${(-ang).toFixed(2)}deg) translateY(${(Math.sin(a) * 26 - (1 - rr) * 34).toFixed(1)}px) scale(${(rr * fit * (0.58 + 0.42 * o ** 1.4)).toFixed(3)})`
+        const blur = Math.round((1 - o) * 8.4) / 2
+        c.style.filter = blur > 0.05 ? `blur(${blur}px)` : ""
+        c.style.zIndex = String(Math.round(o * 100))
+        c.classList.toggle("on", o > 0.9 && rr > 0.92 && k === Math.round(rho) % n)
+      })
+      // the line, from the front question's pear in the painting (cover-fit) to the near side of its pane
+      const lead = box.firstElementChild as SVGSVGElement, line = lead.firstElementChild!, dot = lead.lastElementChild!
+      const sc = Math.max(W / 1920, H / 1080), [ax, ay] = ANCHORS[front % ANCHORS.length]
+      const x1 = (W - 1920 * sc) / 2 + ax * 1920 * sc, y1 = (H - 1080 * sc) / 2 + ay * 1080 * sc
+      const card = cards.current[front]!.getBoundingClientRect()
+      const x2 = x1 < W / 2 ? card.left - 34 : card.right + 34, y2 = card.top + 26
+      line.setAttribute("x1", x1.toFixed(1)); line.setAttribute("y1", y1.toFixed(1))
+      line.setAttribute("x2", x2.toFixed(1)); line.setAttribute("y2", y2.toFixed(1))
+      dot.setAttribute("x", (x2 - 4).toFixed(1)); dot.setAttribute("y", (y2 - 4).toFixed(1))
+      const near = clamp(((best + 1) / 2 - 0.9) / 0.055)
+      lead.style.opacity = (near * near * (3 - 2 * near) * enter).toFixed(3)
+      // the title leans with the pointer, and rises and blurs away on the way out
+      const sign = box.querySelector<HTMLElement>(".sign")!
+      sign.style.transform = `translate(${(mx * 15).toFixed(1)}px,${(my * 12 - out * H * 0.09).toFixed(1)}px)`
+      sign.style.opacity = (1 - out).toFixed(3)
+      const sb = Math.round(out * 22) / 2
+      sign.style.filter = sb > 0.01 ? `blur(${sb}px)` : ""
+      ;(sign.firstElementChild as HTMLElement).style.opacity = clamp(enter / 0.4).toFixed(3)
+      box.classList.toggle("writing", enter > 0.5)
+      // out: the panes break into dots, the whole blurs, lifts and nears
+      box.classList.toggle("out", out > 0.001)
+      box.style.setProperty("--go", `${Math.round((80 - out * 80) / 2) * 2}%`)
+      const ob = Math.round(out * 18) / 2
+      box.style.filter = ob > 0.01 ? `blur(${ob}px)` : ""
+      box.style.transform = out > 0.001 ? `translateY(${(-out * H * 0.06).toFixed(1)}px) scale(${(1 + out * 0.05).toFixed(2)})` : ""
+    }
     const through = (u: number) => clamp((u - HOLD) / (1 - 2 * HOLD)) // how far into the film, at u into the gap
     // the ring holds its film on the first frame; the film then runs over the rest of the gap
     const lead = (k: number) => (steps[k]?.veil === "signal" ? VEIL : 0)
@@ -242,6 +295,12 @@ export function EvolutionIntro() {
       })
       const pct = String(Math.round((p / (N - 1)) * 100)) + "%"
       if (pct !== gauged) { gauged = pct; for (const g of el.querySelectorAll("[data-gauge]")) g.textContent = pct }
+      // the questions: in as the tree film reaches them, out as the next film starts
+      const enter = qa < 0 ? 0 : clamp((p - qa + HOLD) / HOLD), out = clamp((p - qb) / HOLD)
+      const asked = enter > 0 && out < 1
+      if (faq.current) faq.current.style.opacity = asked ? "1" : "0"
+      if (asked) ring(enter, out, clamp(p - qa, 0, qb - qa))
+      if (asked) live = true // (the pointer keeps easing)
       vids.forEach((v, k) => {
         if (!v) return
         if (k !== show) { v.style.opacity = "0"; return }
@@ -256,6 +315,7 @@ export function EvolutionIntro() {
     }
     const frame = (now: number) => {
       raf = 0
+      mx += (aimX - mx) * 0.055; my += (aimY - my) * 0.055
       if (ramp) {
         const e = clamp((now - ramp.t0) / ramp.dur)
         p = target = ramp.from + (ramp.to - ramp.from) * e * e * (3 - 2 * e)
@@ -290,11 +350,11 @@ export function EvolutionIntro() {
       if (left.current || playing >= 0 || ramp || !ready_.current) return
       const r = Math.round(p), seg = Math.abs(p - r) < HOLD ? r : Math.floor(p)
       if (seg >= N - 1) return leave()
-      setMenu(false); setOpen(null)
+      setMenu(false)
       const f = through(p - seg)
       // a step with no film runs by itself, in under two seconds
       if (!steps[seg].film) {
-        ramp = { k: seg, from: p, to: seg + 1, t0: performance.now(), dur: 1800 * (1 - f) + 200 }
+        ramp = { k: seg, from: p, to: seg + 1, t0: performance.now(), dur: (steps[seg].spin ? 900 : 1800) * (1 - f) + 200 }
         return kick()
       }
       if (!vids[seg]) return
@@ -308,7 +368,7 @@ export function EvolutionIntro() {
     // stepping back, or jumping from the menu: a dissolve straight to that rest
     const jump = (i: number) => {
       if (left.current) return
-      stop(); setMenu(false); setOpen(null)
+      stop(); setMenu(false)
       p = target = clamp(i, 0, N - 1)
       draw()
     }
@@ -352,6 +412,8 @@ export function EvolutionIntro() {
     el.addEventListener("click", onClick)
     const onResize = () => { veil?.size(); draw() }
     addEventListener("resize", onResize)
+    const onPointer = (e: PointerEvent) => { aimX = (e.clientX / innerWidth - 0.5) * 2; aimY = (e.clientY / innerHeight - 0.5) * 2 }
+    addEventListener("pointermove", onPointer)
     draw()
     kick() // (the ring breathes at rest)
     return () => {
@@ -361,6 +423,7 @@ export function EvolutionIntro() {
       removeEventListener("keydown", onKey)
       el.removeEventListener("click", onClick)
       removeEventListener("resize", onResize)
+      removeEventListener("pointermove", onPointer)
       cancelAnimationFrame(raf)
       stop()
     }
@@ -368,6 +431,7 @@ export function EvolutionIntro() {
 
   if (!visible) return null
   const rest = rests[at]
+  const chapter = heads.filter((h) => h <= at).length - 1 // 0-based
   const ink = !!rest.light && still // pale painting under the chrome: ink instead of white
   const fade = { transition: `opacity ${FADE}ms ease, color ${FADE}ms ease, border-color ${FADE}ms ease` }
   // a section's wrapper: shown while the story rests on it (data-on starts its words' ink)
@@ -427,10 +491,10 @@ export function EvolutionIntro() {
       </button>
       {/* the rail's ticks: one per chapter, the current one long */}
       <ol aria-hidden className="pointer-events-none absolute left-[calc(3.5rem-1px)] top-40 flex flex-col gap-4 md:left-[71px] md:top-44">
-        {rests.map((r, i) => <li key={r.id} className="h-px bg-current transition-all duration-700" style={{ width: i === at ? 18 : 8, opacity: i === at ? 1 : 0.45 }} />)}
+        {heads.map((h, n) => <li key={h} className="h-px bg-current transition-all duration-700" style={{ width: n === chapter ? 18 : 8, opacity: n === chapter ? 1 : 0.45 }} />)}
       </ol>
       <p className="placard pointer-events-none absolute left-[calc(3.5rem+1.25rem)] top-[calc(3.5rem+1.25rem)] md:left-[calc(72px+1.5rem)] md:top-[calc(72px+1.5rem)]" style={fade}>
-        {String(at + 1).padStart(2, "0")} · {rest.chapter}
+        {String(chapter + 1).padStart(2, "0")} · {rest.chapter}
       </p>
       <Link href="/dang-nhap" className="placard absolute right-4 top-3 inline-flex items-center gap-3 rounded-[3px] bg-[#111] py-1.5 pl-4 pr-1.5 text-white md:right-8 md:top-[18px]">
         <span className="sm:hidden">Đăng nhập</span><span className="hidden sm:inline">Đăng nhập / Đăng ký</span>
@@ -440,10 +504,10 @@ export function EvolutionIntro() {
       {/* the menu: every chapter, to jump to */}
       <nav data-menu aria-label="Các chương" className="absolute left-14 top-14 w-64 border border-white/15 bg-[#0b1c3a]/85 p-5 text-white backdrop-blur-md md:left-[72px] md:top-[72px]" style={{ transition: "opacity 300ms ease, transform 300ms ease", opacity: menu ? 1 : 0, transform: `translateY(${menu ? 0 : -8}px)`, pointerEvents: menu ? undefined : "none" }}>
         <ol className="space-y-3">
-          {rests.map((r, i) => (
-            <li key={r.id}>
-              <button onClick={() => jumpTo.current(i)} className={`placard flex w-full items-center justify-between transition-opacity ${i === at ? "opacity-100" : "opacity-60 hover:opacity-100"}`}>
-                <span>{String(i + 1).padStart(2, "0")} · {r.chapter}</span>{i === at && <span>●</span>}
+          {heads.map((h, n) => (
+            <li key={h}>
+              <button onClick={() => jumpTo.current(h)} className={`placard flex w-full items-center justify-between transition-opacity ${n === chapter ? "opacity-100" : "opacity-60 hover:opacity-100"}`}>
+                <span>{String(n + 1).padStart(2, "0")} · {rests[h].chapter}</span>{n === chapter && <span>●</span>}
               </button>
             </li>
           ))}
@@ -490,25 +554,23 @@ export function EvolutionIntro() {
       <Block show={shown("notes")} side="left" title="Phần lớn miễn phí vào cửa." lead="Hầu hết bảo tàng Smithsonian không bán vé vào cửa; vài triển lãm và sự kiện cần vé giữ chỗ theo giờ." label="Lưu ý"
         body="Sota ghi rõ nơi nào cần vé và nơi nào chỉ cần tới; vé giữ chỗ miễn phí vẫn đặt được ngay trên Sota." cta={{ href: "/bao-tang", label: "Xem giờ mở cửa" }} />
 
-      {/* questions, round the tree: panes at different depths, the nearer sharp and the farther soft;
-          the one asked comes forward */}
-      <div {...shown("faq")}>
-        <h2 className="ink pointer-events-none absolute inset-x-0 top-[15vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-[7.5rem]">
-          Hỏi trước khi <span className="font-[family-name:var(--font-script)] text-[1.12em] font-normal tracking-normal">ghé thăm</span>
+      {/* questions, round the tree, as pear.no's: panes on a ring in depth that the scroll turns, so each
+          comes to the front in turn with its answer, a line running to it from a pear in the tree; the
+          engine sets all of it frame by frame, and breaks it into dots on the way out */}
+      <div ref={faq} className="faq pointer-events-none absolute inset-0 [perspective:1500px] [perspective-origin:50%_46%]" style={{ opacity: 0 }}>
+        <svg aria-hidden className="faq-lead absolute inset-0 size-full overflow-visible"><line /><rect width="8" height="8" /></svg>
+        <h2 className="sign absolute inset-x-0 top-[calc(29.4%-40px)] whitespace-nowrap text-center font-heading text-[clamp(30px,8.1vw,177px)] font-light leading-[1.04] tracking-[-0.024em] text-[#fffaea]">
+          <span className="sign-a">Hỏi trước khi </span>
+          <span className="write font-[family-name:var(--font-script)] text-[1.12em] font-normal tracking-normal">ghé thăm</span>
         </h2>
-        <ul className="absolute inset-x-5 top-[34vh] grid gap-3 md:inset-x-[10vw] md:grid-cols-3 md:gap-x-12 md:gap-y-8">
-          {FAQ.map((f, k) => (
-            <li key={f.q} className={`transition-[filter,opacity,transform] duration-500 md:[filter:blur(var(--d))] md:[transform:translateY(var(--y))] md:hover:[filter:none] ${k === 1 ? "md:col-start-3" : k === 3 ? "md:col-start-2" : ""}`}
-              style={{ "--d": `${open === k ? 0 : DEPTH[k]}px`, "--y": `${LIFT[k]}vh`, opacity: open === null || open === k ? 1 : 0.8 } as React.CSSProperties}>
-              <button onClick={() => setOpen(open === k ? null : k)} aria-expanded={open === k} className="relative block w-full border border-white/25 p-5 text-left [text-shadow:0_1px_14px_rgb(0_0_0/0.5)] md:min-h-[11rem] md:p-7">
-                <span aria-hidden className="absolute -left-[7px] -top-[11px] text-sm">✦</span>
-                <span aria-hidden className="absolute -bottom-[11px] -right-[6px] text-sm">✦</span>
-                <span className="block font-heading text-xl leading-tight md:text-[1.65rem]">{f.q}</span>
-                <span className="mt-4 block text-sm leading-relaxed transition-opacity duration-300" style={{ opacity: open === k ? 1 : 0 }}>{f.a}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        {FAQ.map((f, k) => (
+          <div key={f.q} ref={(d) => { cards.current[k] = d }} className="fq absolute left-1/2">
+            <span className="fr" />
+            <Star className="st a" /><Star className="st b" />
+            <h3>{f.q}</h3>
+            <p>{f.a}</p>
+          </div>
+        ))}
       </div>
 
       <Block show={shown("map")} side="right" title="Cả cụm bảo tàng, trên một tấm bản đồ." lead="Như người xưa nhìn sao để định hướng." label="Bản đồ"
@@ -539,6 +601,11 @@ export function EvolutionIntro() {
       <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
     </section>
   )
+}
+
+// a four-pointed star with curved sides, for the corners of the question panes
+function Star({ className }: { className: string }) {
+  return <span className={className}><svg viewBox="0 0 24 24" aria-hidden><path d="M12 0C12.7 9.4 14.6 11.3 24 12C14.6 12.7 12.7 14.6 12 24C11.3 14.6 9.4 12.7 0 12C9.4 11.3 11.3 9.4 12 0Z" /></svg></span>
 }
 
 // over the tall plate, as pear.no's: halftone clouds drifting across the sky, and a ruler down it with

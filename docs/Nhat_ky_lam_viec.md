@@ -416,3 +416,16 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Lớp phủ tấm tranh (`Plate`): 3 đám mây (PNG nền trong suốt cắt từ chính tấm tranh, độ trong suốt theo độ sáng từng chấm) trôi qua lại bằng CSS, bay lên và mờ dần theo `--pan` khi lia; thước kẻ vạch mỗi 11vh trượt theo; số % là tiến độ của cả phần mở đầu.
   - Hỏi đáp: mỗi câu một khung có độ mờ (blur) và độ lệch riêng trên màn hình rộng; câu đang mở hết mờ.
   - Thử trên Chrome: cháy từ Tài khoản sang trời xanh, lia xuống Khám phá thêm, cháy từ Đặt vé sang Lưu ý, mở câu hỏi; không có lỗi trong console.
+
+## 2026-10-20 — Phần mở đầu: hỏi đáp làm lại 100% theo pear.no (vòng xoay 3D)
+
+- **Thời gian làm việc:** ghi nhận lúc 18:17 20/10/2026.
+- **Làm việc gì:** Thiên thấy phần hỏi đáp của Pear có nhiều hiệu ứng hơn. Đọc lại mã và CSS của Pear (hàm vẽ phần FAQ, các lớp `.faq`, `.fq`, `.fr`, `.st`, `.sign`, `.faq-lead`, `.faq.out`, keyframes `shine`) rồi làm lại cho khớp: các câu hỏi xếp trên một vòng xoay 3D do thanh cuộn điều khiển, câu ở trước nét và hiện câu trả lời, câu ở xa nhỏ và mờ dần; đường kẻ nối từ một quả lê trong tranh tới câu đang ở trước, có ô vuông ở đầu; ngôi sao 4 cánh ở góc khung bung ra và lấp lánh; cả cụm nghiêng theo con trỏ; chữ viết tay "ghé thăm" tự viết ra; khi rời đi các khung tan thành lưới chấm, cả phần nhoè, nhích lên và phóng nhẹ.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/src/app/globals.css`.
+- **Tác dụng:** Phần hỏi đáp chuyển động và có chiều sâu như trang gốc thay vì một lưới khung tĩnh.
+- **Làm như thế nào:**
+  - Chương Hỏi đáp trải trên 5 điểm dừng cùng một tranh, giữa chúng là bước `spin` (không đổi hình, chỉ quay vòng); bấm thì quay sang câu tiếp trong khoảng 1 giây. Menu, vạch bên trái và số chương đếm theo phần (5 điểm dừng tính là 1 chương).
+  - Mỗi khung: rotateY(góc) translateZ(bán kính) rotateY(-góc), bán kính min(360px, 26% chiều ngang) (điện thoại 36%), thu nhỏ 0,58 + 0,42·o^1,4 và làm mờ (1 - o)·4,2 px theo độ ở trước o; vào lần lượt từng khung. Điểm neo của 5 đường kẻ lấy theo toạ độ quả lê của Pear trên cùng khung tranh, quy đổi theo cover-fit.
+  - Lúc rời đi: mask là lưới chấm 5px với bán kính chấm thu dần (`--go`), blur tới 9px.
+  - Gặp lại lỗi Turbopack giữ CSS cũ; xoá `.next` và chạy lại dev server.
+  - Thử trên Chrome (1512 px và iframe 375 px): vào phần hỏi đáp, cuộn quay qua các câu, cuộn qua câu cuối để thấy hiệu ứng rời đi; không có lỗi trong console.
