@@ -14,8 +14,9 @@
 // paintings and films underneath are plain elements.
 
 export type Veil = "signal" | "burn" | "soak"
-// origin: the point of light, in the painting being left (0..1 from its top left); fromPos: its object-position
-export type VeilDraw = (from: TexImageSource, to: TexImageSource, t: number, mode: Veil, origin: [number, number], fromPos: [number, number]) => void
+// origin: the point of light, in the painting being left (0..1 from its top left); fromPos, toPos: the
+// object-position of each picture
+export type VeilDraw = (from: TexImageSource, to: TexImageSource, t: number, mode: Veil, origin: [number, number], fromPos: [number, number], toPos?: [number, number]) => void
 
 const VERT = `attribute vec2 p; varying vec2 v; void main(){ v = p*0.5 + 0.5; gl_Position = vec4(p, 0.0, 1.0); }`
 
@@ -207,14 +208,14 @@ export function makeVeil(canvas: HTMLCanvasElement): { draw: VeilDraw; size: () 
     const sx = ca < ia ? ca / ia : 1, sy = ca < ia ? 1 : ia / ca
     return [sx, sy, (1 - sx) * pos[0], (1 - sy) * (1 - pos[1])] as const
   }
-  const draw: VeilDraw = (from, to, t, mode, origin, fromPos) => {
+  const draw: VeilDraw = (from, to, t, mode, origin, fromPos, toPos = [0.5, 0.5]) => {
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, texs[0])
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, from)
     gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, texs[1])
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, to)
     const fa = fit(from, fromPos)
     gl.uniform4f(u("uFitA"), ...fa)
-    gl.uniform4f(u("uFitB"), ...fit(to, [0.5, 0.5]))
+    gl.uniform4f(u("uFitB"), ...fit(to, toPos))
     gl.uniform2f(u("uRes"), canvas.width, canvas.height)
     // the origin is a point in the painting; where it lands on screen depends on the crop
     gl.uniform2f(u("uO"), (origin[0] - fa[2]) / fa[0], (1 - origin[1] - fa[3]) / fa[1])

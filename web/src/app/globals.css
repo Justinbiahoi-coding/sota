@@ -174,6 +174,10 @@
   animation: grain 0.5s steps(1) infinite;
 }
 
+/* the intro's halftone clouds, drifting back and forth across the sky */
+@keyframes drift { from { transform: translateX(-6vw); } to { transform: translateX(6vw); } }
+.drift { animation: drift 40s ease-in-out infinite alternate; }
+
 /* words arriving like ink taking to paper (the intro): blurred, then drawn in from the left.
    Plays each time its section turns on ([data-on="true"] on an ancestor). */
 @keyframes ink {

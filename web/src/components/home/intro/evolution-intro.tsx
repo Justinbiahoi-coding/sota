@@ -24,9 +24,14 @@ import { readGrain } from "@/lib/grain"
 // fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
-type Section = "hero" | "collection" | "shop" | "account" | "gallery" | "tickets" | "faq" | "map" | "end"
-type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean; glow?: [number, number] } // light: a pale painting, ink type over it; glow: its point of light
-type Step = { film: string; fade?: boolean; veil?: Veil } // fade: the film's first frame differs from the rest before it, so it dissolves in; veil: how, in WebGL
+type Section = "hero" | "collection" | "shop" | "account" | "exhibits" | "stories" | "gallery" | "tickets" | "notes" | "faq" | "map" | "end"
+// light: a pale painting, ink type over it; glow: its point of light; img: the picture, when it is not
+// named after the rest; tall: its pos holds on every screen (a tall plate framed at one height)
+type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean; glow?: [number, number]; img?: string; tall?: boolean }
+// film: what plays between two rests (fade: its first frame differs from the rest before it, so it
+// dissolves in); with no film the step hands one still over to the next, through its veil (WebGL), or
+// pans down a tall plate from one rest's framing to the next
+type Step = { film?: string; fade?: boolean; veil?: Veil; pan?: boolean }
 
 // the three openings (pos: where the figure stands, kept in frame on a narrow screen)
 const HEROES = [
@@ -39,8 +44,11 @@ const SHARED: Rest[] = [
   { id: "collection", section: "collection", chapter: "Bộ sưu tập" },
   { id: "shop", section: "shop", chapter: "Cửa hàng" },
   { id: "share", section: "account", chapter: "Tài khoản", light: true },
+  { id: "work", section: "exhibits", chapter: "Triển lãm", img: "plate", pos: "50% 0%", tall: true },
+  { id: "build", section: "stories", chapter: "Khám phá thêm", img: "plate", pos: "50% 53%", tall: true },
   { id: "blueprint", section: "gallery", chapter: "Tham quan 3D", light: true },
   { id: "plan", section: "tickets", chapter: "Đặt vé", light: true },
+  { id: "terms", section: "notes", chapter: "Lưu ý" },
   { id: "garden", section: "faq", chapter: "Hỏi đáp" },
   { id: "sky", section: "map", chapter: "Bản đồ" },
   { id: "couple", section: "end", chapter: "Sota", loop: "couple" },
@@ -49,9 +57,12 @@ const SHARED: Rest[] = [
 const SHARED_STEPS: Step[] = [
   { film: "harvest" }, // up into the tree, a hand reaching for the golden pear
   { film: "share" }, // the youth with the pear, cutting it, the halves handed across
-  { film: "coda", fade: true, veil: "burn" }, // the scaffold, down to the drawing in her hands
+  { veil: "burn" }, // the halves burn away onto the top of a tall plate: sky and clouds
+  { pan: true }, // down the plate to the pear being gilded on its scaffold
+  { film: "coda", fade: true }, // the scaffold, down to the drawing in her hands
   { film: "plan", fade: true, veil: "soak" }, // the golden pear on its scaffold, seen from above
-  { film: "tree", fade: true, veil: "burn" }, // the woman picking pears, into the tree
+  { veil: "burn" }, // the plan burns away onto the woman with the shears by her pear tree
+  { film: "tree" }, // the pear she cuts falls, through a ring of light, into the tree
   { film: "flysky" }, // through the leaves and clouds to the stars
   { film: "trans" }, // the stars down to the couple watering the tree
 ]
@@ -62,6 +73,9 @@ const FAQ = [
   { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi trong trang tài khoản và hủy vé chưa dùng." },
   { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
+const DEPTH = [0, 1.6, 0.7, 2.3, 1.2] // px of blur on each question pane, wide screens
+const LIFT = [0, 7, -2, 4, 5] // vh each pane sits lower, so they do not read as a table
+const CLOUDS: [string, string, string, string][] = [["7%", "60%", "13vw", "38s"], ["68%", "74%", "18vw", "47s"], ["36%", "20%", "9vw", "31s"]] // left, top, width, drift time
 const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.14 // of each gap between two rests, the stretch at either end that holds the rest
 const SCROLL = 1200 // px of wheel per gap
@@ -173,7 +187,7 @@ export function EvolutionIntro() {
   useEffect(() => {
     if (!visible) return
     const el = root.current!, vids = films.current, rest = layers.current, cv = canvas.current!
-    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true, live = false
+    let p = 0, target = 0, raf = 0, playing = -1, overflow = 0, near = 0, resting = true, live = false, gauged = ""
     // a click on a rest whose film opens with the ring: the ring runs first (the film held on its first
     // frame, as pear.no does), then the film plays
     let ramp: { k: number; from: number; to: number; t0: number; dur: number } | null = null
@@ -186,31 +200,48 @@ export function EvolutionIntro() {
     const wide = matchMedia("(min-width: 768px)")
     // a rest's object-position as fractions (the layers drop it on a wide screen)
     const posOf = (r: Rest): [number, number] => {
-      if (wide.matches || !r.pos) return [0.5, 0.5]
+      if ((wide.matches && !r.tall) || !r.pos) return [0.5, 0.5]
       const [x, y] = r.pos.split(" ").map((q) => parseFloat(q) / 100)
       return [x, y]
     }
 
     const draw = () => {
       const i = Math.min(Math.floor(p), N - 1), u = p - i
-      const show = i < N - 1 && u > HOLD && u < 1 - HOLD ? i : -1 // the film on screen
+      const mid = i < N - 1 && u > HOLD && u < 1 - HOLD // between two rests
+      const show = mid && steps[i].film ? i : -1 // the film on screen
       const f = through(u), lit = i < N - 1 && u >= 1 - HOLD ? i + 1 : i // the rest on screen when no film is
-      // the hand-over in WebGL, over both, while it lasts; a rest whose film opens with the ring keeps
-      // it breathing at its point of light (t = 0) while the story rests there
-      const k = show >= 0 ? show : lit, t = show >= 0 ? f / VEIL : 0
-      const mode = veil && (show >= 0 ? f < VEIL : steps[lit]?.veil === "signal") ? steps[k]?.veil : undefined
-      const from = rest[show >= 0 ? i : lit]?.firstElementChild as HTMLImageElement | HTMLVideoElement | null, to = vids[k]
-      if (show < 0 && mode && to && !to.seeking && to.currentTime > 0.01) to.currentTime = 0
+      const still = (el: HTMLDivElement | null | undefined) => el?.firstElementChild as HTMLImageElement | HTMLVideoElement | null
+      // the hand-over in WebGL, over both, while it lasts: into a film (its first stretch), from one
+      // still to the next (the whole gap), or, at a rest whose film opens with the ring, the ring
+      // breathing at its point of light (t = 0)
+      let mode: Veil | undefined, t = 0, fi = i, to: HTMLImageElement | HTMLVideoElement | null = null, toPos: [number, number] = [0.5, 0.5]
+      if (show >= 0 && steps[show].veil && f < VEIL) { mode = steps[show].veil; t = f / VEIL; to = vids[show] }
+      else if (mid && !steps[i].film && steps[i].veil) { mode = steps[i].veil; t = f; to = still(rest[i + 1]); toPos = posOf(rests[i + 1]) }
+      else if (show < 0 && steps[lit]?.veil === "signal") {
+        mode = "signal"; fi = lit; to = vids[lit]
+        if (to && !to.seeking && to.currentTime > 0.01) to.currentTime = 0
+      }
+      if (!veil) mode = undefined
       live = !!mode
+      const from = still(rest[fi])
       const veiled = live && ready(from) && ready(to)
-      if (veiled) veil!.draw(from!, to!, t, mode!, rests[show >= 0 ? i : lit].glow ?? [0.5, 0.5], posOf(rests[show >= 0 ? i : lit]))
+      if (veiled) veil!.draw(from!, to!, t, mode!, rests[fi].glow ?? [0.5, 0.5], posOf(rests[fi]), toPos)
       cv.style.opacity = veiled ? "1" : "0"
+      // down a tall plate: the leaving rest's picture slides from its framing to the next one's
+      const pan = mid && !!steps[i].pan, e = f * f * (3 - 2 * f)
       rest.forEach((L, k) => {
         if (!L) return
-        // under a film: the rest it leaves while it dissolves in, the rest it reaches once it covers
-        const on = show < 0 ? k === lit : (k === i && f < 0.15) || (k === i + 1 && f >= 0.12)
+        // under a film: the rest it leaves while it dissolves in, the rest it reaches once it covers;
+        // between two stills, the one it leaves
+        const on = show < 0 ? k === (mid ? i : lit) : (k === i && f < 0.15) || (k === i + 1 && f >= 0.12)
         L.style.opacity = on ? "1" : "0"
+        if (!rests[k].tall) return
+        const y = pan && k === i ? posOf(rests[i])[1] + (posOf(rests[i + 1])[1] - posOf(rests[i])[1]) * e : posOf(rests[k])[1]
+        still(L)!.style.objectPosition = `50% ${(y * 100).toFixed(2)}%`
+        L.style.setProperty("--pan", String(pan && k === i ? e : k > 0 && rests[k - 1].img === rests[k].img ? 1 : 0))
       })
+      const pct = String(Math.round((p / (N - 1)) * 100)) + "%"
+      if (pct !== gauged) { gauged = pct; for (const g of el.querySelectorAll("[data-gauge]")) g.textContent = pct }
       vids.forEach((v, k) => {
         if (!v) return
         if (k !== show) { v.style.opacity = "0"; return }
@@ -228,7 +259,7 @@ export function EvolutionIntro() {
       if (ramp) {
         const e = clamp((now - ramp.t0) / ramp.dur)
         p = target = ramp.from + (ramp.to - ramp.from) * e * e * (3 - 2 * e)
-        if (e >= 1) { const k = ramp.k; ramp = null; play(k, 0) }
+        if (e >= 1) { const k = ramp.k; ramp = null; if (steps[k].film) play(k, 0) }
       } else if (playing >= 0) {
         const v = vids[playing]!, fv = v.duration ? v.currentTime / v.duration : 0
         if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
@@ -259,9 +290,14 @@ export function EvolutionIntro() {
       if (left.current || playing >= 0 || ramp || !ready_.current) return
       const r = Math.round(p), seg = Math.abs(p - r) < HOLD ? r : Math.floor(p)
       if (seg >= N - 1) return leave()
-      if (!vids[seg]) return
       setMenu(false); setOpen(null)
       const f = through(p - seg)
+      // a step with no film runs by itself, in under two seconds
+      if (!steps[seg].film) {
+        ramp = { k: seg, from: p, to: seg + 1, t0: performance.now(), dur: 1800 * (1 - f) + 200 }
+        return kick()
+      }
+      if (!vids[seg]) return
       if (f < lead(seg)) {
         // (about a second and a half for the whole ring, less for what is left of it)
         ramp = { k: seg, from: p, to: seg + HOLD + lead(seg) * (1 - 2 * HOLD), t0: performance.now(), dur: 1500 * (1 - f / lead(seg)) }
@@ -354,16 +390,17 @@ export function EvolutionIntro() {
       {/* ---------------------------------------------------------------- the paintings */}
       {/* (their opacity is set by the engine, frame by frame; the transition softens jumps) */}
       {rests.map((r, i) => (
-        <div key={r.id} ref={(d) => { layers.current[i] = d }} className="absolute inset-0 [&>*]:[object-position:var(--pos)] md:[&>*]:[object-position:center]" style={{ transition: "opacity 400ms ease", opacity: i === 0 ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
+        <div key={r.id} ref={(d) => { layers.current[i] = d }} className={`absolute inset-0 overflow-hidden [&>*:first-child]:[object-position:var(--pos)] ${r.tall ? "" : "md:[&>*:first-child]:[object-position:center]"}`} style={{ transition: "opacity 400ms ease", opacity: i === 0 ? 1 : 0, "--pos": r.pos ?? "50% 50%" } as React.CSSProperties}>
           {r.loop ? (
             <video ref={(v) => { loops.current[r.loop!] = v }} src={src(r.loop, "mp4")} poster={src(r.id, "jpg")} muted loop playsInline autoPlay={i === 0} preload={i === 0 ? "auto" : "metadata"} className="size-full object-cover" />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={src(r.id, "jpg")} alt="" loading={i < 2 ? "eager" : "lazy"} className="size-full object-cover" draggable={false} />
+            <img src={src(r.img ?? r.id, "jpg")} alt="" loading={i < 2 ? "eager" : "lazy"} className="size-full object-cover" draggable={false} />
           )}
+          {r.img === "plate" && <Plate />}
         </div>
       ))}
-      {steps.map((s, i) => (
+      {steps.map((s, i) => s.film && (
         <video key={s.film} ref={(v) => { films.current[i] = v }} src={src(s.film, "mp4")} muted playsInline preload={i === 0 ? "auto" : "none"} className="absolute inset-0 size-full object-cover" style={{ opacity: 0 }} />
       ))}
       <canvas ref={canvas} aria-hidden className="pointer-events-none absolute inset-0 size-full" style={{ opacity: 0 }} />
@@ -441,23 +478,34 @@ export function EvolutionIntro() {
         body="Chọn món, cho vào chung giỏ với vé tham quan rồi thanh toán một lần; đơn quà được giao tận nơi." cta={{ href: "/cua-hang", label: "Vào cửa hàng" }} />
       <Block show={shown("account")} side="right" title="Của bạn, ở một chỗ." lead="Vé, đơn hàng và những hiện vật bạn đã lưu, trong một tài khoản." label="Tài khoản" narrow
         body="Xem lại vé có mã QR, theo dõi đơn quà lưu niệm và mở lại hiện vật bạn thích trên bất kỳ máy nào." cta={{ href: "/dang-ky", label: "Tạo tài khoản" }} />
+      <Block show={shown("exhibits")} side="right" title="Triển lãm đang mở, và sắp mở." lead="Lịch triển lãm của cả cụm bảo tàng trên một trang." label="Triển lãm" narrow
+        body="Lọc theo bảo tàng, chủ đề hoặc ngày; mỗi triển lãm có trang riêng với ảnh, thời gian và chỗ đặt vé." cta={{ href: "/trien-lam", label: "Xem triển lãm" }} />
+      <Block show={shown("stories")} side="left" title="Câu chuyện phía sau hiện vật." lead="Bài viết, video và tư liệu từ các nhà nghiên cứu Smithsonian." label="Khám phá thêm"
+        body="Mỗi bài gắn với hiện vật và bảo tàng được nhắc tới, đọc xong là biết nên ghé đâu." cta={{ href: "/kham-pha", label: "Đọc thêm" }} />
       <Block show={shown("gallery")} side="right" title="Bước vào từng bảo tàng." lead="Mỗi bảo tàng có một phòng trưng bày 3D, dựng theo bản vẽ của riêng nó." label="Tham quan 3D"
         body="Đi giữa các bức tường, bấm vào hiện vật để xem gần, rồi đọc tiếp về nó ở trang hiện vật." cta={{ href: "/bao-tang", label: "Xem các bảo tàng" }} />
       <Block show={shown("tickets")} side="right" title="Một giỏ hàng, cả ngày tham quan." lead="Chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ còn chỗ." label="Đặt vé" narrow
         body="Đặt vé cho nhiều nơi rồi thanh toán một lần. Mỗi vé có mã QR để quét ở cửa, xem lại trong Vé của tôi." cta={{ href: "/dat-ve", label: "Đặt vé" }} />
 
-      {/* questions, round the tree */}
+      <Block show={shown("notes")} side="left" title="Phần lớn miễn phí vào cửa." lead="Hầu hết bảo tàng Smithsonian không bán vé vào cửa; vài triển lãm và sự kiện cần vé giữ chỗ theo giờ." label="Lưu ý"
+        body="Sota ghi rõ nơi nào cần vé và nơi nào chỉ cần tới; vé giữ chỗ miễn phí vẫn đặt được ngay trên Sota." cta={{ href: "/bao-tang", label: "Xem giờ mở cửa" }} />
+
+      {/* questions, round the tree: panes at different depths, the nearer sharp and the farther soft;
+          the one asked comes forward */}
       <div {...shown("faq")}>
-        <h2 className="ink pointer-events-none absolute inset-x-0 top-[20vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-8xl">
-          Hỏi trước khi <span className="italic">ghé thăm</span>
+        <h2 className="ink pointer-events-none absolute inset-x-0 top-[15vh] text-center font-heading text-5xl font-light tracking-tight [text-shadow:0_2px_30px_rgb(0_0_0/0.35)] sm:text-7xl xl:text-[7.5rem]">
+          Hỏi trước khi <span className="font-[family-name:var(--font-script)] text-[1.12em] font-normal tracking-normal">ghé thăm</span>
         </h2>
-        <ul className="absolute inset-x-5 top-[38vh] grid gap-3 md:inset-x-[12vw] md:grid-cols-3 md:gap-x-10 md:gap-y-8">
+        <ul className="absolute inset-x-5 top-[34vh] grid gap-3 md:inset-x-[10vw] md:grid-cols-3 md:gap-x-12 md:gap-y-8">
           {FAQ.map((f, k) => (
-            <li key={f.q} className={k === 1 ? "md:col-start-3" : k === 3 ? "md:col-start-2" : ""}>
-              <button onClick={() => setOpen(open === k ? null : k)} aria-expanded={open === k} className="text-left font-heading text-xl leading-tight [text-shadow:0_1px_16px_rgb(0_0_0/0.45)] md:text-2xl">
-                {f.q}<span className="placard ml-2 align-middle opacity-70">{open === k ? "−" : "+"}</span>
+            <li key={f.q} className={`transition-[filter,opacity,transform] duration-500 md:[filter:blur(var(--d))] md:[transform:translateY(var(--y))] md:hover:[filter:none] ${k === 1 ? "md:col-start-3" : k === 3 ? "md:col-start-2" : ""}`}
+              style={{ "--d": `${open === k ? 0 : DEPTH[k]}px`, "--y": `${LIFT[k]}vh`, opacity: open === null || open === k ? 1 : 0.8 } as React.CSSProperties}>
+              <button onClick={() => setOpen(open === k ? null : k)} aria-expanded={open === k} className="relative block w-full border border-white/25 p-5 text-left [text-shadow:0_1px_14px_rgb(0_0_0/0.5)] md:min-h-[11rem] md:p-7">
+                <span aria-hidden className="absolute -left-[7px] -top-[11px] text-sm">✦</span>
+                <span aria-hidden className="absolute -bottom-[11px] -right-[6px] text-sm">✦</span>
+                <span className="block font-heading text-xl leading-tight md:text-[1.65rem]">{f.q}</span>
+                <span className="mt-4 block text-sm leading-relaxed transition-opacity duration-300" style={{ opacity: open === k ? 1 : 0 }}>{f.a}</span>
               </button>
-              <p className="mt-2 max-w-xs text-sm leading-relaxed [text-shadow:0_1px_12px_rgb(0_0_0/0.55)]" style={{ transition: "opacity 300ms ease", opacity: open === k ? 1 : 0 }}>{f.a}</p>
             </li>
           ))}
         </ul>
@@ -490,6 +538,24 @@ export function EvolutionIntro() {
       </div>
       <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
     </section>
+  )
+}
+
+// over the tall plate, as pear.no's: halftone clouds drifting across the sky, and a ruler down it with
+// how far through the story you are; both ride up as the plate pans (--pan, set by the engine)
+function Plate() {
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0">
+      {CLOUDS.map(([x, y, w, d]) => (
+        <div key={x} className="absolute" style={{ left: x, top: y, transform: "translateY(calc(var(--pan, 0) * -70vh))", opacity: "calc(1 - var(--pan, 0))" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/intro/cloud.png" alt="" className="drift" style={{ width: w, animationDuration: d }} />
+        </div>
+      ))}
+      <div className="absolute inset-y-0 left-[61%] hidden w-12 border-l border-white/30 md:block"
+        style={{ backgroundImage: "linear-gradient(to bottom, rgb(255 255 255 / 0.7) 0 1px, transparent 1px)", backgroundSize: "60% 11vh", backgroundRepeat: "repeat-y", backgroundPositionY: "calc(var(--pan, 0) * -70vh)" }} />
+      <span data-gauge className="placard absolute bottom-[7vh] left-[61%] hidden -translate-x-1/2 bg-[#0d4f9e] px-1 italic md:block" />
+    </div>
   )
 }
 

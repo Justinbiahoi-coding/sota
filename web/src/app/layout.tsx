@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Geist_Mono, Hanken_Grotesk, Newsreader } from "next/font/google"
+import { Geist_Mono, Hanken_Grotesk, Newsreader, Pinyon_Script } from "next/font/google"
 import { SiteFooter } from "@/components/site/site-footer"
 import { SiteHeader } from "@/components/site/site-header"
 import "./globals.css"
@@ -9,6 +9,8 @@ import "./globals.css"
 const display = Newsreader({ variable: "--font-display", subsets: ["latin", "vietnamese"], axes: ["opsz"], style: ["normal", "italic"] })
 const body = Hanken_Grotesk({ variable: "--font-body", subsets: ["latin", "vietnamese"] })
 const mono = Geist_Mono({ variable: "--font-label", subsets: ["latin", "vietnamese"] })
+// and a copperplate script for the odd word set by hand, like pear.no's "signing"
+const script = Pinyon_Script({ variable: "--font-script", subsets: ["latin", "vietnamese"], weight: "400" })
 
 export const metadata: Metadata = {
   title: { default: "Sota · Space of the Art", template: "%s · Sota" },
@@ -17,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="vi" className={`${display.variable} ${body.variable} ${mono.variable} h-full antialiased`}>
+    <html lang="vi" className={`${display.variable} ${body.variable} ${mono.variable} ${script.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <SiteHeader />
         <main className="flex-1">{children}</main>

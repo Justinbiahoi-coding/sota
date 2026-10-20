@@ -404,3 +404,15 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Nén 2 phim từ chuỗi khung hình như các phim khác (48 khung/giây, 1440 px, crf 25, keyframe mỗi 3 khung): `harvest` (khung 100–172) và `share` (khung 172–362). Ảnh tĩnh là khung cuối của mỗi phim nên không cần mờ dần khi chuyển.
   - Thêm 2 rest và 2 step vào danh sách chương; chữ Cửa hàng ở cột hẹp bên phải có lớp tối (nền lá dày), chữ Tài khoản màu mực ở cột hẹp bên phải trên nền giấy sáng; nút trỏ tới `/cua-hang` và `/dang-ky`.
   - Thử trên Chrome: bấm qua Bộ sưu tập → Cửa hàng → Tài khoản → cháy sang Tham quan 3D.
+
+## 2026-10-20 — Phần mở đầu: thêm các đoạn còn thiếu so với pear.no (tấm tranh dọc, chương Lưu ý, hỏi đáp kiểu khung kính)
+
+- **Thời gian làm việc:** ghi nhận lúc 17:57 20/10/2026.
+- **Làm việc gì:** Thiên gửi 3 ảnh chụp pear.no còn thiếu trong bản của mình. Đối chiếu lại thứ tự của Pear (các chuỗi coda, plan, tree và ảnh `art/scaffold_expand.jpg`) rồi thêm: (1) đoạn "the work": vết cháy từ hai nửa quả lê mở ra đỉnh một tấm tranh dọc (trời xanh, mây chấm in báo), lia xuống tới quả lê đang được dát vàng trên giàn giáo, có mây trôi và thước kẻ vạch cùng số % tiến độ; (2) chương dừng ở người phụ nữ cầm kéo bên chậu lê (khung đầu phim `tree`), vết cháy chuyển sang từ bản vẽ; (3) phần hỏi đáp làm lại: khung viền mảnh, dấu ✦ ở góc, khung xa mờ đi như có chiều sâu, khung đang mở nét lên, tiêu đề có chữ viết tay.
+- **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `veil.ts`, `web/src/app/layout.tsx` (phông Pinyon Script, có tiếng Việt), `web/src/app/globals.css` (`drift`), `web/public/intro/` (`plate.jpg`, `terms.jpg`, `cloud.png`).
+- **Tác dụng:** Phần mở đầu giờ có 12 chương theo đúng mạch của trang gốc; thêm 3 chương giới thiệu Sota: Triển lãm, Khám phá thêm, Lưu ý (phần lớn miễn phí vào cửa).
+- **Làm như thế nào:**
+  - Engine có thêm 2 kiểu bước không có phim: chuyển giữa 2 ảnh tĩnh qua veil WebGL (cả đoạn), và lia dọc một tấm tranh cao (object-position đi từ khung của chương trước sang khung của chương sau, làm mềm bằng smoothstep). Khi bấm, các bước này tự chạy trong khoảng 2 giây. Veil nhận thêm `toPos` để vết cháy đáp đúng phần đỉnh tấm tranh. Rest có thêm `img` (dùng chung một ảnh) và `tall` (giữ khung trên mọi màn hình).
+  - Lớp phủ tấm tranh (`Plate`): 3 đám mây (PNG nền trong suốt cắt từ chính tấm tranh, độ trong suốt theo độ sáng từng chấm) trôi qua lại bằng CSS, bay lên và mờ dần theo `--pan` khi lia; thước kẻ vạch mỗi 11vh trượt theo; số % là tiến độ của cả phần mở đầu.
+  - Hỏi đáp: mỗi câu một khung có độ mờ (blur) và độ lệch riêng trên màn hình rộng; câu đang mở hết mờ.
+  - Thử trên Chrome: cháy từ Tài khoản sang trời xanh, lia xuống Khám phá thêm, cháy từ Đặt vé sang Lưu ý, mở câu hỏi; không có lỗi trong console.
