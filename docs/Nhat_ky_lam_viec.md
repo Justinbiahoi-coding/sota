@@ -503,3 +503,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Ứng dụng/module:** `web/src/lib/api/types.ts`, `web/src/lib/api/client.ts`, `web/src/lib/mock-data.ts`, `web/src/app/page.tsx`, `web/src/components/home/iso-cluster.tsx`.
 - **Tác dụng:** Frontend không còn phụ thuộc Prisma. Tất cả types phản ánh đúng backend schema. API client sẵn sàng gọi khi backend routes được implement. TypeScript build sạch, không lỗi.
 - **Làm như thế nào:** Đọc Drizzle schema (`backend/src/db/schema/`) và API contract từ backend repo, tạo types thủ công thay vì auto-generate (ponytail: không cần codegen khi schema ổn định). Mock data giữ `accent` field client-side (không có trong backend) thông qua `MuseumWithAccent = Museum & { accent: string }` để tránh phải chạm vào nhiều component.
+
+---
+
+## 2026-11-14, 06:22 — Chốt 3 bảo tàng + dựng lại màn mở đầu (CastleIntro, WebGL nhẹ)
+
+- **Thời gian làm việc:** ghi nhận lúc 06:22 14/11/2026.
+- **Làm việc gì:** (1) Khảo sát trang tham khảo `magische-spiegelungen.de` (Vue 3 + custom WebGL, 7 tác phẩm, gallery → painting → photo → share) để lấy hướng cho màn mở đầu. (2) Chốt phạm vi: **3 bảo tàng** Smithsonian — Natural History, Air and Space, African American History & Culture (8 cái thì quá nhiều nội dung phải dựng cho đồ án). (3) Bỏ intro cũ `EvolutionIntro` (story nhiều chương, 650 dòng) và dựng intro mới `CastleIntro`: một màn hình, ảnh Smithsonian Castle full-screen vẽ bằng WebGL thuần (1 quad, 1 shader: cover-fit, zoom "thở" chậm, parallax nhẹ theo chuột, vignette), tiêu đề "Space of the Art." + tagline "Cụm bảo tàng Smithsonian, một lối vào.", nút "Khám phá", "Bỏ qua", Esc → fade sang trang chủ.
+- **Ứng dụng/module:** `web/src/components/home/intro/castle-intro.tsx` (mới), `web/public/intro/castle.avif` (mới), `web/src/app/page.tsx` (đổi mount); xoá `evolution-intro.tsx` và `veil.ts` (media cũ trong `public/intro/` và CSS `.fq/.faq/.write/.drift` tạm giữ, dọn sau).
+- **Tác dụng:** Màn mở đầu nhẹ (không thư viện 3D, ~130 dòng), chạy được không cần backend; ảnh `<img>` nằm dưới canvas nên hiện ngay khi tải và là fallback khi không có WebGL; tôn trọng `prefers-reduced-motion`.
+- **Làm như thế nào:** Raw WebGL (`webgl2` ưu tiên để có mipmap cho texture non-power-of-two, fallback `webgl`), DPR giới hạn 1.5 cho nhẹ. Lỗi gặp phải: màn trắng do React StrictMode chạy effect 2 lần — cleanup gọi `loseContext()` làm context của canvas chết vĩnh viễn, lần mount sau `getContext()` trả về đúng context đã mất → bỏ `loseContext()` khỏi cleanup. Preview bằng dev server với biến Supabase giả (giá trị trong `.env` đang rỗng nên trang 500 nếu không có). Ảnh Castle là placeholder editorial, production cần ảnh CC0.
