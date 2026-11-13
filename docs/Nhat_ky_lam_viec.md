@@ -429,3 +429,67 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
   - Lúc rời đi: mask là lưới chấm 5px với bán kính chấm thu dần (`--go`), blur tới 9px.
   - Gặp lại lỗi Turbopack giữ CSS cũ; xoá `.next` và chạy lại dev server.
   - Thử trên Chrome (1512 px và iframe 375 px): vào phần hỏi đáp, cuộn quay qua các câu, cuộn qua câu cuối để thấy hiệu ứng rời đi; không có lỗi trong console.
+
+## 2026-10-23 — PA1: viết lại Kế hoạch phát triển và Vision bằng LaTeX
+
+- **Thời gian làm việc:** ghi nhận lúc 18:40 23/10/2026.
+- **Làm việc gì:** Thiên nhờ viết lại 2 tài liệu PA1 của bạn trong nhóm (Kế hoạch dự án, Vision) cho gọn, dễ đọc, xuất PDF từ LaTeX. Bỏ các ghi chú nội bộ (tên file nguồn, biệt danh, ghi chú Typst), bớt các câu rào đón "đề xuất / chưa xác nhận", điền nội dung cho 3 mục để trống (4.1 Ước lượng, 4.3.2 Báo cáo và đo lường, 4.3.4 Quản lý cấu hình), sửa "Cáp Hửu Duy" thành "Cáp Hữu Duy".
+- **Ứng dụng/module:** `pa1-latex/` (`common.tex`, `01-ke-hoach-du-an.tex`, `02-vision.tex` và 2 file PDF), nằm ngoài repo sota.
+- **Tác dụng:** Kế hoạch còn 6 trang, Vision 5 trang. Cả hai dùng chung phần bìa, bảng nhân sự, màu và kiểu bảng; điền tên nhóm, lớp, giảng viên một lần ở `common.tex`.
+- **Làm như thế nào:** Giữ nguyên nội dung nghiệp vụ (22 mã F, 30 đầu việc, 5 sprint, R01 đến R09) nhưng viết lại câu theo hướng trực tiếp, không dùng dấu gạch ngang. Dịch bằng `tectonic` với font Times New Roman và Arial của macOS (tectonic không có `xelatex`). Lỗi gặp phải: để `\def` chữ tiếng Việt trước `\documentclass` làm tectonic không nạp được font, nên chuyển xuống sau `\input{common.tex}`.
+
+## 2026-10-23 — PA1: viết lại Kế hoạch và Vision đúng template môn học
+
+- **Thời gian làm việc:** ghi nhận lúc 19:10 23/10/2026.
+- **Làm việc gì:** Thiên thấy bản trước không ổn. Đọc lại `Downloads/PA1.pdf`, template `PA1/01. Software Development Plan.dot` và `PA1/02. rup_vision_sp-example.docx`, rồi viết lại cả hai tài liệu theo đúng cấu trúc mẫu, không dựa trên 2 file PDF của bạn trong nhóm.
+- **Ứng dụng/module:** `pa1-latex/` (`common.tex`, `01-ke-hoach-du-an.tex`, `02-vision.tex` và 2 file PDF).
+- **Tác dụng:** Kế hoạch 5 trang, Vision 5 trang. Giữ đúng tiêu đề mục của template, có Revision History và Table of Contents. Các mục 4.1, 4.3.2, 4.3.4 để trống như PA1 yêu cầu. Chữ nội dung Times New Roman cỡ 10, màu đen.
+- **Làm như thế nào:** Plan: mục 4.2.1 đến 4.2.3 theo yêu cầu PA1 (3 giai đoạn, 5 sprint, 5 build, lịch tổng thể có người phụ trách). Vision: Problem Statement và Product Position Statement theo khuôn "The problem of / affects / ...", bảng tính năng có Priority High/Medium/Low, mục Other Product Requirements là yêu cầu phi chức năng. Công cụ theo dõi sprint ghi là Jira (theo PA1), thay cho Trello trong bản trước. Biên dịch bằng `tectonic`.
+
+## 2026-10-24 — PA1: rà lại Kế hoạch và Vision theo cách viết của Thiên
+
+- **Thời gian làm việc:** ghi nhận lúc 13:44 24/10/2026.
+- **Làm việc gì:** Thiên sửa tay file Kế hoạch (`01-ke-hoach-du-an.tex`). Đọc chỗ đã sửa để học cách viết (ngắn, bỏ câu rào đón, nhóm trưởng là Phúc), rồi dùng humanizer, stop-slop, research-paper-writing-skill để rà và viết lại cả hai file, giữ LaTeX và xuất PDF.
+- **Ứng dụng/module:** `report/pa1-latex/` (`01-ke-hoach-du-an.tex`, `02-vision.tex`, 2 file PDF).
+- **Tác dụng:** Sửa các chỗ hỏng cú pháp và lệch nhau trong Kế hoạch; Vision cùng giọng với Kế hoạch. Cả hai vẫn 5 trang.
+- **Làm như thế nào:** Mỗi đoạn một ý, mở đầu bằng ý chính. Bỏ các câu "chưa/không cam kết". Thống nhất thuật ngữ (sprint, build, MVP). Cập nhật các câu nhắc "người dự phòng" cho khớp bảng vai trò đã sửa.
+
+## 2026-10-24 — PA1: viết báo cáo tuần 1 theo template
+
+- **Thời gian làm việc:** ghi nhận lúc 19:25 24/10/2026.
+- **Làm việc gì:** Viết báo cáo tuần theo `#Weekly Report Template.docx.pdf` bằng LaTeX, xuất PDF.
+- **Ứng dụng/module:** `report/pa1-latex/03-bao-cao-tuan-1.tex` và `.pdf`.
+- **Tác dụng:** Có báo cáo tuần 1 của Sprint 1 (tuần 19/10 đến 25/10/2026), 1 trang, đủ 3 phần của template.
+- **Làm như thế nào:** Phần Achievements chỉ ghi việc có bằng chứng (kế hoạch, Vision, phân công và công nghệ). Next week's goals lấy từ bảng Sprint 1 trong kế hoạch. Issues lấy từ các điểm còn mở của PA1.
+
+## 2026-10-24 — PA1: chuyển báo cáo tuần 1 sang Word
+
+- **Thời gian làm việc:** ghi nhận lúc 19:28 24/10/2026.
+- **Làm việc gì:** Thiên nhờ chuyển báo cáo tuần sang định dạng docx.
+- **Ứng dụng/module:** `report/pa1-latex/03-bao-cao-tuan-1.docx`.
+- **Tác dụng:** Có bản Word của báo cáo tuần 1, cùng nội dung với bản PDF LaTeX, sửa trực tiếp được trong Word.
+- **Làm như thế nào:** Dựng bằng thư viện `docx` (Node). Máy không có LibreOffice nên xem trước bằng Quick Look của macOS, chưa chạy bước kiểm tra XSD của skill (script cần Python mới hơn 3.9).
+
+## 2026-10-24 — PA1: viết báo cáo tuần 1 và tuần 2 (Word và PDF)
+
+- **Thời gian làm việc:** ghi nhận lúc 20:01 24/10/2026.
+- **Làm việc gì:** Viết lại báo cáo tuần 1 (12/10 đến 18/10) và viết báo cáo tuần 2 (19/10 đến 25/10) theo template, cả bản Word và PDF LaTeX. Sửa tên "Cáp Hửu Duy", chuyển Tuấn sang frontend trong báo cáo, bỏ vai trò Business analyst của Thiên.
+- **Ứng dụng/module:** `report/pa1-latex/03-bao-cao-tuan-1` và `04-bao-cao-tuan-2` (`.tex`, `.pdf`, `.docx`).
+- **Tác dụng:** Đủ 2 báo cáo tuần cho Sprint 1 theo yêu cầu PA1.
+- **Làm như thế nào:** Phần Achievements lấy từ nhật ký làm việc và git log của repo sota (việc có thật, có ngày). Next week's goals lấy từ bảng Sprint trong kế hoạch. Một script sinh cả `.tex` lẫn `.docx` từ cùng dữ liệu để hai định dạng khớp nhau.
+
+## 2026-10-24 — PA2: viết bộ tài liệu nộp bài PA2 (Word)
+
+- **Thời gian làm việc:** ghi nhận lúc 21:44 24/10/2026.
+- **Làm việc gì:** Đọc `PA2.pdf` và hai mẫu use-case spec, rồi viết 5 tài liệu PA2 bằng Word: Software Development Plan bản 2.0, Vision Document bản 2.0, Sprint 2 Backlog, Use-Case Specification (3 sơ đồ, 24 use-case), báo cáo tuần 2. Nén thành `PA2-Group08.zip`.
+- **Ứng dụng/module:** `report/pa2/PA2-Group08/` (5 file .docx), `report/pa2/PA2-Group08.zip`, mã nguồn dựng ở `report/pa2/build/`.
+- **Tác dụng:** Đủ 5 phần của PA2 (a đến e). Phần thay đổi ở Plan và Vision tô chữ xanh dương, ghi trong Revision History.
+- **Làm như thế nào:** Sơ đồ use-case vẽ bằng TikZ rồi xuất PNG nhúng vào Word. Tài liệu dựng bằng thư viện `docx` (Node). Backlog Sprint 2: 26 hạng mục, mỗi người đúng 16 giờ. Tuấn chuyển sang frontend nên API hồ sơ giao cho Tân, API media giao cho Duy, API thống kê chưa có người. Chưa có nhận xét PA1 của trợ giảng nên bản 2.0 cập nhật theo tiến độ thực tế. Máy không có LibreOffice nên chỉ xem trước bằng Quick Look và kiểm tra XML.
+
+## 2026-11-14 — Nối auth vào Supabase, middleware route guard, quên mật khẩu
+
+- **Thời gian làm việc:** ghi nhận lúc 04:57 14/11/2026.
+- **Làm việc gì:** Rà backend repo (`zetomis-was-taken/sota-backend`) để hiểu trạng thái: foundation xong, 6 vertical slices chưa làm. Vì auth dùng Supabase Auth trực tiếp (không qua Express), nối luôn frontend mà không cần chờ backend: (1) `auth-scene.tsx` gọi `signInWithPassword` / `signUp` thật; (2) thêm `middleware.ts` refresh session và redirect về `/dang-nhap` cho các route cần đăng nhập; (3) thêm `/auth/callback` cho email confirmation; (4) thêm `/quen-mat-khau` và `/dat-lai-mat-khau`; (5) `SiteHeader` hiện nút đăng nhập/đăng xuất qua `AuthActions` client component kiểm tra session bằng `onAuthStateChange`.
+- **Ứng dụng/module:** `web/src/components/auth/auth-scene.tsx`, `web/src/middleware.ts`, `web/src/app/auth/callback/route.ts`, `web/src/app/quen-mat-khau/page.tsx`, `web/src/app/dat-lai-mat-khau/page.tsx`, `web/src/components/site/auth-actions.tsx`, `web/src/components/site/site-header.tsx`.
+- **Tác dụng:** Đăng nhập/đăng ký thật với Supabase Auth. Các trang protected (tài khoản, đặt vé, v.v.) tự redirect về đăng nhập. Build Next.js sạch, không lỗi.
+- **Làm như thế nào:** Giữ `SiteHeader` là Server Component tĩnh (không dùng cookies), đẩy auth check vào `AuthActions` client component dùng `onAuthStateChange` — tránh làm toàn bộ layout thành dynamic. Middleware dùng `createServerClient` của `@supabase/ssr` để refresh token trong cookies theo đúng pattern Supabase SSR.

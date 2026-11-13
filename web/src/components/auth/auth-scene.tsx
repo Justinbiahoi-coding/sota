@@ -1,9 +1,11 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { ArrowRight, AtSign, Lock, UserRound } from "lucide-react"
 import { readGrain } from "@/lib/grain"
+import { createClient } from "@/lib/supabase/client"
 
 // Sign-in and sign-up, laid out like pear.no's application: the astronomer pointing at a constellation
 // (a frame from Pear's films, made with AI), and the form floating in the sky as panes of glass on one
@@ -55,8 +57,10 @@ const noSubscribe = () => () => {}
 export function AuthScene({ mode }: { mode: Mode }) {
   const plane = useRef<HTMLDivElement>(null)
   const [note, setNote] = useState("")
+  const [loading, setLoading] = useState(false)
   const grain = useSyncExternalStore(noSubscribe, readGrain, () => "none")
   const copy = COPY[mode], fields = FIELDS[mode]
+  const router = useRouter()
 
   // the plane leans toward the pointer, eased; the rims' light follows its angle
   useEffect(() => {
@@ -78,11 +82,37 @@ export function AuthScene({ mode }: { mode: Mode }) {
     return () => { removeEventListener("pointermove", onMove); cancelAnimationFrame(raf) }
   }, [])
 
-  const send = (e: React.FormEvent<HTMLFormElement>) => {
+  const send = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
-    if (mode === "register" && f.get("password") !== f.get("confirm")) return setNote("Hai mật khẩu chưa khớp nhau.")
-    setNote("Đã kiểm tra xong. Máy chủ tài khoản chưa chạy nên chưa gửi được; phần này sẽ nối khi backend xong.")
+    const email = String(f.get("email") ?? "")
+    const password = String(f.get("password") ?? "")
+
+    if (mode === "register" && f.get("password") !== f.get("confirm")) {
+      setNote("Hai mật khẩu chưa khớp nhau.")
+      return
+    }
+
+    setLoading(true)
+    setNote("")
+    const supabase = createClient()
+
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setNote(error.message); setLoading(false); return }
+      router.push("/")
+      router.refresh()
+    } else {
+      const name = String(f.get("name") ?? "")
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: name } },
+      })
+      if (error) { setNote(error.message); setLoading(false); return }
+      setNote("Kiểm tra email để xác nhận tài khoản.")
+      setLoading(false)
+    }
   }
 
   return (
@@ -140,10 +170,10 @@ export function AuthScene({ mode }: { mode: Mode }) {
               )
             })}
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3 md:col-span-2 md:mt-3" style={{ transform: "rotate(1.6deg) translateZ(30px)" }}>
-              <button className="placard inline-flex h-[52px] items-center gap-4 rounded-full bg-[#0b0b0d] px-8 text-[0.8rem] md:h-[62px] md:px-12 md:text-[0.9rem] tracking-[0.22em] shadow-[0_10px_30px_rgb(0_0_0/0.35)] transition-transform hover:scale-[1.02]">
-                {copy.cta}
+              <button disabled={loading} className="placard inline-flex h-[52px] items-center gap-4 rounded-full bg-[#0b0b0d] px-8 text-[0.8rem] md:h-[62px] md:px-12 md:text-[0.9rem] tracking-[0.22em] shadow-[0_10px_30px_rgb(0_0_0/0.35)] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed">
+                {loading ? "Đang xử lý…" : copy.cta}
               </button>
-              {mode === "login" && <button type="button" onClick={() => setNote("Đặt lại mật khẩu sẽ gửi qua email khi máy chủ tài khoản chạy.")} className="placard opacity-75 hover:opacity-100">Quên mật khẩu?</button>}
+              {mode === "login" && <Link href="/quen-mat-khau" className="placard opacity-75 hover:opacity-100">Quên mật khẩu?</Link>}
             </div>
           </form>
           <p aria-live="polite" className="mt-6 min-h-6 max-w-md text-sm leading-relaxed [text-shadow:0_1px_12px_rgb(0_0_0/0.5)]">{note}</p>

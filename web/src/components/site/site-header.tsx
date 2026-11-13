@@ -1,8 +1,9 @@
 import Link from "next/link"
-import { Menu, Search, ShoppingBag, UserRound } from "lucide-react"
+import { Menu, Search, ShoppingBag } from "lucide-react"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { NavLinks } from "./nav-links"
+import { AuthActions } from "./auth-actions"
 
 const icon = "inline-flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 
@@ -22,8 +23,7 @@ export function SiteHeader() {
         <div className="ml-auto flex items-center gap-1 lg:ml-4">
           <Link href="/tim-kiem" className={icon} aria-label="Tìm kiếm"><Search className="size-[18px]" /></Link>
           <Link href="/gio-hang" className={icon} aria-label="Giỏ hàng"><ShoppingBag className="size-[18px]" /></Link>
-          <Link href="/tai-khoan" className={cn(icon, "hidden sm:inline-flex")} aria-label="Tài khoản"><UserRound className="size-[18px]" /></Link>
-          <Link href="/dat-ve" className={cn(buttonVariants({ size: "lg" }), "ml-2 hidden rounded-full px-4 sm:inline-flex")}>Đặt vé</Link>
+          <AuthActions />
 
           {/* phones and tablets: a native disclosure, no script needed */}
           <details className="group relative lg:hidden">
