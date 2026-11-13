@@ -1,37 +1,133 @@
-// Mock data for the frontend while the API is being built (risk "Frontend tụt lại so với backend").
-// Shapes follow what the API is expected to return; swap these imports for API calls later.
-// Museum names are the real Smithsonian museums; hours and exhibitions are placeholders.
+// Mock data matching the real backend schema (docs/database-design.md).
+// Shapes mirror api/types.ts — swap these for api.museums.list() etc. when backend is live.
+// UUIDs are fake but valid-format. Money is VND decimal strings.
 
-export type Museum = {
-  slug: string
-  name: string
-  nameEn: string
-  accent: string // the museum's own accent colour (--museum-accent on its pages)
-  opens: string
-  closes: string
-}
+import type { Museum, Artifact, TicketType } from "./api/types"
 
-export type Exhibition = {
-  slug: string
-  title: string
-  museumSlug: string
-  starts: string // ISO date
-  ends: string
-}
+// Each museum has an accent colour for UI theming (not in backend schema — kept client-side only)
+export type MuseumWithAccent = Museum & { accent: string }
 
-export const museums: Museum[] = [
-  { slug: "lich-su-tu-nhien", name: "Bảo tàng Lịch sử Tự nhiên", nameEn: "National Museum of Natural History", accent: "oklch(0.46 0.07 145)", opens: "10:00", closes: "17:30" },
-  { slug: "hang-khong-vu-tru", name: "Bảo tàng Hàng không và Vũ trụ", nameEn: "National Air and Space Museum", accent: "oklch(0.4 0.09 255)", opens: "10:00", closes: "17:30" },
-  { slug: "lich-su-hoa-ky", name: "Bảo tàng Lịch sử Hoa Kỳ", nameEn: "National Museum of American History", accent: "oklch(0.5 0.13 30)", opens: "10:00", closes: "17:30" },
-  { slug: "phong-tranh-chan-dung", name: "Phòng tranh Chân dung Quốc gia", nameEn: "National Portrait Gallery", accent: "oklch(0.42 0.1 330)", opens: "11:30", closes: "19:00" },
-  { slug: "hirshhorn", name: "Bảo tàng và Vườn điêu khắc Hirshhorn", nameEn: "Hirshhorn Museum and Sculpture Garden", accent: "oklch(0.62 0.12 75)", opens: "10:00", closes: "17:30" },
-  { slug: "nghe-thuat-chau-a", name: "Bảo tàng Nghệ thuật châu Á", nameEn: "National Museum of Asian Art", accent: "oklch(0.47 0.075 190)", opens: "10:00", closes: "17:30" },
+export const museums: MuseumWithAccent[] = [
+  {
+    id: "00000000-0000-0000-0000-000000000001",
+    name: "Bảo tàng Lịch sử Tự nhiên",
+    slug: "lich-su-tu-nhien",
+    description: "Khám phá thế giới tự nhiên qua hơn 145 triệu hiện vật.",
+    address: "10th St. & Constitution Ave. NW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.46 0.07 145)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000002",
+    name: "Bảo tàng Hàng không và Vũ trụ",
+    slug: "hang-khong-vu-tru",
+    description: "Lịch sử hàng không và khám phá không gian của nhân loại.",
+    address: "6th St. & Independence Ave. SW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.4 0.09 255)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000003",
+    name: "Bảo tàng Lịch sử Hoa Kỳ",
+    slug: "lich-su-hoa-ky",
+    description: "Di sản lịch sử và văn hóa Hoa Kỳ từ thuở lập quốc.",
+    address: "14th St. & Constitution Ave. NW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.5 0.13 30)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000004",
+    name: "Phòng tranh Chân dung Quốc gia",
+    slug: "phong-tranh-chan-dung",
+    description: "Chân dung những người định hình nước Mỹ.",
+    address: "8th & F Streets NW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.42 0.1 330)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000005",
+    name: "Bảo tàng và Vườn điêu khắc Hirshhorn",
+    slug: "hirshhorn",
+    description: "Nghệ thuật đương đại và điêu khắc hiện đại.",
+    address: "7th St. & Independence Ave. SW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.62 0.12 75)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000006",
+    name: "Bảo tàng Nghệ thuật châu Á",
+    slug: "nghe-thuat-chau-a",
+    description: "Nghệ thuật và văn hóa châu Á qua hàng thiên niên kỷ.",
+    address: "1050 Independence Ave. SW",
+    city: "Washington, D.C.",
+    cover_image_path: null,
+    status: "published",
+    accent: "oklch(0.47 0.075 190)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
 ]
 
-export const exhibitions: Exhibition[] = [
-  { slug: "hoa-thach-thoi-gian", title: "Hóa thạch: Dòng thời gian sâu", museumSlug: "lich-su-tu-nhien", starts: "2026-09-01", ends: "2027-03-31" },
-  { slug: "buoc-ra-quy-dao", title: "Bước ra quỹ đạo", museumSlug: "hang-khong-vu-tru", starts: "2026-10-15", ends: "2027-01-10" },
-  { slug: "chan-dung-the-ky", title: "Chân dung một thế kỷ", museumSlug: "phong-tranh-chan-dung", starts: "2026-11-01", ends: "2027-05-02" },
+export const featuredArtifacts: (Artifact & { museumSlug: string; accent: string })[] = [
+  {
+    id: "00000000-0000-0000-0001-000000000001",
+    museum_id: "00000000-0000-0000-0000-000000000001",
+    museumSlug: "lich-su-tu-nhien",
+    name: "Voi ma mút lông mịn",
+    description: "Bộ xương voi ma mút nguyên vẹn từ kỷ Pleistocene, khoảng 10.000 năm trước.",
+    period: "Kỷ Pleistocene (~10.000 TCN)",
+    inventory_code: "NMNH-M-001",
+    status: "published",
+    accent: "oklch(0.46 0.07 145)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0001-000000000002",
+    museum_id: "00000000-0000-0000-0000-000000000002",
+    museumSlug: "hang-khong-vu-tru",
+    name: "Module Điều khiển Apollo 11",
+    description: "Khoang chỉ huy đã đưa phi hành đoàn Apollo 11 trở về Trái Đất năm 1969.",
+    period: "1969",
+    inventory_code: "NASM-A-002",
+    status: "published",
+    accent: "oklch(0.4 0.09 255)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0001-000000000003",
+    museum_id: "00000000-0000-0000-0000-000000000003",
+    museumSlug: "lich-su-hoa-ky",
+    name: "Lá cờ Fort McHenry",
+    description: "Lá cờ treo trên Fort McHenry sau trận chiến năm 1814, cảm hứng để viết The Star-Spangled Banner.",
+    period: "1814",
+    inventory_code: "NMAH-F-003",
+    status: "published",
+    accent: "oklch(0.5 0.13 30)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
 ]
 
 export const museumBySlug = (slug: string) => museums.find((m) => m.slug === slug)

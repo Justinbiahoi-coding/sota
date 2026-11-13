@@ -3,11 +3,8 @@ import { ArrowUpRight } from "lucide-react"
 import { IsoCluster } from "@/components/home/iso-cluster"
 import { EvolutionIntro } from "@/components/home/intro/evolution-intro"
 import { buttonVariants } from "@/components/ui/button"
-import { exhibitions, museumBySlug, museums } from "@/lib/mock-data"
+import { featuredArtifacts, museums } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
-
-const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
-const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} đến ${dateFmt.format(new Date(b))}`
 
 export default function Home() {
   return (
@@ -52,11 +49,11 @@ export default function Home() {
                   <span className="placard tabular-nums text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
                   <span>
                     <span className="font-heading text-xl transition-colors group-hover:text-museum md:text-2xl">{m.name}</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">{m.nameEn}</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">{m.city}</span>
                   </span>
                   <span className="col-start-2 mt-2 flex items-center gap-2 text-sm tabular-nums text-muted-foreground md:col-start-auto md:mt-0">
                     <span className="size-2 rounded-full bg-museum" aria-hidden />
-                    {m.opens} đến {m.closes}
+                    {m.address}
                   </span>
                   <ArrowUpRight className="hidden size-5 text-muted-foreground transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-museum md:block" />
                 </Link>
@@ -66,27 +63,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- exhibitions */}
+      {/* ---------------------------------------------------------------- featured artifacts */}
       <section className="border-t border-border bg-card/60">
         <div className="mx-auto max-w-7xl px-5 py-16 md:px-8">
-          <SectionHead index="02" title="Triển lãm đang và sắp diễn ra" href="/trien-lam" more="Lịch triển lãm" />
+          <SectionHead index="02" title="Hiện vật nổi bật" href="/hien-vat" more="Xem tất cả" />
           <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {exhibitions.map((e) => {
-              const m = museumBySlug(e.museumSlug)!
-              return (
-                <Link key={e.slug} href={`/trien-lam/${e.slug}`} style={{ "--museum-accent": m.accent } as React.CSSProperties}
-                  className="group flex min-h-64 flex-col justify-between border border-border bg-background p-6 transition-all hover:-translate-y-1 hover:border-museum hover:shadow-[0_18px_40px_-24px] hover:shadow-museum">
-                  <div>
-                    <span className="block h-1 w-10 bg-museum transition-all duration-500 group-hover:w-full" />
-                    <p className="placard mt-5 text-muted-foreground">{m.name}</p>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl leading-tight">{e.title}</h3>
-                    <p className="mt-3 text-sm text-muted-foreground">{range(e.starts, e.ends)}</p>
-                  </div>
-                </Link>
-              )
-            })}
+            {featuredArtifacts.map((a) => (
+              <Link key={a.id} href={`/bao-tang/${a.museumSlug}`} style={{ "--museum-accent": a.accent } as React.CSSProperties}
+                className="group flex min-h-64 flex-col justify-between border border-border bg-background p-6 transition-all hover:-translate-y-1 hover:border-museum hover:shadow-[0_18px_40px_-24px] hover:shadow-museum">
+                <div>
+                  <span className="block h-1 w-10 bg-museum transition-all duration-500 group-hover:w-full" />
+                  <p className="placard mt-5 text-muted-foreground">{a.inventory_code}</p>
+                </div>
+                <div>
+                  <h3 className="text-2xl leading-tight">{a.name}</h3>
+                  <p className="mt-3 text-sm text-muted-foreground">{a.period}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>

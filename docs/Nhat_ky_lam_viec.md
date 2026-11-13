@@ -493,3 +493,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Ứng dụng/module:** `web/src/components/auth/auth-scene.tsx`, `web/src/middleware.ts`, `web/src/app/auth/callback/route.ts`, `web/src/app/quen-mat-khau/page.tsx`, `web/src/app/dat-lai-mat-khau/page.tsx`, `web/src/components/site/auth-actions.tsx`, `web/src/components/site/site-header.tsx`.
 - **Tác dụng:** Đăng nhập/đăng ký thật với Supabase Auth. Các trang protected (tài khoản, đặt vé, v.v.) tự redirect về đăng nhập. Build Next.js sạch, không lỗi.
 - **Làm như thế nào:** Giữ `SiteHeader` là Server Component tĩnh (không dùng cookies), đẩy auth check vào `AuthActions` client component dùng `onAuthStateChange` — tránh làm toàn bộ layout thành dynamic. Middleware dùng `createServerClient` của `@supabase/ssr` để refresh token trong cookies theo đúng pattern Supabase SSR.
+
+---
+
+## 2026-11-14, 05:18 — Đồng bộ frontend với backend schema (types + API client + xoá Prisma + sửa mock data + home page)
+
+- **Thời gian làm việc:** ghi nhận lúc 05:18 14/11/2026.
+- **Làm việc gì:** Rà toàn bộ backend schema (Drizzle) và API contract để tạo lớp đồng bộ cho frontend: (1) xoá `web/prisma/schema.prisma` và `web/prisma7.config.ts` — backend dùng Drizzle, không phải Prisma; (2) tạo `web/src/lib/api/types.ts` chứa toàn bộ TypeScript types khớp với backend (Museum, Artifact, SouvenirProduct, TicketType, TicketOrder, ShopOrder, Cart, v.v.) — money là decimal string VND, không phải cents; (3) tạo `web/src/lib/api/client.ts` với `api.museums.*`, `api.me.*`, `api.carts.*`, `api.ticketOrders.*`, `api.shopOrders.*` gọi Express `/api/v1/*` với Bearer token; (4) viết lại `web/src/lib/mock-data.ts` cho đúng shape thật (xoá `nameEn`/`opens`/`closes`/`Exhibition`, thêm `MuseumWithAccent` type, `featuredArtifacts`); (5) cập nhật `web/src/app/page.tsx` xoá exhibitions section, dùng `featuredArtifacts`; (6) sửa `iso-cluster.tsx` import `MuseumWithAccent` thay cho type cũ.
+- **Ứng dụng/module:** `web/src/lib/api/types.ts`, `web/src/lib/api/client.ts`, `web/src/lib/mock-data.ts`, `web/src/app/page.tsx`, `web/src/components/home/iso-cluster.tsx`.
+- **Tác dụng:** Frontend không còn phụ thuộc Prisma. Tất cả types phản ánh đúng backend schema. API client sẵn sàng gọi khi backend routes được implement. TypeScript build sạch, không lỗi.
+- **Làm như thế nào:** Đọc Drizzle schema (`backend/src/db/schema/`) và API contract từ backend repo, tạo types thủ công thay vì auto-generate (ponytail: không cần codegen khi schema ổn định). Mock data giữ `accent` field client-side (không có trong backend) thông qua `MuseumWithAccent = Museum & { accent: string }` để tránh phải chạm vào nhiều component.
