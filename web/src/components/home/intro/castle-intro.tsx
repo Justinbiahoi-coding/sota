@@ -7,427 +7,252 @@ import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 import { SplitText } from "gsap/SplitText"
 import { Physics2DPlugin } from "gsap/Physics2DPlugin"
-// type-only import so TypeScript knows the Three.js shapes (stripped at runtime)
-import type * as THREE from "three"
 
 gsap.registerPlugin(useGSAP, SplitText, Physics2DPlugin)
 
-// ─── Water shaders ─────────────────────────────────────────────────────────
-// Procedural waves (3 octaves) + analytical normals for Fresnel/specular.
-// 8 click-ripple uniforms expand outward in world-space.
-const WATER_VERT = /* glsl */ `
-precision highp float;
-uniform float time;
-uniform vec4 rip[8];
-varying vec3 vWorld;
-varying vec3 vNorm;
-void main(){
-  vec3 p=position;
-  float w=sin(p.x*0.4+time*1.3)*0.22
-         +sin(p.z*0.35+time*0.9)*0.14
-         +sin(p.x*0.7+p.z*0.6+time*2.0)*0.07;
-  // click ripples expand from world-space centres
-  vec3 wp=(modelMatrix*vec4(p,1.0)).xyz;
-  for(int i=0;i<8;i++){
-    float age=time-rip[i].z;
-    if(age<0.0||age>2.5)continue;
-    float d=length(wp.xz-rip[i].xy);
-    float rad=age*3.0;
-    float ring=sin((d-rad)*5.0)*exp(-abs(d-rad)*2.5)*(1.0-age/2.5)*rip[i].w;
-    w+=ring*0.35;
-  }
-  // analytical normal
-  float dnx=-0.4*0.22*cos(p.x*0.4+time*1.3)-0.7*0.07*cos(p.x*0.7+p.z*0.6+time*2.0);
-  float dnz=-0.35*0.14*cos(p.z*0.35+time*0.9)-0.6*0.07*cos(p.x*0.7+p.z*0.6+time*2.0);
-  vNorm=normalize(normalMatrix*vec3(dnx,1.0,dnz));
-  p.y+=w;
-  vWorld=(modelMatrix*vec4(p,1.0)).xyz;
-  gl_Position=projectionMatrix*modelViewMatrix*vec4(p,1.0);
-}`
-
-const WATER_FRAG = /* glsl */ `
-precision highp float;
-varying vec3 vWorld;
-varying vec3 vNorm;
-uniform vec3 sunDir;
-uniform vec3 camPos;
-uniform vec3 skyTop;
-uniform vec3 skyHorizon;
-void main(){
-  vec3 V=normalize(camPos-vWorld);
-  vec3 N=normalize(vNorm);
-  float fresnel=pow(1.0-max(dot(N,V),0.0),3.5);
-  vec3 R=reflect(-V,N);
-  float st=clamp(R.y*0.5+0.5,0.0,1.0);
-  vec3 skyRefl=mix(skyHorizon,skyTop,st);
-  vec3 deepWater=vec3(0.03,0.07,0.14);
-  vec3 col=mix(deepWater,skyRefl,fresnel*0.9);
-  // sun specular highlight
-  float spec=pow(max(dot(reflect(-sunDir,N),V),0.0),160.0);
-  col+=spec*vec3(1.0,0.95,0.85)*1.1;
-  gl_FragColor=vec4(col,0.9+fresnel*0.08);
-}`
-
-// ─── Types ─────────────────────────────────────────────────────────────────
-type Vec4 = { x: number; y: number; z: number; w: number; set(x: number, y: number, z: number, w: number): Vec4 }
-type PetalObj = { x: number; y: number; z: number; rx: number; ry: number; rz: number }
-
-interface SceneHandles {
-  camera: { rotation: { x: number; y: number; z: number }; position: { x: number; y: number; z: number } }
-  waterMat: { uniforms: { time: { value: number }; rip: { value: Vec4[] } } }
-  petals: { instanceMatrix: { needsUpdate: boolean }; setMatrixAt(i: number, m: unknown): void }
-  petalObjs: PetalObj[]
-  ripVecs: Vec4[]
-  ripIdx: number
-  raycaster: { setFromCamera(coords: { x: number; y: number }, cam: unknown): void; intersectObject(obj: unknown): Array<{ point: { x: number; y: number; z: number } }> }
-  waterMesh: unknown
-  sun: { x: number; y: number; z: number }
-}
-
-const MAX_RIPS = 8
-const PETAL_COUNT = 150
+// The opening: the Castle over its reflecting pool, read as a window rather than a photo. The
+// picture is one WebGL quad whose shader does the depth work (parallax that grows toward the near
+// water, ripples where the pointer touches the pool, the vignette); GSAP does everything in the DOM
+// (the perspective tilt of the whole stage, three depths of drifting petals that land as ripples,
+// a petal burst on the trees, the entrance, the exit).
 const SRC = "/intro/pool.webp"
+const IMG_ASPECT = 16 / 9
+const WATER = 0.31 // the water line, image uv from the bottom (just under the pool's stone rim)
+const ZOOM = 1.14 // headroom so the strong depth parallax never samples past the image edge
+const MAX_RIPPLES = 8
+
+const VERT = `attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0,1);}`
+const FRAG = `precision highp float;uniform sampler2D t;uniform vec2 res,img,m;uniform float z,time,wl;uniform vec4 rip[${MAX_RIPPLES}];varying vec2 v;
+void main(){float ra=res.x/res.y,ia=img.x/img.y;vec2 s=ra>ia?vec2(1.,ia/ra):vec2(ra/ia,1.);
+vec2 uv=(v-.5)*s/z+.5;float depth=smoothstep(.15,1.,1.-v.y);uv+=m*(.009+depth*.05)*s;
+float water=1.-smoothstep(wl-.015,wl+.015,uv.y);
+vec2 d=vec2(sin(uv.y*90.+time*1.4),cos(uv.x*70.+time*1.1))*.0012;float glint=0.;
+for(int i=0;i<${MAX_RIPPLES};i++){vec4 r=rip[i];float age=time-r.z;if(age<0.||age>2.2)continue;
+vec2 dv=(v-r.xy)*vec2(ra,1.);float dist=length(dv),rad=age*.22;
+float ring=sin((dist-rad)*55.)*exp(-abs(dist-rad)*28.)*(1.-age/2.2)*r.w;
+d+=dv/max(dist,1e-4)*ring*.014;glint+=abs(ring)*.25;}
+uv+=d*water;vec3 c=texture2D(t,uv).rgb;
+vec2 px=1./img;
+vec3 nb=texture2D(t,uv+vec2(px.x,0.)).rgb+texture2D(t,uv-vec2(px.x,0.)).rgb
+       +texture2D(t,uv+vec2(0.,px.y)).rgb+texture2D(t,uv-vec2(0.,px.y)).rgb;
+c=clamp(c+(c-nb*.25)*.55,0.,1.);
+c+=water*glint*vec3(.9,.95,1.);
+c*=1.28;c=pow(c,vec3(.9));
+float lum=dot(c,vec3(.299,.587,.114));c=mix(vec3(lum),c,1.12);
+c*=1.-smoothstep(.55,1.,distance(v,vec2(.5)))*.26;gl_FragColor=vec4(c,1.);}`
+
+// where the water line sits on screen (inverse of the shader's cover fit)
+const waterScreenY = () => {
+  const ra = innerWidth / innerHeight
+  const sy = ra > IMG_ASPECT ? IMG_ASPECT / ra : 1
+  return (1 - ((WATER - 0.5) * ZOOM) / sy - 0.5) * innerHeight
+}
+const inWater = (clientY: number) => clientY > waterScreenY()
+
+type Layer = { n: number; size: [number, number]; z: number; blur: number; alpha: number; dur: [number, number]; sway: number; ripple?: boolean }
+const LAYERS: Layer[] = [
+  { n: 12, size: [5, 8], z: 0, blur: 1, alpha: 0.55, dur: [16, 22], sway: 40 },
+  { n: 12, size: [9, 13], z: 90, blur: 0, alpha: 0.85, dur: [11, 15], sway: 70 },
+  { n: 8, size: [15, 22], z: 220, blur: 0, alpha: 1, dur: [7, 10], sway: 110, ripple: true },
+]
+
+type Gl = { pointer: (x: number, y: number) => void; ripple: (cx: number, cy: number, strength: number) => void }
+const rnd = gsap.utils.random
 
 export function CastleIntro() {
   const section = useRef<HTMLElement>(null)
-  const cv = useRef<HTMLCanvasElement>(null)
-  const fxDom = useRef<HTMLDivElement>(null)
+  const stage = useRef<HTMLDivElement>(null)
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const fx = useRef<HTMLDivElement>(null)
   const title = useRef<HTMLHeadingElement>(null)
-  const godBox = useRef<HTMLDivElement>(null)
+  const gl = useRef<Gl | null>(null)
   const [closed, setClosed] = useState(false)
-  const [ready, setReady] = useState(false)
-  const sc = useRef<SceneHandles | null>(null)
+  const [drawn, setDrawn] = useState(false)
 
-  // prevent scroll while intro is open
+  // the page underneath does not scroll while the intro is up
   useEffect(() => {
-    const html = document.documentElement
-    const before = html.style.overflow
+    const html = document.documentElement, before = html.style.overflow
     html.style.overflow = "hidden"
     return () => { html.style.overflow = before }
   }, [])
 
-  // ── Three.js scene ────────────────────────────────────────────────────────
+  // ---------------------------------------------------------------- the picture (raw WebGL)
   useEffect(() => {
-    const canvas = cv.current!
-    let tickFn: gsap.TickerCallback
-    let ro: ResizeObserver
+    const cv = canvas.current!
+    const g = cv.getContext("webgl2") ?? cv.getContext("webgl")
+    if (!g) return
+    const shader = (type: number, src: string) => {
+      const s = g.createShader(type)!
+      g.shaderSource(s, src); g.compileShader(s)
+      return s
+    }
+    const prog = g.createProgram()!
+    g.attachShader(prog, shader(g.VERTEX_SHADER, VERT))
+    g.attachShader(prog, shader(g.FRAGMENT_SHADER, FRAG))
+    g.linkProgram(prog); g.useProgram(prog)
+    g.bindBuffer(g.ARRAY_BUFFER, g.createBuffer())
+    g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), g.STATIC_DRAW)
+    const p = g.getAttribLocation(prog, "p")
+    g.enableVertexAttribArray(p); g.vertexAttribPointer(p, 2, g.FLOAT, false, 0, 0)
+    const u = (n: string) => g.getUniformLocation(prog, n)
+    const uRes = u("res"), uImg = u("img"), uM = u("m"), uZ = u("z"), uT = u("time"), uRip = u("rip[0]")
+    g.uniform1f(u("wl"), WATER)
+    g.bindTexture(g.TEXTURE_2D, g.createTexture())
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE)
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE)
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR)
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR)
+    g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, true)
 
-    ;(async () => {
-      const THREE = await import("three")
-      const { Sky } = await import("three/addons/objects/Sky.js")
-      const { EffectComposer } = await import("three/addons/postprocessing/EffectComposer.js")
-      const { RenderPass } = await import("three/addons/postprocessing/RenderPass.js")
-      const { UnrealBloomPass } = await import("three/addons/postprocessing/UnrealBloomPass.js")
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches
+    const t0 = performance.now()
+    const rip = new Float32Array(MAX_RIPPLES * 4).fill(-10)
+    let ri = 0, mx = 0, my = 0, ax = 0, ay = 0, raf = 0, ready = false
+    const size = () => {
+      const d = Math.min(devicePixelRatio, 2)
+      cv.width = Math.round(innerWidth * d); cv.height = Math.round(innerHeight * d)
+      g.viewport(0, 0, cv.width, cv.height)
+      g.uniform2f(uRes, cv.width, cv.height)
+    }
+    const draw = (nowMs: number) => {
+      raf = 0
+      const t = (nowMs - t0) / 1000
+      mx += (ax - mx) * 0.05; my += (ay - my) * 0.05
+      g.uniform2f(uM, mx, -my)
+      g.uniform1f(uT, t)
+      g.uniform1f(uZ, still ? ZOOM : ZOOM + Math.sin(t / 9) * 0.03)
+      g.uniform4fv(uRip, rip)
+      g.drawArrays(g.TRIANGLE_STRIP, 0, 4)
+      if (!still) raf = requestAnimationFrame(draw)
+    }
+    const kick = () => { if (ready && !raf) raf = requestAnimationFrame(draw) }
+    const onResize = () => { size(); kick() }
+    addEventListener("resize", onResize)
+    gl.current = {
+      pointer: (x, y) => { ax = x; ay = y },
+      ripple: (cx, cy, strength) => {
+        if (still) return
+        rip.set([cx / innerWidth, 1 - cy / innerHeight, (performance.now() - t0) / 1000, strength], ri * 4)
+        ri = (ri + 1) % MAX_RIPPLES
+      },
+    }
 
-      // renderer
-      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
-      renderer.outputColorSpace = THREE.SRGBColorSpace
-      renderer.toneMapping = THREE.ACESFilmicToneMapping
-      renderer.toneMappingExposure = 1.1
-      renderer.setSize(innerWidth, innerHeight)
-
-      // scene + camera
-      const scene = new THREE.Scene()
-      const camera = new THREE.PerspectiveCamera(52, innerWidth / innerHeight, 0.1, 2000)
-      camera.position.set(0, 2.5, 14)
-      camera.rotation.x = -0.14 // default slight downward tilt
-
-      // sky with procedural sun (morning light)
-      const sky = new Sky()
-      sky.scale.setScalar(1500)
-      scene.add(sky)
-      const su = sky.material.uniforms as Record<string, { value: unknown }>
-      su.turbidity.value = 7
-      su.rayleigh.value = 2.8
-      su.mieCoefficient.value = 0.006
-      su.mieDirectionalG.value = 0.88
-      const sun = new THREE.Vector3()
-      sun.setFromSphericalCoords(1,
-        THREE.MathUtils.degToRad(90 - 18), // elevation 18°
-        THREE.MathUtils.degToRad(220)       // south-east azimuth
-      )
-      su.sunPosition.value = sun
-
-      // lighting
-      const sunLight = new THREE.DirectionalLight(0xffe8c0, 2.8)
-      sunLight.position.copy(sun).multiplyScalar(100)
-      scene.add(sunLight)
-      scene.add(new THREE.AmbientLight(0x667799, 0.45))
-      scene.add(new THREE.HemisphereLight(0x88aadd, 0x334422, 0.75))
-
-      // water material — ripple uniforms as array of Vector4
-      const ripVecs = Array.from({ length: MAX_RIPS }, () => new THREE.Vector4(-999, 0, -999, 0))
-      const waterMat = new THREE.ShaderMaterial({
-        uniforms: {
-          time: { value: 0 },
-          sunDir: { value: sun.clone().normalize() },
-          camPos: { value: camera.position },
-          skyTop: { value: new THREE.Color(0x1a3060) },
-          skyHorizon: { value: new THREE.Color(0xc07040) },
-          rip: { value: ripVecs },
-        },
-        vertexShader: WATER_VERT,
-        fragmentShader: WATER_FRAG,
-        transparent: true,
-      })
-      const waterGeo = new THREE.PlaneGeometry(80, 80, 96, 96)
-      const waterMesh = new THREE.Mesh(waterGeo, waterMat)
-      waterMesh.rotation.x = -Math.PI / 2
-      waterMesh.position.y = -0.8
-      scene.add(waterMesh)
-
-      // castle billboard — pool.webp texture with max anisotropy
-      const castleTex = await new Promise<THREE.Texture>((res) =>
-        new THREE.TextureLoader().load(SRC, (t) => {
-          t.minFilter = THREE.LinearMipmapLinearFilter
-          t.anisotropy = renderer.capabilities.getMaxAnisotropy()
-          t.colorSpace = THREE.SRGBColorSpace
-          res(t)
-        })
-      )
-      const castleMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(24, 13.5),
-        new THREE.MeshStandardMaterial({ map: castleTex, roughness: 0.9 })
-      )
-      // position castle high enough so the pool in the texture sits behind the 3D water
-      castleMesh.position.set(0, 5.5, -10)
-      scene.add(castleMesh)
-
-      // cherry petal InstancedMesh — GSAP animates plain objects, ticker copies to matrices
-      const petals = new THREE.InstancedMesh(
-        new THREE.PlaneGeometry(0.22, 0.28),
-        new THREE.MeshStandardMaterial({
-          color: 0xffb0c8,
-          emissive: 0x661020,
-          emissiveIntensity: 0.1,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.88,
-          roughness: 0.8,
-        }),
-        PETAL_COUNT
-      )
-      scene.add(petals)
-
-      const petalObjs: PetalObj[] = Array.from({ length: PETAL_COUNT }, () => ({
-        x: (Math.random() - 0.5) * 32,
-        y: Math.random() * 18 - 2,
-        z: (Math.random() - 0.5) * 18,
-        rx: Math.random() * Math.PI * 2,
-        ry: Math.random() * Math.PI * 2,
-        rz: Math.random() * Math.PI * 2,
-      }))
-
-      const still = matchMedia("(prefers-reduced-motion: reduce)").matches
-      if (!still) {
-        petalObjs.forEach((p) => {
-          const dur = 9 + Math.random() * 13
-          gsap.timeline({ repeat: -1, repeatRefresh: true })
-            .set(p, { y: 15 + Math.random() * 8, x: () => (Math.random() - 0.5) * 32, z: () => (Math.random() - 0.5) * 18 })
-            .to(p, { y: -1.2, duration: dur, ease: "none" })
-            .to(p, { x: `+=${(Math.random() - 0.5) * 14}`, duration: dur / 2, repeat: 1, yoyo: true, ease: "sine.inOut" }, 0)
-            .to(p, {
-              rx: `+=${Math.random() * Math.PI * 5 + Math.PI * 2}`,
-              ry: `+=${Math.random() * Math.PI * 7 + Math.PI * 2}`,
-              rz: `+=${Math.random() * Math.PI * 4 + Math.PI}`,
-              duration: dur, ease: "none",
-            }, 0)
-            .time(Math.random() * dur)
-        })
+    const img = new Image()
+    img.src = SRC
+    img.decode().then(() => {
+      g.texImage2D(g.TEXTURE_2D, 0, g.RGBA, g.RGBA, g.UNSIGNED_BYTE, img)
+      // (mipmaps on a non-power-of-two texture: WebGL2 only; they keep the downscale from shimmering)
+      if (typeof WebGL2RenderingContext !== "undefined" && g instanceof WebGL2RenderingContext) {
+        g.generateMipmap(g.TEXTURE_2D)
+        g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR_MIPMAP_LINEAR)
       }
+      g.uniform2f(uImg, img.naturalWidth, img.naturalHeight)
+      size()
+      ready = true
+      kick()
+      setDrawn(true)
+    }).catch(() => {})
 
-      // post-processing: bloom makes the sun glow, stars & petals pick up subtle halo
-      const composer = new EffectComposer(renderer)
-      composer.addPass(new RenderPass(scene, camera))
-      const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.5, 0.82)
-      composer.addPass(bloom)
-
-      // raycaster for water click detection
-      const raycaster = new THREE.Raycaster()
-
-      // store handles for GSAP hook
-      let ripIdx = 0
-      sc.current = {
-        camera,
-        waterMat: waterMat as unknown as SceneHandles["waterMat"],
-        petals: petals as unknown as SceneHandles["petals"],
-        petalObjs,
-        ripVecs: ripVecs as unknown as Vec4[],
-        ripIdx,
-        raycaster: raycaster as unknown as SceneHandles["raycaster"],
-        waterMesh,
-        sun,
-      }
-
-      // tick: GSAP ticker ↔ Three.js render (keeps timing in sync)
-      const dummy = new THREE.Object3D()
-      let simTime = 0
-
-      tickFn = () => {
-        simTime += 1 / 60
-        waterMat.uniforms.time.value = simTime
-
-        // copy GSAP-animated plain objects → InstancedMesh matrices
-        for (let i = 0; i < PETAL_COUNT; i++) {
-          const p = petalObjs[i]
-          dummy.position.set(p.x, p.y, p.z)
-          dummy.rotation.set(p.rx, p.ry, p.rz)
-          dummy.updateMatrix()
-          petals.setMatrixAt(i, dummy.matrix)
-        }
-        petals.instanceMatrix.needsUpdate = true
-
-        // project sun to 2D screen → move god-ray DOM container
-        if (godBox.current) {
-          const sv = sun.clone().multiplyScalar(500).project(camera)
-          gsap.set(godBox.current, {
-            x: (sv.x + 1) / 2 * innerWidth - innerWidth / 2,
-            y: -(sv.y - 1) / 2 * innerHeight - innerHeight / 2,
-          })
-        }
-
-        composer.render()
-      }
-      gsap.ticker.add(tickFn)
-
-      ro = new ResizeObserver(() => {
-        renderer.setSize(innerWidth, innerHeight)
-        composer.setSize(innerWidth, innerHeight)
-        camera.aspect = innerWidth / innerHeight
-        camera.updateProjectionMatrix()
-        bloom.resolution.set(innerWidth, innerHeight)
-      })
-      ro.observe(document.documentElement)
-
-      setReady(true)
-    })()
-
+    // (the context is kept: a lost context stays lost on this canvas, and React dev remounts the effect)
     return () => {
-      if (tickFn) gsap.ticker.remove(tickFn)
-      ro?.disconnect()
-      sc.current = null
+      cancelAnimationFrame(raf)
+      removeEventListener("resize", onResize)
+      gl.current = null
     }
   }, [])
 
-  // ── GSAP animations ───────────────────────────────────────────────────────
-  const { contextSafe } = useGSAP(
-    () => {
-      if (!ready) return
-      const sec = section.current!
-      const mm = gsap.matchMedia()
+  // ---------------------------------------------------------------- the motion (GSAP)
+  const { contextSafe } = useGSAP(() => {
+    const sec = section.current!, st = stage.current!
+    const mm = gsap.matchMedia()
+    mm.add({ still: "(prefers-reduced-motion: reduce)", motion: "(prefers-reduced-motion: no-preference)" }, (ctx) => {
+      const still = !!ctx.conditions?.still
 
-      mm.add(
-        { still: "(prefers-reduced-motion: reduce)", motion: "(prefers-reduced-motion: no-preference)" },
-        (ctx) => {
-          const still = !!ctx.conditions?.still
+      // entrance: caption, title letter by letter from under a mask, then the button
+      gsap.timeline({ defaults: { ease: "power3.out", duration: still ? 0 : 1 } })
+        .from(".cap", { y: 16, autoAlpha: 0 }, 0.2)
+        .from(".cta", { y: 16, autoAlpha: 0 }, 1)
+      SplitText.create(title.current!, {
+        type: "words,chars", mask: "chars", autoSplit: true,
+        onSplit: (self) => gsap.from(self.chars, { yPercent: 110, duration: still ? 0 : 0.9, stagger: 0.025, ease: "power3.out", delay: 0.35 }),
+      })
+      if (still) return
 
-          // caption + button slide up; title chars reveal from under mask
-          gsap.timeline({ defaults: { ease: "power3.out", duration: still ? 0 : 1 } })
-            .from(".cap",  { y: 18, autoAlpha: 0 }, 0.3)
-            .from(".cta",  { y: 18, autoAlpha: 0 }, 1.1)
-          SplitText.create(title.current!, {
-            type: "words,chars", mask: "chars", autoSplit: true,
-            onSplit: (self) => gsap.from(self.chars, {
-              yPercent: 115, duration: still ? 0 : 0.95, stagger: 0.025, ease: "power3.out", delay: 0.4,
-            }),
-          })
-
-          if (still) return
-
-          // god rays pulse: each rotated ray varies opacity + scaleY independently
-          gsap.to(".god-ray", {
-            scaleY: "random(0.75,1.5)",
-            autoAlpha: "random(0.08,0.35)",
-            duration: "random(1.8,3.5)",
-            repeat: -1, yoyo: true, ease: "sine.inOut",
-            stagger: { each: 0.35, from: "random" },
-          })
-
-          // camera parallax tilt — gsap.quickTo works on any JS object, including THREE cameras
-          const handles = sc.current
-          if (!handles) return
-          const qx = gsap.quickTo(handles.camera.rotation, "x", { duration: 1.1, ease: "power3" })
-          const qy = gsap.quickTo(handles.camera.rotation, "y", { duration: 1.1, ease: "power3" })
-
-          const onMove = (e: PointerEvent) => {
-            const nx = (e.clientX / innerWidth) * 2 - 1
-            const ny = (e.clientY / innerHeight) * 2 - 1
-            qy(nx * 0.09)
-            qx(-0.14 + ny * -0.04)
-          }
-
-          const onDown = (e: PointerEvent) => {
-            if ((e.target as HTMLElement).closest("a,button")) return
-            const h = sc.current
-            if (!h) return
-            // raycast to find whether the pointer is over the water
-            const nx = (e.clientX / innerWidth) * 2 - 1
-            const ny = -(e.clientY / innerHeight) * 2 + 1
-            h.raycaster.setFromCamera({ x: nx, y: ny }, h.camera)
-            const hits = h.raycaster.intersectObject(h.waterMesh)
-            if (hits.length) {
-              addRipple(hits[0].point.x, hits[0].point.z, 1.0)
-            } else {
-              burst(e.clientX, e.clientY)
-            }
-          }
-
-          sec.addEventListener("pointermove", onMove)
-          sec.addEventListener("pointerdown", onDown)
-          return () => {
-            sec.removeEventListener("pointermove", onMove)
-            sec.removeEventListener("pointerdown", onDown)
-          }
+      // the stage tilts after the pointer (perspective on the section), the shader parallaxes with it
+      gsap.set(st, { scale: 1.1 })
+      // camera: dolly-in on entrance, then a slow depth drift so the scene never sits still
+      gsap.from(st, { z: -180, duration: 2.4, ease: "power3.out" }) // (z only — rotation belongs to the pointer quickTo)
+      gsap.to(st, { z: 26, duration: 8, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 2.4 })
+      const rotX = gsap.quickTo(st, "rotationX", { duration: 0.9, ease: "power3" })
+      const rotY = gsap.quickTo(st, "rotationY", { duration: 0.9, ease: "power3" })
+      let lastT = 0, lx = 0, ly = 0
+      const onMove = (e: PointerEvent) => {
+        const x = (e.clientX / innerWidth) * 2 - 1, y = (e.clientY / innerHeight) * 2 - 1
+        gl.current?.pointer(x, y)
+        rotY(x * 4.5); rotX(-y * 3.5)
+        // a trail of small ripples while the pointer moves over the water
+        if (inWater(e.clientY) && e.timeStamp - lastT > 70 && Math.hypot(e.clientX - lx, e.clientY - ly) > 18) {
+          lastT = e.timeStamp; lx = e.clientX; ly = e.clientY
+          gl.current?.ripple(e.clientX, e.clientY, 0.45)
         }
-      )
+      }
+      const onDown = (e: PointerEvent) => {
+        if ((e.target as HTMLElement).closest("a,button")) return
+        if (inWater(e.clientY)) gl.current?.ripple(e.clientX, e.clientY, 1)
+        else burst(e.clientX, e.clientY)
+      }
+      sec.addEventListener("pointermove", onMove)
+      sec.addEventListener("pointerdown", onDown)
 
-      const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") leave() }
-      addEventListener("keydown", onKey)
-      return () => removeEventListener("keydown", onKey)
-    },
-    { scope: section, dependencies: [ready] }
-  )
+      // the drifting petals: three depths, each one falls to the water line, fades, and starts over
+      gsap.utils.toArray<HTMLElement>(".petal", sec).forEach((el) => {
+        const L = LAYERS[+el.dataset.layer!]
+        const size = rnd(L.size[0], L.size[1]), dur = rnd(L.dur[0], L.dur[1])
+        gsap.set(el, { width: size, height: size * 1.3, filter: L.blur ? `blur(${L.blur}px)` : "none" })
+        const tl = gsap.timeline({ repeat: -1, repeatRefresh: true })
+        tl.fromTo(el,
+          { x: () => rnd(-20, innerWidth + 20), y: -30, z: L.z, rotationX: 0, rotationY: 0, rotation: () => rnd(0, 360), autoAlpha: L.alpha },
+          { y: () => waterScreenY() + rnd(-6, 6), duration: dur, ease: "none" })
+          .to(el, { x: `+=random(-${L.sway},${L.sway})`, duration: dur / 4, repeat: 3, yoyo: true, ease: "sine.inOut" }, 0)
+          .to(el, { rotationX: "+=random(300,800)", rotationY: "+=random(300,800)", rotation: "+=random(-180,180)", duration: dur, ease: "none" }, 0)
+          .to(el, { autoAlpha: 0, duration: 0.5 }, dur - 0.5)
+        if (L.ripple) tl.call(() => gl.current?.ripple(gsap.getProperty(el, "x") as number, waterScreenY(), 0.3), [], dur - 0.45)
+        tl.time(rnd(0, dur))
+      })
 
-  // add a click ripple to the water (world space XZ)
-  const addRipple = contextSafe((wx: number, wz: number, strength: number) => {
-    const h = sc.current
-    if (!h) return
-    const idx = h.ripIdx % MAX_RIPS
-    h.ripVecs[idx].set(wx, wz, h.waterMat.uniforms.time.value as unknown as number, strength)
-    h.ripIdx++
-  })
+      return () => {
+        sec.removeEventListener("pointermove", onMove)
+        sec.removeEventListener("pointerdown", onDown)
+      }
+    })
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") leave() }
+    addEventListener("keydown", onKey)
+    return () => removeEventListener("keydown", onKey)
+  }, { scope: section })
 
-  // DOM Physics2D petal burst on click on sky/castle area
+  // a handful of petals thrown off the trees where the pointer lands
   const burst = contextSafe((cx: number, cy: number) => {
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 14; i++) {
       const el = document.createElement("span")
       el.className = "petal"
-      const size = 8 + Math.random() * 12
-      fxDom.current!.appendChild(el)
-      gsap.set(el, { width: size, height: size * 1.3, x: cx, y: cy, z: 0, rotation: Math.random() * 360 })
+      const size = rnd(8, 16)
+      fx.current!.appendChild(el)
+      gsap.set(el, { width: size, height: size * 1.3, x: cx, y: cy, z: 120, rotation: rnd(0, 360) })
       gsap.to(el, {
-        duration: 1.6 + Math.random() * 1.0, ease: "none",
-        physics2D: { velocity: 100 + Math.random() * 280, angle: 190 + Math.random() * 160, gravity: 400 },
-        rotationX: `+=${300 + Math.random() * 400}`,
-        rotationY: `+=${300 + Math.random() * 500}`,
-        autoAlpha: 0,
+        duration: rnd(1.4, 2.2), ease: "none",
+        physics2D: { velocity: rnd(120, 320), angle: rnd(200, 340), gravity: 420 },
+        rotationX: "+=random(200,600)", rotationY: "+=random(200,600)", autoAlpha: 0,
         onComplete: () => el.remove(),
       })
     }
   })
 
   const leave = contextSafe(() => {
-    gsap.to(section.current, {
-      autoAlpha: 0, duration: 0.75, ease: "power2.inOut", overwrite: true,
-      onComplete: () => setClosed(true),
-    })
+    gsap.to(section.current, { autoAlpha: 0, duration: 0.7, ease: "power2.inOut", overwrite: true, onComplete: () => setClosed(true) })
   })
 
   if (closed) return null
-
-  const btn =
-    "placard inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white"
+  const btn = "placard inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white"
 
   return (
     <section
@@ -435,84 +260,35 @@ export function CastleIntro() {
       role="dialog"
       aria-modal="true"
       aria-label="Phần mở đầu"
-      className="fixed inset-0 z-50 select-none overflow-hidden bg-[#0d1520] text-white"
+      className="fixed inset-0 z-50 select-none overflow-hidden bg-[#1c1a17] text-white"
+      style={{ perspective: 1200 }}
     >
-      {/* Three.js canvas — full screen 3D render */}
-      <canvas ref={cv} aria-hidden className="absolute inset-0 size-full" />
-
-      {/* God rays: DOM divs centred on the sun screen-position, animated by GSAP */}
-      <div
-        ref={godBox}
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2"
-        style={{ mixBlendMode: "screen" }}
-      >
-        {Array.from({ length: 10 }, (_, i) => (
-          <div
-            key={i}
-            className="god-ray absolute"
-            style={{
-              width: 3 + (i % 3) * 2,
-              height: 420 + (i % 4) * 80,
-              transformOrigin: "top center",
-              transform: `rotate(${i * 36}deg) translateY(-50%)`,
-              background: `linear-gradient(to bottom, rgba(255,230,160,${0.25 - i * 0.015}), transparent 70%)`,
-              filter: `blur(${3 + (i % 3) * 2}px)`,
-              opacity: 0,
-            }}
-          />
-        ))}
+      <div ref={stage} className="absolute inset-0 will-change-transform" style={{ transformStyle: "preserve-3d" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={SRC} alt="" className="absolute inset-0 size-full object-cover" draggable={false} />
+        <canvas ref={canvas} aria-hidden className="absolute inset-0 size-full" style={{ transition: "opacity 600ms ease", opacity: drawn ? 1 : 0 }} />
+        <div ref={fx} aria-hidden className="pointer-events-none absolute inset-0" style={{ transformStyle: "preserve-3d" }}>
+          {LAYERS.flatMap((L, li) => Array.from({ length: L.n }, (_, i) => <span key={`${li}-${i}`} className="petal" data-layer={li} />))}
+        </div>
       </div>
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/20" />
 
-      {/* Vignette + ground shadow */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20" />
-
-      {/* DOM petal burst layer */}
-      <div ref={fxDom} aria-hidden className="pointer-events-none absolute inset-0" />
-
-      {/* Nav */}
-      <Link href="/" onClick={leave} className="absolute left-5 top-4 font-heading text-3xl italic md:left-8">
-        Sota
-      </Link>
+      <Link href="/" onClick={leave} className="absolute left-5 top-4 font-heading text-3xl italic md:left-8">Sota</Link>
       <Link href="/dang-nhap" className={`${btn} absolute right-4 top-4 py-1 pl-4 md:right-8`}>
-        Đăng nhập
-        <span className="grid size-7 place-items-center rounded-[2px] border border-white/25">
-          <ArrowRight className="size-3.5" />
-        </span>
+        Đăng nhập<span className="grid size-7 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
       </Link>
 
-      {/* Hero text */}
       <div className="absolute inset-x-0 top-[42%] -translate-y-1/2 px-5 text-center md:px-8">
-        <p className="cap placard text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.65)]">
-          Cụm bảo tàng Smithsonian · Washington, D.C.
-        </p>
-        <h1
-          ref={title}
-          className="mt-5 font-heading text-5xl font-light leading-[1.05] tracking-tight [text-shadow:0_2px_28px_rgb(0_0_0/0.5)] sm:text-7xl xl:text-[7rem]"
-        >
-          Space of the Art.
-        </h1>
+        <p className="cap placard text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.7)]">Cụm bảo tàng Smithsonian · Washington, D.C.</p>
+        <h1 ref={title} className="mt-5 font-heading text-5xl font-light leading-[1.05] tracking-tight [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-7xl xl:text-[7rem]">Space of the Art.</h1>
         <button onClick={leave} className={`cta ${btn} mt-10`}>
-          Khám phá
-          <span className="grid size-8 place-items-center rounded-[2px] border border-white/25">
-            <ArrowRight className="size-3.5" />
-          </span>
+          Khám phá<span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
         </button>
       </div>
 
-      {/* Footer */}
-      <p className="placard pointer-events-none absolute bottom-5 left-5 text-white/55 md:bottom-6 md:left-8">
-        10 · 08 · 1846 — Smithsonian Institution
-      </p>
-      <p className="placard pointer-events-none absolute inset-x-0 bottom-5 hidden text-center text-white/40 sm:block">
-        Nhấn vào mặt nước · nhấn lên trời để tung hoa
-      </p>
-      <button
-        onClick={leave}
-        className="placard absolute bottom-5 right-5 opacity-55 transition-opacity hover:opacity-100 md:bottom-6 md:right-8"
-      >
-        Bỏ qua
-      </button>
+      <p className="placard pointer-events-none absolute bottom-5 left-5 text-white/60 md:bottom-6 md:left-8">10 · 08 · 1846 — Smithsonian Institution</p>
+      <p className="placard pointer-events-none absolute bottom-5 inset-x-0 hidden text-center text-white/45 sm:block">Chạm vào mặt nước · nhấn vào hàng cây</p>
+      <button onClick={leave} className="placard absolute bottom-5 right-5 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8">Bỏ qua</button>
     </section>
   )
 }

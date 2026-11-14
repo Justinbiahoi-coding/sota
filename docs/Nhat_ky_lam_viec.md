@@ -513,3 +513,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Ứng dụng/module:** `web/src/components/home/intro/castle-intro.tsx` (mới), `web/public/intro/castle.avif` (mới), `web/src/app/page.tsx` (đổi mount); xoá `evolution-intro.tsx` và `veil.ts` (media cũ trong `public/intro/` và CSS `.fq/.faq/.write/.drift` tạm giữ, dọn sau).
 - **Tác dụng:** Màn mở đầu nhẹ (không thư viện 3D, ~130 dòng), chạy được không cần backend; ảnh `<img>` nằm dưới canvas nên hiện ngay khi tải và là fallback khi không có WebGL; tôn trọng `prefers-reduced-motion`.
 - **Làm như thế nào:** Raw WebGL (`webgl2` ưu tiên để có mipmap cho texture non-power-of-two, fallback `webgl`), DPR giới hạn 1.5 cho nhẹ. Lỗi gặp phải: màn trắng do React StrictMode chạy effect 2 lần — cleanup gọi `loseContext()` làm context của canvas chết vĩnh viễn, lần mount sau `getContext()` trả về đúng context đã mất → bỏ `loseContext()` khỏi cleanup. Preview bằng dev server với biến Supabase giả (giá trị trong `.env` đang rỗng nên trang 500 nếu không có). Ảnh Castle là placeholder editorial, production cần ảnh CC0.
+
+---
+
+## 2026-11-14, 09:20 — Intro 3D hơn: sáng, nét, dolly camera (giữ nguyên cảnh hồ)
+
+- **Thời gian làm việc:** ghi nhận lúc 09:20 14/11/2026.
+- **Làm việc gì:** Thử Three.js full scene (Sky + Water + bloom + god rays) nhưng kết quả sai ý — cảnh bị thay bằng trời/nước thủ tục với 2 đốm sáng, ảnh castle thành tấm nhỏ. Quay về bản shader full màn hình (git show f3bd174) rồi nâng theo đúng yêu cầu "cảnh y hệt, 3d, sáng hơn, nét hơn": (1) shader thêm unsharp mask 4 tap theo texel ảnh (nét hơn), exposure ×1.28 + pow 0.9 + saturation 1.12 (sáng rực), vignette nhẹ đi (0.45→0.26); (2) parallax chiều sâu tăng hơn gấp đôi (.004+.022 → .009+.05), ZOOM 1.06→1.14 để không lộ mép ảnh; (3) lớp phủ tối DOM giảm (black/55→35); (4) GSAP: dolly-in translateZ -180→0 lúc vào (2.4s power3.out), sau đó z trôi ±26 yoyo 8s vô hạn — cảnh không bao giờ đứng yên; tilt chuột tăng 3°/2.5°→4.5°/3.5°; cánh hoa giãn z 0/50/140→0/90/220 cho parallax tầng rõ hơn. Gỡ three + @types/three.
+- **Ứng dụng/module:** `web/src/components/home/intro/castle-intro.tsx`, `web/package.json`.
+- **Tác dụng:** Vẫn đúng cảnh hồ Smithsonian nhưng sáng, nét, và có chiều sâu 3D thật (dolly + đa tầng + parallax theo depth). Không còn phụ thuộc Three.js (~600KB).
+- **Làm như thế nào:** Rung chuông ponytail: ảnh 1 quad + depth parallax trong shader là đủ "3d" cho một tấm ảnh — Three.js scene thủ tục phá vỡ cảnh gốc. Dolly-in chỉ animate translateZ (rotation để dành cho quickTo theo chuột, tránh 2 tween đánh nhau trên cùng property). Unsharp mask lấy offset 1 texel ảnh (1/img) chứ không phải 1 pixel màn hình — đúng tần số chi tiết bị mất khi upscale 800×450.
