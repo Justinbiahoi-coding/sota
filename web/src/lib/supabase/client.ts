@@ -1,12 +1,11 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-/**
- * Supabase client dùng ở phía trình duyệt (Client Component). Không dùng
- * file này trong Server Component/API route — xem server.ts.
- */
+// Minimal valid-format JWT for local dev without real Supabase keys
+const PLACEHOLDER_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJwbGFjZWhvbGRlciJ9.placeholder"
+
 export function createClient() {
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PLACEHOLDER_JWT,
   );
 }

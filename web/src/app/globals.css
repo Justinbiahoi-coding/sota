@@ -158,6 +158,17 @@
   .rise { animation: none; }
 }
 
+/* a cherry-blossom petal for the intro: one rounded leaf shape, driven by GSAP transforms only */
+.petal {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 100% 0 100% 0;
+  background: radial-gradient(circle at 30% 30%, #ffe1ec, #f6a5c6 60%, #e4809f);
+  will-change: transform;
+  pointer-events: none;
+}
+
 /* the intro's film grain: a tile of noise at the screen's own pixels (drawn by the intro, see
    grainTile), over everything, jumping a few times a second by whole pixels so it stays sharp */
 @keyframes grain {

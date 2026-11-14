@@ -4,11 +4,16 @@ import { NextResponse, type NextRequest } from "next/server"
 const PROTECTED = ["/tai-khoan", "/dat-ve", "/don-hang", "/ve-cua-toi"]
 
 export async function middleware(request: NextRequest) {
+  // Skip when Supabase isn't configured yet (local dev without .env)
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
       cookies: {
         getAll() { return request.cookies.getAll() },
