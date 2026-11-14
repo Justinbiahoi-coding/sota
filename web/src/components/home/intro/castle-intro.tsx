@@ -7,6 +7,7 @@ import gsap from "gsap"
 import { useGSAP } from "@gsap/react"
 import { SplitText } from "gsap/SplitText"
 import { Physics2DPlugin } from "gsap/Physics2DPlugin"
+import { CastleEnter } from "./castle-enter"
 
 gsap.registerPlugin(useGSAP, SplitText, Physics2DPlugin)
 
@@ -23,19 +24,25 @@ const MAX_RIPPLES = 8
 
 const VERT = `attribute vec2 p;varying vec2 v;void main(){v=p*.5+.5;gl_Position=vec4(p,0,1);}`
 const FRAG = `precision highp float;uniform sampler2D t;uniform vec2 res,img,m;uniform float z,time,wl;uniform vec4 rip[${MAX_RIPPLES}];varying vec2 v;
-void main(){float ra=res.x/res.y,ia=img.x/img.y;vec2 s=ra>ia?vec2(1.,ia/ra):vec2(ra/ia,1.);
-vec2 uv=(v-.5)*s/z+.5;float depth=smoothstep(.15,1.,1.-v.y);uv+=m*(.009+depth*.05)*s;
+void main(){float ra=res.x/res.y,ia=img.x/img.y;vec2 sc=ra>ia?vec2(1.,ia/ra):vec2(ra/ia,1.);
+vec2 uv=(v-.5)*sc/z+.5;float depth=smoothstep(.15,1.,1.-v.y);uv+=m*(.009+depth*.05)*sc;
 float water=1.-smoothstep(wl-.015,wl+.015,uv.y);
 vec2 d=vec2(sin(uv.y*90.+time*1.4),cos(uv.x*70.+time*1.1))*.0012;float glint=0.;
 for(int i=0;i<${MAX_RIPPLES};i++){vec4 r=rip[i];float age=time-r.z;if(age<0.||age>2.2)continue;
 vec2 dv=(v-r.xy)*vec2(ra,1.);float dist=length(dv),rad=age*.22;
 float ring=sin((dist-rad)*55.)*exp(-abs(dist-rad)*28.)*(1.-age/2.2)*r.w;
 d+=dv/max(dist,1e-4)*ring*.014;glint+=abs(ring)*.25;}
-uv+=d*water;vec3 c=texture2D(t,uv).rgb;
+uv+=d*water;
+vec2 bxy=uv*img-.5;vec2 bf=fract(bxy);bxy-=bf;
+vec4 bnx=vec4(1.,2.,3.,4.)-bf.x,bsx=bnx*bnx*bnx;float bx0=bsx.x,bx1=bsx.y-4.*bsx.x,bx2=bsx.z-4.*bsx.y+6.*bsx.x,bx3=6.-bx0-bx1-bx2;vec4 bcx=vec4(bx0,bx1,bx2,bx3)/6.;
+vec4 bny=vec4(1.,2.,3.,4.)-bf.y,bsy=bny*bny*bny;float by0=bsy.x,by1=bsy.y-4.*bsy.x,by2=bsy.z-4.*bsy.y+6.*bsy.x,by3=6.-by0-by1-by2;vec4 bcy=vec4(by0,by1,by2,by3)/6.;
+vec4 bw=vec4(bcx.xz+bcx.yw,bcy.xz+bcy.yw);vec4 bo=(bxy.xxyy+vec4(-.5,1.5,-.5,1.5)+vec4(bcx.yw,bcy.yw)/bw)/img.xxyy;
+float bmx=bw.x/(bw.x+bw.y),bmy=bw.z/(bw.z+bw.w);
+vec3 c=mix(mix(texture2D(t,bo.yw).rgb,texture2D(t,bo.xw).rgb,bmx),mix(texture2D(t,bo.yz).rgb,texture2D(t,bo.xz).rgb,bmx),bmy);
 vec2 px=1./img;
 vec3 nb=texture2D(t,uv+vec2(px.x,0.)).rgb+texture2D(t,uv-vec2(px.x,0.)).rgb
        +texture2D(t,uv+vec2(0.,px.y)).rgb+texture2D(t,uv-vec2(0.,px.y)).rgb;
-c=clamp(c+(c-nb*.25)*.55,0.,1.);
+c=clamp(c+(c-nb*.25)*.75,0.,1.);
 c+=water*glint*vec3(.9,.95,1.);
 c*=1.28;c=pow(c,vec3(.9));
 float lum=dot(c,vec3(.299,.587,.114));c=mix(vec3(lum),c,1.12);
@@ -56,7 +63,7 @@ const LAYERS: Layer[] = [
   { n: 8, size: [15, 22], z: 220, blur: 0, alpha: 1, dur: [7, 10], sway: 110, ripple: true },
 ]
 
-type Gl = { pointer: (x: number, y: number) => void; ripple: (cx: number, cy: number, strength: number) => void }
+type Gl = { pointer: (x: number, y: number) => void; ripple: (cx: number, cy: number, strength: number) => void; stop: () => void }
 const rnd = gsap.utils.random
 
 export function CastleIntro() {
@@ -68,6 +75,8 @@ export function CastleIntro() {
   const gl = useRef<Gl | null>(null)
   const [closed, setClosed] = useState(false)
   const [drawn, setDrawn] = useState(false)
+  const [entered, setEntered] = useState(false)
+  const enteredRef = useRef(false)
 
   // the page underneath does not scroll while the intro is up
   useEffect(() => {
@@ -104,7 +113,7 @@ export function CastleIntro() {
     g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR)
     g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL, true)
 
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches
+    let still = matchMedia("(prefers-reduced-motion: reduce)").matches
     const t0 = performance.now()
     const rip = new Float32Array(MAX_RIPPLES * 4).fill(-10)
     let ri = 0, mx = 0, my = 0, ax = 0, ay = 0, raf = 0, ready = false
@@ -135,6 +144,7 @@ export function CastleIntro() {
         rip.set([cx / innerWidth, 1 - cy / innerHeight, (performance.now() - t0) / 1000, strength], ri * 4)
         ri = (ri + 1) % MAX_RIPPLES
       },
+      stop: () => { still = true; cancelAnimationFrame(raf); raf = 0 },
     }
 
     const img = new Image()
@@ -187,6 +197,7 @@ export function CastleIntro() {
       const rotY = gsap.quickTo(st, "rotationY", { duration: 0.9, ease: "power3" })
       let lastT = 0, lx = 0, ly = 0
       const onMove = (e: PointerEvent) => {
+        if (enteredRef.current) return
         const x = (e.clientX / innerWidth) * 2 - 1, y = (e.clientY / innerHeight) * 2 - 1
         gl.current?.pointer(x, y)
         rotY(x * 4.5); rotX(-y * 3.5)
@@ -197,7 +208,7 @@ export function CastleIntro() {
         }
       }
       const onDown = (e: PointerEvent) => {
-        if ((e.target as HTMLElement).closest("a,button")) return
+        if (enteredRef.current || (e.target as HTMLElement).closest("a,button")) return
         if (inWater(e.clientY)) gl.current?.ripple(e.clientX, e.clientY, 1)
         else burst(e.clientX, e.clientY)
       }
@@ -251,6 +262,17 @@ export function CastleIntro() {
     gsap.to(section.current, { autoAlpha: 0, duration: 0.7, ease: "power2.inOut", overwrite: true, onComplete: () => setClosed(true) })
   })
 
+  // "Khám phá": the run across the pool toward the Castle, into white, then the door scene takes over
+  const enter = contextSafe(() => {
+    if (enteredRef.current) return
+    enteredRef.current = true
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches
+    gsap.timeline({ onComplete: () => { gl.current?.stop(); setEntered(true) } })
+      .to([".cap", title.current, ".cta", ".foot"], { autoAlpha: 0, duration: still ? 0 : 0.45, ease: "power2.in" }, 0)
+      .to(stage.current, { z: 900, duration: still ? 0 : 1.9, ease: "power2.in", overwrite: "auto" }, 0)
+      .to(stage.current, { filter: "brightness(3.2)", duration: still ? 0 : 1.9, ease: "power3.in" }, 0)
+  })
+
   if (closed) return null
   const btn = "placard inline-flex items-center gap-4 whitespace-nowrap rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white"
 
@@ -263,7 +285,7 @@ export function CastleIntro() {
       className="fixed inset-0 z-50 select-none overflow-hidden bg-[#1c1a17] text-white"
       style={{ perspective: 1200 }}
     >
-      <div ref={stage} className="absolute inset-0 will-change-transform" style={{ transformStyle: "preserve-3d" }}>
+      <div ref={stage} className="absolute inset-0 will-change-transform" style={{ transformStyle: "preserve-3d", visibility: entered ? "hidden" : undefined }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={SRC} alt="" className="absolute inset-0 size-full object-cover" draggable={false} />
         <canvas ref={canvas} aria-hidden className="absolute inset-0 size-full" style={{ transition: "opacity 600ms ease", opacity: drawn ? 1 : 0 }} />
@@ -271,7 +293,7 @@ export function CastleIntro() {
           {LAYERS.flatMap((L, li) => Array.from({ length: L.n }, (_, i) => <span key={`${li}-${i}`} className="petal" data-layer={li} />))}
         </div>
       </div>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/20" />
+      {entered ? <CastleEnter onDone={leave} /> : <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-black/20" />}
 
       <Link href="/" onClick={leave} className="absolute left-5 top-4 font-heading text-3xl italic md:left-8">Sota</Link>
       <Link href="/dang-nhap" className={`${btn} absolute right-4 top-4 py-1 pl-4 md:right-8`}>
@@ -281,14 +303,14 @@ export function CastleIntro() {
       <div className="absolute inset-x-0 top-[42%] -translate-y-1/2 px-5 text-center md:px-8">
         <p className="cap placard text-white/90 [text-shadow:0_1px_12px_rgb(0_0_0/0.7)]">Cụm bảo tàng Smithsonian · Washington, D.C.</p>
         <h1 ref={title} className="mt-5 font-heading text-5xl font-light leading-[1.05] tracking-tight [text-shadow:0_2px_24px_rgb(0_0_0/0.45)] sm:text-7xl xl:text-[7rem]">Space of the Art.</h1>
-        <button onClick={leave} className={`cta ${btn} mt-10`}>
+        <button onClick={enter} className={`cta ${btn} mt-10`}>
           Khám phá<span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
         </button>
       </div>
 
-      <p className="placard pointer-events-none absolute bottom-5 left-5 text-white/60 md:bottom-6 md:left-8">10 · 08 · 1846 — Smithsonian Institution</p>
-      <p className="placard pointer-events-none absolute bottom-5 inset-x-0 hidden text-center text-white/45 sm:block">Chạm vào mặt nước · nhấn vào hàng cây</p>
-      <button onClick={leave} className="placard absolute bottom-5 right-5 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8">Bỏ qua</button>
+      <p className="foot placard pointer-events-none absolute bottom-5 left-5 text-white/60 md:bottom-6 md:left-8">10 · 08 · 1846 — Smithsonian Institution</p>
+      <p className="foot placard pointer-events-none absolute bottom-5 inset-x-0 hidden text-center text-white/45 sm:block">Chạm vào mặt nước · nhấn vào hàng cây</p>
+      {!entered && <button onClick={leave} className="placard absolute bottom-5 right-5 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8">Bỏ qua</button>}
     </section>
   )
 }
