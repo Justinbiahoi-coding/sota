@@ -1,8 +1,9 @@
 import { Suspense } from "react"
 import Link from "next/link"
-import { Menu, Search, UserRound } from "lucide-react"
+import { Menu, Search } from "lucide-react"
 import { NavLinks } from "./nav-links"
 import { CartIcon } from "./cart-icon"
+import { AuthActions } from "./auth-actions"
 import { StarBorder } from "@/components/reactbits/star-border"
 import { Magnet } from "@/components/reactbits/magnet"
 
@@ -43,15 +44,8 @@ export function SiteHeader() {
             <CartIcon />
           </Magnet>
 
-          <Magnet magnetStrength={0.25}>
-            <Link
-              href="/tai-khoan"
-              className="hidden sm:inline-flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-stone-200 transition-all duration-300 hover:border-[#d4af37]/60 hover:bg-white/10 hover:text-[#d4af37]"
-              aria-label="Tài khoản"
-            >
-              <UserRound className="size-[17px]" />
-            </Link>
-          </Magnet>
+          {/* Supabase Auth State (Đăng nhập / Đăng xuất / Hồ sơ) */}
+          <AuthActions />
 
           {/* StarBorder Featured Button (ReactBits) */}
           <div className="hidden sm:block ml-1">

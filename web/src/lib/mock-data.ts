@@ -1,11 +1,15 @@
 // Mock data for the frontend while the API is being built.
 // All image URLs are tested and verified high-resolution Unsplash and local museum assets.
+// Compatible with both frontend UI components and backend schema types (docs/database-design.md).
+
+import type { Museum as ApiMuseum, Artifact as ApiArtifact, TicketType } from "./api/types"
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
 export type Museum = {
+  id?: string
   slug: string
   name: string
   nameEn: string
@@ -14,8 +18,15 @@ export type Museum = {
   closes: string
   image: string
   address: string
+  city?: string
   description: string
+  cover_image_path?: string | null
+  status?: string
+  created_at?: string
+  updated_at?: string
 }
+
+export type MuseumWithAccent = Museum
 
 export type Exhibition = {
   slug: string
@@ -211,6 +222,48 @@ export const exhibitions: Exhibition[] = [
     description: "Lịch sử hàng hải Hoa Kỳ từ thế kỷ 18 đến Thế chiến II — bộ sưu tập gồm hải đồ, nhật ký thuyền trưởng và các vật phẩm Hải quân gốc.",
     curator: "David Allison",
     status: "ended",
+  },
+]
+
+export const featuredArtifacts: (ApiArtifact & { museumSlug: string; accent: string })[] = [
+  {
+    id: "00000000-0000-0000-0001-000000000001",
+    museum_id: "00000000-0000-0000-0000-000000000001",
+    museumSlug: "lich-su-tu-nhien",
+    name: "Voi ma mút lông mịn",
+    description: "Bộ xương voi ma mút nguyên vẹn từ kỷ Pleistocene, khoảng 10.000 năm trước.",
+    period: "Kỷ Pleistocene (~10.000 TCN)",
+    inventory_code: "NMNH-M-001",
+    status: "published",
+    accent: "oklch(0.46 0.07 145)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0001-000000000002",
+    museum_id: "00000000-0000-0000-0000-000000000002",
+    museumSlug: "hang-khong-vu-tru",
+    name: "Module Điều khiển Apollo 11",
+    description: "Khoang chỉ huy đã đưa phi hành đoàn Apollo 11 trở về Trái Đất năm 1969.",
+    period: "1969",
+    inventory_code: "NASM-A-002",
+    status: "published",
+    accent: "oklch(0.4 0.09 255)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "00000000-0000-0000-0001-000000000003",
+    museum_id: "00000000-0000-0000-0000-000000000003",
+    museumSlug: "lich-su-hoa-ky",
+    name: "Lá cờ Fort McHenry",
+    description: "Lá cờ treo trên Fort McHenry sau trận chiến năm 1814, cảm hứng để viết The Star-Spangled Banner.",
+    period: "1814",
+    inventory_code: "NMAH-F-003",
+    status: "published",
+    accent: "oklch(0.5 0.13 30)",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
   },
 ]
 

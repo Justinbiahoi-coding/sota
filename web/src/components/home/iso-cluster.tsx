@@ -1,5 +1,5 @@
 import Link from "next/link"
-import type { Museum } from "@/lib/mock-data"
+import type { MuseumWithAccent as Museum } from "@/lib/mock-data"
 
 // An isometric miniature of the museum cluster, two rows of buildings either side of the Mall.
 // Stand-in for the React Three Fiber scene: same idea (hover lifts a museum, click enters it),
@@ -54,7 +54,7 @@ export function IsoCluster({ museums }: { museums: Museum[] }) {
                 return <polygon key={k} points={pts(iso(fx - 0.11, fy, z0), iso(fx + 0.11, fy, z0), iso(fx + 0.11, fy, z1), iso(fx - 0.11, fy, z1))} className="fill-foreground/15" />
               })}
               <text x={lx} y={ly - 16} textAnchor="middle" className="placard pointer-events-none fill-foreground opacity-0 transition-opacity duration-300 group-hover/b:opacity-100 group-focus-visible/b:opacity-100" style={{ fontSize: 10 }}>
-                {m.nameEn.replace("National ", "")}
+                {m.name}
               </text>
             </g>
           </Link>
