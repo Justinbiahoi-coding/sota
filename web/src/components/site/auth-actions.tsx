@@ -16,16 +16,44 @@ export function AuthActions() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data }) => setUser(data.user))
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null)
-    })
-    return () => subscription.unsubscribe()
+    try {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        // Chế độ Mock Test độc lập: đọc từ localStorage client
+        const localUser = typeof window !== "undefined" ? localStorage.getItem("sota_user_name") : null
+        setUser(localUser ? ({ email: localUser } as unknown as User) : null)
+        return
+      }
+
+      const supabase = createClient()
+      supabase.auth.getUser()
+        .then(({ data }) => setUser(data?.user ?? null))
+        .catch(() => {
+          const localUser = typeof window !== "undefined" ? localStorage.getItem("sota_user_name") : null
+          setUser(localUser ? ({ email: localUser } as unknown as User) : null)
+        })
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+        setUser(session?.user ?? null)
+      })
+      return () => subscription?.unsubscribe()
+    } catch {
+      const localUser = typeof window !== "undefined" ? localStorage.getItem("sota_user_name") : null
+      setUser(localUser ? ({ email: localUser } as unknown as User) : null)
+    }
   }, [])
 
   const signOut = async () => {
-    await createClient().auth.signOut()
+    try {
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+        await createClient().auth.signOut()
+      }
+    } catch {
+      // Ignored in mock mode
+    }
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("sota_user_name")
+    }
+    setUser(null)
     router.push("/")
     router.refresh()
   }
