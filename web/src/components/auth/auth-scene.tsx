@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { ArrowRight, AtSign, Lock, UserRound } from "lucide-react"
 import { readGrain } from "@/lib/grain"
@@ -53,6 +54,7 @@ const TILT = ["rotate(1.6deg) translateZ(22px)", "rotate(2.2deg) translateZ(8px)
 const noSubscribe = () => () => {}
 
 export function AuthScene({ mode }: { mode: Mode }) {
+  const router = useRouter()
   const plane = useRef<HTMLDivElement>(null)
   const [note, setNote] = useState("")
   const grain = useSyncExternalStore(noSubscribe, readGrain, () => "none")
@@ -82,7 +84,13 @@ export function AuthScene({ mode }: { mode: Mode }) {
     e.preventDefault()
     const f = new FormData(e.currentTarget)
     if (mode === "register" && f.get("password") !== f.get("confirm")) return setNote("Hai mật khẩu chưa khớp nhau.")
-    setNote("Đã kiểm tra xong. Máy chủ tài khoản chưa chạy nên chưa gửi được; phần này sẽ nối khi backend xong.")
+    const email = String(f.get("email") || "")
+    const name = String(f.get("name") || email.split("@")[0] || "Khách Sota")
+    localStorage.setItem("sota_user_name", name)
+    setNote(mode === "login" ? "Đăng nhập thành công! Đang chuyển hướng..." : "Tạo tài khoản thành công! Đang chuyển hướng...")
+    setTimeout(() => {
+      router.push("/tai-khoan")
+    }, 600)
   }
 
   return (

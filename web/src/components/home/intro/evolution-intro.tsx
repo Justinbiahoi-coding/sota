@@ -321,9 +321,14 @@ export function EvolutionIntro() {
         p = target = ramp.from + (ramp.to - ramp.from) * e * e * (3 - 2 * e)
         if (e >= 1) { const k = ramp.k; ramp = null; if (steps[k].film) play(k, 0) }
       } else if (playing >= 0) {
-        const v = vids[playing]!, fv = v.duration ? v.currentTime / v.duration : 0
-        if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
-        else p = target = playing + HOLD + (lead(playing) + fv * (1 - lead(playing))) * (1 - 2 * HOLD)
+        const v = vids[playing]
+        if (!v) {
+          playing = -1
+        } else {
+          const fv = v.duration ? v.currentTime / v.duration : 0
+          if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
+          else p = target = playing + HOLD + (lead(playing) + fv * (1 - lead(playing))) * (1 - 2 * HOLD)
+        }
       } else {
         p += (target - p) * 0.16
         if (Math.abs(target - p) < 0.0005) p = target
