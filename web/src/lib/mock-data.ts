@@ -706,3 +706,505 @@ export const exhibitionStatus = (starts: string, ends: string): "ongoing" | "upc
   if (starts > refDate) return "upcoming"
   return "ongoing"
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN MVP TYPES & IN-MEMORY STORE (F14, F15, F16, F17, F18, F19, F20, F22)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type AdminRole = "anon" | "normal_user" | "admin_user" | "super_admin"
+export type AdminKind = "museum" | "artifact" | "exhibit" | "ticket" | "product"
+export type AdminFields = Record<string, string>
+
+export interface AdminItem {
+  id: string
+  kind: AdminKind
+  museum: string
+  name: string
+  status: string
+  fields: AdminFields
+  links: string[]
+  source?: { code: string; url: string; rights: string }
+}
+
+export interface AdminOrder {
+  id: string
+  museum: string
+  kind: "ticket" | "shop"
+  date: string
+  visit: string
+  slot: string
+  code: string
+  status: string
+  paid: boolean
+  qty: number
+  price: number
+  fee: number
+  product: string
+  label: string
+  exhibit?: string
+  usedAt?: string
+}
+
+export interface AdminAsset {
+  id: string
+  museum: string
+  target: string
+  name: string
+  primary: boolean
+  sequence: number
+  url: string
+  mime: string
+}
+
+export function getAdminDay(offset = 0, now = new Date()): string {
+  return new Date(now.getTime() + (7 * 60 + offset * 1440) * 60000).toISOString().slice(0, 10)
+}
+
+export const formatVND = (amount: number): string =>
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(amount)
+
+export const ADMIN_STATUS_LABELS: Record<string, string> = {
+  draft: "Bản nháp",
+  published: "Đã xuất bản",
+  archived: "Đã lưu trữ",
+  available: "Đang bán",
+  unavailable: "Ngừng bán",
+  confirmed: "Đã xác nhận",
+  used: "Đã sử dụng",
+  pending: "Chờ thanh toán",
+  cancelled: "Đã hủy",
+  shipped: "Đang giao",
+  completed: "Đã giao",
+}
+
+export function createInitialAdminItems(): AdminItem[] {
+  const item = (
+    kind: AdminKind,
+    id: string,
+    museum: string,
+    name: string,
+    fields: AdminFields,
+    status = "published"
+  ): AdminItem => ({ kind, id, museum, name, fields, status, links: [] })
+
+  const exhibit = item("exhibit", "e1", "m1", "Dấu men thời gian", {
+    start: getAdminDay(-12),
+    end: getAdminDay(28),
+    description: "Bộ sưu tập gốm men lam và nghệ thuật thế kỷ XIX",
+  })
+  exhibit.links = ["a1"]
+
+  return [
+    item("museum", "m1", "m1", "Bảo tàng Mỹ thuật", {
+      slug: "my-thuat",
+      address: "66 Nguyễn Thái Học, Ba Đình",
+      city: "Hà Nội",
+      description: "Không gian trưng bày di sản mỹ thuật tiêu biểu của Việt Nam qua các thời kỳ.",
+    }),
+    item(
+      "museum",
+      "m2",
+      "m2",
+      "Bảo tàng Di sản",
+      {
+        slug: "di-san",
+        city: "Huế",
+        address: "12 Lê Lợi",
+        description: "Bảo tồn cổ vật và di vật cung đình.",
+      },
+      "draft"
+    ),
+    item("artifact", "a1", "m1", "Bình men lam", {
+      code: "BT-001",
+      period: "Thế kỷ XIX",
+      description: "Gốm men lam hoa lam thời Nguyễn sắc nét.",
+    }),
+    item(
+      "artifact",
+      "a2",
+      "m1",
+      "Tranh khắc phố cổ",
+      {
+        code: "BT-002",
+        period: "Thế kỷ XX",
+        description: "Bản khắc gỗ tái hiện phố Hàng Bạc.",
+      },
+      "draft"
+    ),
+    exhibit,
+    item("ticket", "t1", "m1", "Vé tiêu chuẩn", { price: "60000", description: "Tham quan toàn bộ sảnh trưng bày cố định" }, "available"),
+    item("ticket", "t2", "m1", "Vé sinh viên", { price: "30000", description: "Áp dụng khi xuất trình thẻ học sinh, sinh viên" }, "available"),
+    item("product", "p1", "m1", "Bộ bưu thiếp", {
+      code: "BC-01",
+      price: "45000",
+      stock: "18",
+      description: "Tập 10 bưu thiếp in tác phẩm men lam tiêu biểu",
+    }),
+    item("product", "p2", "m1", "Sổ tay bảo tàng", {
+      code: "ST-01",
+      price: "80000",
+      stock: "12",
+      description: "Sổ bìa cứng giấy mỹ thuật ép kim",
+    }),
+    item("artifact", "a3", "m2", "Ấn triện", {
+      code: "DS-01",
+      period: "Thế kỷ XIX",
+      description: "Cổ vật ngự dụng triều Nguyễn.",
+    }),
+  ]
+}
+
+export function createInitialAdminOrders(): AdminOrder[] {
+  const ticket: AdminOrder = {
+    id: "TKT-101",
+    museum: "m1",
+    kind: "ticket",
+    date: getAdminDay(),
+    visit: getAdminDay(),
+    slot: "09:00-11:00",
+    code: "SOTA-101",
+    status: "confirmed",
+    paid: true,
+    qty: 2,
+    price: 60000,
+    fee: 0,
+    product: "t1",
+    label: "Vé tiêu chuẩn",
+  }
+
+  return [
+    ticket,
+    {
+      ...ticket,
+      id: "TKT-102",
+      code: "SOTA-102",
+      qty: 1,
+      slot: "14:00-16:00",
+      visit: getAdminDay(1),
+      exhibit: "e1",
+    },
+    {
+      ...ticket,
+      id: "SHP-201",
+      kind: "shop",
+      code: "",
+      qty: 2,
+      price: 45000,
+      fee: 20000,
+      product: "p1",
+      label: "Bộ bưu thiếp",
+    },
+    {
+      ...ticket,
+      id: "TKT-103",
+      code: "",
+      status: "pending",
+      paid: false,
+    },
+  ]
+}
+
+export class AdminMockStore {
+  role: AdminRole = "admin_user"
+  activeMuseums = new Set(["m1"])
+  items: AdminItem[] = createInitialAdminItems()
+  assets: AdminAsset[] = []
+  orders: AdminOrder[] = createInitialAdminOrders()
+  private nextId = 100
+
+  constructor() {
+    this.reset()
+  }
+
+  reset() {
+    this.role = "admin_user"
+    this.activeMuseums = new Set(["m1"])
+    this.items = createInitialAdminItems()
+    this.assets = []
+    this.orders = createInitialAdminOrders()
+    this.nextId = 100
+  }
+
+  museums(): AdminItem[] {
+    return this.items.filter(
+      (x) =>
+        x.kind === "museum" &&
+        (this.role === "super_admin" ||
+          (this.role === "admin_user" && this.activeMuseums.has(x.id)))
+    )
+  }
+
+  guard(museumId: string) {
+    if (this.role === "anon") {
+      throw new Error("Phiên đã hết hạn. Vui lòng chọn lại tài khoản mẫu.")
+    }
+    if (this.role === "normal_user") {
+      throw new Error("Tài khoản khách tham quan không có quyền quản lý bảo tàng.")
+    }
+    if (!this.museums().some((x) => x.id === museumId)) {
+      throw new Error("Bạn không có quyền quản lý bảo tàng này.")
+    }
+  }
+
+  list(museumId: string, kind: AdminKind): AdminItem[] {
+    this.guard(museumId)
+    return this.items.filter((x) => x.museum === museumId && x.kind === kind)
+  }
+
+  save(
+    museumId: string,
+    kind: AdminKind,
+    id: string,
+    name: string,
+    status: string,
+    fields: AdminFields,
+    links: string[] = []
+  ): AdminItem {
+    this.guard(museumId)
+    const old = id ? this.list(museumId, kind).find((x) => x.id === id) : undefined
+    if (id && !old) throw new Error("Không tìm thấy bản ghi trong bảo tàng.")
+    if (kind === "museum" && !id && this.role !== "super_admin") {
+      throw new Error("Chỉ quản trị hệ thống được tạo bảo tàng.")
+    }
+    if (!name.trim()) throw new Error("Nhập tên trước khi lưu.")
+
+    const validStatuses =
+      kind === "ticket"
+        ? ["available", "unavailable"]
+        : ["draft", "published", "archived"]
+    if (!validStatuses.includes(status)) {
+      throw new Error("Trạng thái không hợp lệ.")
+    }
+
+    const uniqueKey = kind === "museum" ? "slug" : "code"
+    if (
+      kind === "museum" &&
+      !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(fields.slug || "")
+    ) {
+      throw new Error("Slug chỉ gồm chữ thường, số và dấu gạch nối.")
+    }
+
+    if (
+      fields[uniqueKey] &&
+      this.items.some(
+        (x) =>
+          x.id !== id &&
+          x.kind === kind &&
+          (kind === "museum" || x.museum === museumId) &&
+          x.fields[uniqueKey] === fields[uniqueKey]
+      )
+    ) {
+      throw new Error("Mã hoặc slug đã tồn tại.")
+    }
+
+    const numericKeys =
+      kind === "product"
+        ? ["price", "stock"]
+        : kind === "ticket"
+        ? ["price"]
+        : []
+    for (const key of numericKeys) {
+      const v = Number(fields[key])
+      if (
+        !fields[key]?.trim() ||
+        !Number.isFinite(v) ||
+        v < 0 ||
+        (key === "stock" && !Number.isInteger(v))
+      ) {
+        throw new Error("Giá và tồn kho phải hợp lệ và không âm.")
+      }
+    }
+
+    if (kind === "exhibit") {
+      if (!fields.start || !fields.end || fields.start > fields.end) {
+        throw new Error("Ngày kết thúc phải từ ngày bắt đầu trở đi.")
+      }
+      if (
+        new Set(links).size !== links.length ||
+        links.some(
+          (i) =>
+            !this.list(museumId, "artifact").some(
+              (a) => a.id === i && (a.status === "published" || old?.links.includes(i))
+            )
+        )
+      ) {
+        throw new Error("Chọn hiện vật hợp lệ trong bảo tàng.")
+      }
+    }
+
+    const key = id || `record-${this.nextId++}`
+    const result: AdminItem = {
+      ...old,
+      id: key,
+      museum: kind === "museum" ? key : museumId,
+      kind,
+      name: name.trim(),
+      status,
+      fields: { ...fields },
+      links: [...links],
+    }
+
+    if (old) {
+      const idx = this.items.indexOf(old)
+      this.items[idx] = result
+    } else {
+      this.items.push(result)
+    }
+
+    return result
+  }
+
+  importSample(museumId: string, count: number): { added: number; skipped: number } {
+    this.guard(museumId)
+    if (![1, 2].includes(count)) throw new Error("Chọn một hoặc hai mẫu.")
+
+    let added = 0
+    const samples = ["Stoneware bowl", "Blue textile study"].slice(0, count)
+
+    for (const [index, name] of samples.entries()) {
+      const code = `MOCK-SI-${index + 1}`
+      if (this.list(museumId, "artifact").some((a) => a.source?.code === code)) {
+        continue
+      }
+      const row = this.save(museumId, "artifact", "", name, "draft", {
+        period: "Thế kỷ XIX",
+        code: `SI-00${index + 1}`,
+        description: `Mẫu vật thu thập từ bộ sưu tập Smithsonian Open Access (${name}).`,
+      })
+      row.source = {
+        code,
+        url: "https://www.si.edu/openaccess",
+        rights: "Mẫu mô phỏng · CC0 – Public Domain",
+      }
+      added++
+    }
+
+    return { added, skipped: count - added }
+  }
+
+  queue(museumId: string): AdminOrder[] {
+    this.guard(museumId)
+    return this.orders.filter((o) => o.museum === museumId)
+  }
+
+  redeem(museumId: string, code: string): void {
+    const order = this.queue(museumId).find(
+      (o) => o.kind === "ticket" && o.code && o.code === code.trim().toUpperCase()
+    )
+    if (!order) throw new Error("Không tìm thấy mã vé trong bảo tàng.")
+    if (order.status !== "confirmed") throw new Error("Vé đã sử dụng hoặc chưa được xác nhận.")
+    if (order.visit !== getAdminDay()) throw new Error("Ngày tham quan không phải hôm nay.")
+
+    order.status = "used"
+    order.usedAt = new Date().toISOString()
+  }
+
+  advance(museumId: string, id: string, status: string): void {
+    const o = this.queue(museumId).find((x) => x.id === id)
+    if (!o) throw new Error("Không tìm thấy đơn.")
+
+    if (status === "cancelled" && o.status === "confirmed" && (o.kind === "shop" || o.visit > getAdminDay())) {
+      if (o.kind === "shop") {
+        const p = this.list(museumId, "product").find((x) => x.id === o.product)
+        if (!p) throw new Error("Không tìm thấy sản phẩm để hoàn kho.")
+        p.fields.stock = String(Number(p.fields.stock) + o.qty)
+      }
+    } else if (
+      !(
+        o.kind === "shop" &&
+        o.paid &&
+        ((status === "shipped" && o.status === "confirmed") ||
+          (status === "completed" && o.status === "shipped"))
+      )
+    ) {
+      throw new Error("Đơn không thể chuyển sang trạng thái này.")
+    }
+
+    o.status = status
+  }
+
+  report(museumId: string, from: string, to: string, exhibit = "") {
+    if (!from || !to || from > to) throw new Error("Khoảng ngày không hợp lệ.")
+    const rows = this.queue(museumId).filter(
+      (o) =>
+        o.kind === "ticket" &&
+        o.paid &&
+        o.date >= from &&
+        o.date <= to &&
+        (!exhibit || o.exhibit === exhibit)
+    )
+    return {
+      rows,
+      qty: rows.reduce((v, o) => v + o.qty, 0),
+      total: rows.reduce((v, o) => v + o.qty * o.price, 0),
+    }
+  }
+
+  media(museumId: string): AdminAsset[] {
+    this.guard(museumId)
+    return this.assets
+      .filter((a) => a.museum === museumId)
+      .sort((a, b) => a.sequence - b.sequence)
+  }
+
+  upload(museumId: string, target: string, file: File): void {
+    this.guard(museumId)
+    if (
+      !this.items.some(
+        (x) =>
+          x.id === target &&
+          x.museum === museumId &&
+          ["artifact", "product"].includes(x.kind)
+      )
+    ) {
+      throw new Error("Chọn hiện vật hoặc sản phẩm trong bảo tàng.")
+    }
+
+    const formats: Record<string, string[]> = {
+      "image/jpeg": ["jpg", "jpeg"],
+      "image/png": ["png"],
+      "image/webp": ["webp"],
+      "video/mp4": ["mp4"],
+      "video/webm": ["webm"],
+    }
+    const maxMb = file.type.startsWith("video/") ? 50 : 10
+    const ext = file.name.split(".").pop()?.toLowerCase() || ""
+
+    if (!formats[file.type]?.includes(ext) || !file.size || file.size > maxMb * 1024 * 1024) {
+      throw new Error("Chọn JPG, PNG, WebP (tối đa 10 MB) hoặc MP4, WebM (50 MB).")
+    }
+
+    this.assets.push({
+      id: `media-${this.nextId++}`,
+      museum: museumId,
+      target,
+      name: file.name,
+      primary: !this.assets.some((a) => a.target === target),
+      sequence: 0,
+      url: URL.createObjectURL(file),
+      mime: file.type,
+    })
+  }
+
+  updateMedia(museumId: string, id: string, sequence: number, primary: boolean): void {
+    const a = this.media(museumId).find((x) => x.id === id)
+    if (!a || !Number.isInteger(sequence) || sequence < 0) {
+      throw new Error("Thứ tự tệp không hợp lệ.")
+    }
+    if (primary) {
+      this.assets.filter((x) => x.target === a.target).forEach((x) => (x.primary = false))
+    }
+    a.primary = primary
+    a.sequence = sequence
+  }
+
+  removeMedia(museumId: string, id: string): void {
+    const a = this.media(museumId).find((x) => x.id === id)
+    if (!a) throw new Error("Không tìm thấy tệp.")
+    if (a.url.startsWith("blob:")) URL.revokeObjectURL(a.url)
+    this.assets = this.assets.filter((x) => x !== a)
+  }
+}
+
+// Global in-memory singleton for the frontend mock session
+export const adminStore = new AdminMockStore()
