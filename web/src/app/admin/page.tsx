@@ -142,12 +142,12 @@ export default function AdminPortalPage() {
       <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] font-sans flex flex-col justify-between p-4">
         {/* Notice toast */}
         {notice && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded shadow-lg text-sm max-w-[92vw]">
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded text-sm max-w-[92vw]">
             {notice}
           </div>
         )}
 
-        <div className="w-full max-w-[610px] mx-auto my-[9vh] bg-white border border-[#d6ddd3] border-t-[6px] border-t-[#184c40] rounded-md p-6 sm:p-12 shadow-sm">
+        <div className="w-full max-w-[610px] mx-auto my-[9vh] bg-white border border-[#d6ddd3] border-t-[6px] border-t-[#184c40] rounded-md p-6 sm:p-12">
           {/* Brand */}
           <div className="font-serif text-[#184c40] text-[43px] leading-[0.95] tracking-tight mb-2">
             SOTA
@@ -199,7 +199,7 @@ export default function AdminPortalPage() {
 
             <button
               type="submit"
-              className="mt-2 bg-[#184c40] hover:bg-[#143e34] text-white font-semibold py-2.5 px-4 rounded text-sm transition-colors cursor-pointer"
+              className="mt-2 bg-[#184c40] hover:bg-[#143e34] text-white font-semibold py-2.5 px-4 rounded text-sm cursor-pointer"
             >
               Tiếp tục
             </button>
@@ -233,7 +233,7 @@ export default function AdminPortalPage() {
     <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] font-sans">
       {/* Notice Toast */}
       {notice && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded shadow-lg text-sm max-w-[92vw]">
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded text-sm max-w-[92vw]">
           {notice}
         </div>
       )}
@@ -265,7 +265,7 @@ export default function AdminPortalPage() {
                       setVisitFilter("")
                     }}
                     className={cn(
-                      "w-full text-left py-2 px-3.5 rounded text-sm font-semibold transition-colors cursor-pointer",
+                      "w-full text-left py-2 px-3.5 rounded text-sm font-semibold cursor-pointer",
                       isActive
                         ? "bg-[#326656] text-white"
                         : "text-[#e8f0e8] hover:bg-[#326656]/70 hover:text-white"
@@ -917,7 +917,7 @@ export default function AdminPortalPage() {
             const isEditing = Boolean(item)
 
             return (
-              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl max-h-[90vh] overflow-y-auto">
+              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] max-h-[90vh] overflow-y-auto">
                 <h2 className="font-serif text-[1.85rem] leading-tight mb-4 font-normal">
                   {isEditing ? "Chỉnh sửa " : "Thêm "}
                   {kind === "museum"
@@ -1236,7 +1236,7 @@ export default function AdminPortalPage() {
       {/* MODAL: NHẬP MẪU SMITHSONIAN */}
       {modalType === "import-sample" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl">
+          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
             <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Nhập mẫu Smithsonian</h2>
             <p className="text-[#53685f] text-xs leading-relaxed mb-4">
               Dữ liệu giả lập, dùng để kiểm tra mã nguồn trùng và quyền sử dụng.
@@ -1299,7 +1299,7 @@ export default function AdminPortalPage() {
       {/* MODAL: SOÁT VÉ VÀO CỬA */}
       {modalType === "redeem-ticket" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl">
+          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
             <h2 className="font-serif text-[1.85rem] leading-tight mb-3 font-normal">Soát vé vào cửa</h2>
 
             <form
@@ -1370,7 +1370,7 @@ export default function AdminPortalPage() {
                 : ""
 
             return (
-              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl space-y-3">
+              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] space-y-3">
                 <h2 className="font-serif text-[1.85rem] leading-tight font-normal">{o.id}</h2>
 
                 <div>{renderPill(o.status)}</div>
@@ -1460,7 +1460,7 @@ export default function AdminPortalPage() {
       {/* MODAL: THÊM TỆP MEDIA MÔ PHỎNG */}
       {modalType === "upload-media" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl">
+          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
             <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Thêm tệp mô phỏng</h2>
 
             <form
@@ -1548,7 +1548,7 @@ export default function AdminPortalPage() {
             if (!a) return null
 
             return (
-              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] shadow-2xl space-y-3">
+              <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] space-y-3">
                 <h2 className="font-serif text-[1.85rem] leading-tight font-normal">{a.name}</h2>
 
                 <div className="max-h-[45vh] overflow-hidden flex items-center justify-center bg-[#edf2eb] rounded border border-[#d6ddd3]">

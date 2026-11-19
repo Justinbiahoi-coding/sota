@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
 
 interface Particle {
   x: number
@@ -28,10 +29,12 @@ interface TrailParticle {
 }
 
 export function GalleryBackground() {
+  const pathname = usePathname()
   const bgCanvasRef = useRef<HTMLCanvasElement>(null)
   const topCanvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
+    if (pathname?.startsWith("/admin")) return
     const bgCanvas = bgCanvasRef.current
     const topCanvas = topCanvasRef.current
     if (!bgCanvas || !topCanvas) return
@@ -291,7 +294,11 @@ export function GalleryBackground() {
       document.removeEventListener("mouseleave", handleMouseLeave)
       cancelAnimationFrame(animationFrameId)
     }
-  }, [])
+  }, [pathname])
+
+  if (pathname?.startsWith("/admin")) {
+    return null
+  }
 
   return (
     <>

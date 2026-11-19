@@ -1,4 +1,7 @@
+"use client"
+
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { NAV } from "./nav"
 
 const HELP = [
@@ -8,6 +11,9 @@ const HELP = [
 ]
 
 export function SiteFooter() {
+  const pathname = usePathname()
+  if (pathname?.startsWith("/admin")) return null
+
   return (
     <footer className="mt-auto border-t border-[#d4af37]/20 bg-[#08162b] text-[#f8f6f0]">
       <div className="mx-auto grid max-w-[1560px] gap-12 px-6 py-14 md:grid-cols-12 md:px-12">

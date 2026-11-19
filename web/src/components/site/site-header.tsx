@@ -1,6 +1,9 @@
+"use client"
+
 import { Suspense } from "react"
 import Link from "next/link"
-import { Menu, Search } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Menu, Search, ShieldCheck } from "lucide-react"
 import { NavLinks } from "./nav-links"
 import { CartIcon } from "./cart-icon"
 import { AuthActions } from "./auth-actions"
@@ -8,6 +11,9 @@ import { StarBorder } from "@/components/reactbits/star-border"
 import { Magnet } from "@/components/reactbits/magnet"
 
 export function SiteHeader() {
+  const pathname = usePathname()
+  if (pathname?.startsWith("/admin")) return null
+
   return (
     <header className="sticky top-0 z-40 border-b border-[#d4af37]/20 bg-[#08162b]/95 backdrop-blur-md text-[#f8f6f0] shadow-md transition-colors duration-300">
       <div className="mx-auto flex h-16 max-w-[1560px] items-center justify-between gap-6 px-6 md:px-12">
