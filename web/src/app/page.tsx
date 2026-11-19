@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { ArrowUpRight } from "lucide-react"
 import { IsoCluster } from "@/components/home/iso-cluster"
-import { CastleIntro } from "@/components/home/intro/castle-intro"
+import { EvolutionIntro } from "@/components/home/intro/evolution-intro"
 import { buttonVariants } from "@/components/ui/button"
 import { featuredArtifacts, museums } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 export default function Home() {
   return (
     <>
-      <CastleIntro />
+      <EvolutionIntro />
 
       {/* ---------------------------------------------------------------- hero */}
       <section className="mx-auto grid max-w-7xl items-center gap-10 px-5 pb-16 pt-12 md:px-8 lg:grid-cols-12 lg:pb-24 lg:pt-20">
