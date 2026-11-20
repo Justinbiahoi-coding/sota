@@ -1,0 +1,60 @@
+# SOTA (Space of the Art) — Cursor AI Rules & Frontend Directives
+
+## 1. Context & Tech Stack
+- **Project:** Sota — Smithsonian Museum Platform (HCMUS, Member 4: Tuấn).
+- **Stack:** Next.js 16.4.6 (App Router), Tailwind CSS v4, Turbopack, Framer Motion, React 19, TypeScript.
+- **Data:** Client-side architecture (`web/src/lib/mock-data.ts` + `localStorage`). Zero backend dependency for client UI prototype.
+- **Verification Gate:** `npm run build` inside `web/` MUST compile cleanly with Exit code 0 (73 static routes).
+
+---
+
+## 2. Strict Color Harmony (Rule 70 - 20 - 10)
+- **70% Primary — Alabaster Limestone Cream (`#f7f4ec` & `#ffffff`):**
+  - Main canvas background: `#f7f4ec`.
+  - Vitrine cards & panels: `#ffffff` with subtle warm border `rgba(28, 25, 23, 0.09)` and soft ambient drop shadows.
+- **20% Secondary — Deep Royal Gallery Midnight Navy (`#08162b`):**
+  - **Header Bar & Footer:** Always Deep Royal Navy with 1px gold hairline border (`border-[#d4af37]/20`).
+  - Feature panels & 3D cluster frame: Deep Royal Navy vitrine boxes (`#08162b` / `#0a1c36`).
+- **10% Accent — Imperial Museum Gold (`#d4af37` / `#f59e0b`):**
+  - High-impact focal points: StarBorder particle orbits, glowing active navigation indicators, `✦` star glints, price tags, interactive spotlight reflection (`rgba(212, 175, 55, 0.3)`), and gold corner brackets.
+
+---
+
+## 3. Renaissance Museum Aesthetic (Thời Kỳ Phục Hưng)
+Incorporate classical Renaissance architectural and art-gallery decorative assets:
+1. **Classical Arch Portals (Khung Vòm Phục Hưng):**
+   - High-end vitrines and exhibition hero images use top arch radii (`rounded-t-[80px]` or `rounded-t-full`) reminiscent of Florence and Venice galleries (Uffizi, Louvre).
+2. **Gilded Corner Brackets (Góc Hoa Văn Hoàng Kim):**
+   - Use ornate golden corner brackets (`⌜ ⌝ ⌞ ⌟` or fine SVG filigree) on cards and featured placards.
+3. **Brass Rivet Placards (Nhãn Đồng Triển Lãm):**
+   - Curator notes and artwork plaques styled with small imperial gold screw studs (`size-1.5 rounded-full bg-[#d4af37] shadow-[0_0_6px_#d4af37]`).
+4. **Engraved Hairlines & Flourishes:**
+   - Classical double hairlines (`border-t border-b border-[#d4af37]/30 py-1`), Roman numeral typography (`I, II, III, IV`), and serif italics (*Newsreader*).
+
+---
+
+## 4. ReactBits.dev Component Directives
+Prioritize high-impact, tactile, visually stunning components from ReactBits:
+1. **`StarBorder`:** Wrap high-priority CTA buttons ("Đặt vé", "Xác nhận đặt vé", "Mua ngay") with rotating imperial gold star particle trails.
+2. **`FlippableVitrineCard` (3D Flip):**
+   - Front: Classical framed masterpiece, high-res painting, artist & year.
+   - Back: Deep Royal Navy `#08162b` plaque with curator critique, historical backstory, audio tour button, and CC0 rights.
+   - Flip mechanism: 3D perspective flip (`transform-style: preserve-3d; transition: transform 0.6s; rotateY(180deg)`).
+3. **`SpotlightCard` (Intense Dual-Layer Gold Glow):**
+   - Dynamic radial spotlight tracking cursor (`radial-gradient(380px circle at mouse, rgba(212, 175, 55, 0.25), transparent 75%)`).
+   - Dynamic cursor border sheen (`rgba(212, 175, 55, 0.65)`).
+4. **`TiltedCard` (3D Parallax Masterpiece):**
+   - Physical perspective tilt with layered depth: artwork image on `translateZ(25px)`, title on `translateZ(40px)`, and moving glare sheen.
+5. **`SplitText` & `DecryptedText`:**
+   - Headings reveal character-by-character with spring stagger.
+   - Catalog codes and museum badges scramble through Renaissance glyphs (`✦`, `§`, `‡`) before decrypting.
+6. **`DenseGoldParticles` (Enriched Ambient Background):**
+   - 60-80 floating golden dust motes with twinkling halos and interactive cursor repulsion webs, creating a sunlit Grand Gallery atmosphere.
+
+---
+
+## 5. Coding Constraints
+- Never add `Co-Authored-By` or AI attribution tags to git commits or project files.
+- Always preserve image stability: Keep `unoptimized: true` in `next.config.ts` and use verified Unsplash image URLs.
+- Always verify with `npm run build` inside `web/` after modifying pages or components.
+

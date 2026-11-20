@@ -50,40 +50,116 @@
 }
 
 :root {
-  /* the white cube: ivory walls, ink type, hairline borders; every museum brings its own accent */
-  --background: oklch(0.969 0.008 85);
-  --foreground: oklch(0.215 0.01 70);
-  --card: oklch(0.985 0.005 85);
-  --card-foreground: oklch(0.215 0.01 70);
-  --popover: oklch(0.985 0.005 85);
-  --popover-foreground: oklch(0.215 0.01 70);
-  --primary: oklch(0.215 0.01 70);
-  --primary-foreground: oklch(0.975 0.006 85);
-  --secondary: oklch(0.935 0.01 85);
-  --secondary-foreground: oklch(0.215 0.01 70);
-  --muted: oklch(0.935 0.01 85);
-  --muted-foreground: oklch(0.49 0.014 70);
-  --accent: oklch(0.935 0.01 85);
-  --accent-foreground: oklch(0.215 0.01 70);
-  --destructive: oklch(0.55 0.2 27);
-  --border: oklch(0.875 0.012 80);
-  --input: oklch(0.875 0.012 80);
-  --ring: var(--museum-accent);
-  --museum-accent: oklch(0.47 0.075 190);
-  --chart-1: oklch(0.47 0.075 190);
-  --chart-2: oklch(0.55 0.12 40);
-  --chart-3: oklch(0.45 0.09 300);
-  --chart-4: oklch(0.6 0.11 85);
-  --chart-5: oklch(0.4 0.06 140);
-  --radius: 0.25rem;
-  --sidebar: oklch(0.955 0.008 85);
-  --sidebar-foreground: oklch(0.215 0.01 70);
-  --sidebar-primary: oklch(0.215 0.01 70);
-  --sidebar-primary-foreground: oklch(0.975 0.006 85);
-  --sidebar-accent: oklch(0.935 0.01 85);
-  --sidebar-accent-foreground: oklch(0.215 0.01 70);
-  --sidebar-border: oklch(0.875 0.012 80);
-  --sidebar-ring: var(--museum-accent);
+  /* Museum 70-20-10 Rule: 70% Cream Limestone, 20% Deep Royal Navy, 10% Imperial Gold */
+  --background: #f7f4ec; /* 70% primary wall cream */
+  --foreground: #171717; /* high contrast gallery charcoal */
+  --card: #ffffff;       /* 70% pure vitrine white */
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --primary: #08162b;    /* 20% secondary deep royal navy */
+  --primary-foreground: #f8f6f0;
+  --secondary: #08162b;  /* 20% deep royal navy */
+  --secondary-foreground: #f8f6f0;
+  --muted: #ede8dc;
+  --muted-foreground: #57534e;
+  --accent: #d4af37;     /* 10% imperial museum gold */
+  --accent-foreground: #08162b;
+  --destructive: #dc2626;
+  --border: rgba(28, 25, 23, 0.1);
+  --input: rgba(28, 25, 23, 0.14);
+  --ring: #d4af37;
+  --museum-accent: #d4af37;
+  --chart-1: #d4af37;
+  --chart-2: #08162b;
+  --chart-3: #92400e;
+  --chart-4: #0284c7;
+  --chart-5: #059669;
+  --radius: 0.5rem;
+  --sidebar: #08162b;
+  --sidebar-foreground: #f8f6f0;
+  --sidebar-primary: #d4af37;
+  --sidebar-primary-foreground: #08162b;
+  --sidebar-accent: rgba(255, 255, 255, 0.08);
+  --sidebar-accent-foreground: #f8f6f0;
+  --sidebar-border: rgba(212, 175, 55, 0.2);
+  --sidebar-ring: #d4af37;
+}
+
+@keyframes shiny {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.animate-shiny {
+  animation: shiny 4s linear infinite;
+}
+
+@keyframes star-movement-bottom {
+  0% { transform: translate(0%, 0%); opacity: 0.9; }
+  100% { transform: translate(-100%, 0%); opacity: 0.2; }
+}
+
+@keyframes star-movement-top {
+  0% { transform: translate(0%, 0%); opacity: 0.9; }
+  100% { transform: translate(100%, 0%); opacity: 0.2; }
+}
+
+.animate-star-movement-bottom {
+  animation: star-movement-bottom linear infinite alternate;
+}
+
+.animate-star-movement-top {
+  animation: star-movement-top linear infinite alternate;
+}
+
+@keyframes gentle-leaf-sway {
+  0%, 100% { transform: rotate(0deg) translate(0, 0); }
+  50% { transform: rotate(2.8deg) translate(-4px, 3px); }
+}
+
+@keyframes gentle-leaf-sway-rev {
+  0%, 100% { transform: rotate(0deg) translate(0, 0); }
+  50% { transform: rotate(-2.5deg) translate(3px, -3px); }
+}
+
+@keyframes float-cloud {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(60px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes float-cloud-rev {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-50px); }
+  100% { transform: translateX(0); }
+}
+
+/* Custom Gilded Museum Scrollbar */
+.museum-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.museum-scrollbar::-webkit-scrollbar-track {
+  background: rgba(8, 22, 43, 0.4);
+  border-radius: 9999px;
+}
+
+.museum-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #d4af37, #8d6718);
+  border-radius: 9999px;
+  box-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+}
+
+.museum-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #ffd700, #d4af37);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+.museum-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d4af37 rgba(8, 22, 43, 0.4);
 }
 
 .dark {
@@ -145,6 +221,29 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   font-weight: 400;
+}
+
+/* Museum Custom Gilded Luxury Scrollbar */
+.museum-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d4af37 rgba(8, 22, 43, 0.6);
+}
+.museum-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.museum-scrollbar::-webkit-scrollbar-track {
+  background: rgba(8, 22, 43, 0.4);
+  border-radius: 9999px;
+}
+.museum-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #d4af37 0%, #996f1b 100%);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+}
+.museum-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #fbe396 0%, #d4af37 100%);
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.8);
 }
 
 @keyframes rise {

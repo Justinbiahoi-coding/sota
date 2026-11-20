@@ -1,11 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-// Minimal valid-format JWT for local dev without real Supabase keys
-const PLACEHOLDER_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJwbGFjZWhvbGRlciJ9.placeholder"
-
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || PLACEHOLDER_JWT,
-  );
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mock-sota-demo.supabase.co";
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-anon-key-for-frontend-testing-only";
+  return createBrowserClient(url, key);
 }

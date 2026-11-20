@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import { Geist_Mono, Hanken_Grotesk, Newsreader, Pinyon_Script } from "next/font/google"
 import { SiteFooter } from "@/components/site/site-footer"
 import { SiteHeader } from "@/components/site/site-header"
+import { CartProvider } from "@/lib/cart-context"
+import { GalleryBackground } from "@/components/reactbits/gallery-background"
+import { BotanicalSwayDecor } from "@/components/renaissance/botanical-sway"
 import "./globals.css"
 
 // the faces follow pear.no's (Flecha, GT Standard, GT Standard Mono), with free stand-ins that carry
@@ -20,10 +23,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="vi" className={`${display.variable} ${body.variable} ${mono.variable} ${script.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">
-        <SiteHeader />
-        <main className="flex-1">{children}</main>
-        <SiteFooter />
+      <body className="flex min-h-full flex-col relative selection:bg-foreground selection:text-background">
+        <GalleryBackground />
+        <BotanicalSwayDecor />
+        <CartProvider>
+          <SiteHeader />
+          <main className="flex-1">{children}</main>
+          <SiteFooter />
+        </CartProvider>
       </body>
     </html>
   )
