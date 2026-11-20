@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react"
 import { artifacts, museums, type Artifact } from "@/lib/mock-data"
 import { FlippableVitrineCard } from "@/components/reactbits/flippable-card"
 import { VitrineStageView } from "@/components/museum/vitrine-stage-view"
+import { MuseumHall3D } from "@/components/museum/museum-hall-3d"
 import {
   BrassPlacardPin,
   RenaissanceCorners,
@@ -92,6 +93,24 @@ export default function ArtifactListPage() {
             </p>
           </div>
         </div>
+
+        {/* MuseumHall3D — hiện khi lọc theo bảo tàng cụ thể */}
+        {museumFilter !== "all" && displayed.length > 0 && (() => {
+          const museum = museums.find((m) => m.slug === museumFilter)
+          return museum ? (
+            <section className="mb-14">
+              <div className="mb-4">
+                <p className="placard text-xs text-[#92400e] font-semibold uppercase tracking-widest flex items-center gap-2">
+                  <BrassPlacardPin /> KHÔNG GIAN TRIỂN LÃM 3D
+                </p>
+                <h2 className="mt-1 font-heading text-2xl md:text-3xl font-light text-[#171717]">
+                  Không gian trưng bày hiện vật tiêu biểu
+                </h2>
+              </div>
+              <MuseumHall3D artifacts={displayed} museumName={museum.name} museumSlug={museum.slug} />
+            </section>
+          ) : null
+        })()}
 
         {/* Filter and Search Bar */}
         <div className="mb-12 flex flex-wrap gap-4">

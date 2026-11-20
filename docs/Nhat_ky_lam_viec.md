@@ -543,3 +543,21 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Ứng dụng/module:** `web/src/components/home/intro/evolution-intro.tsx`, `web/src/app/page.tsx`.
 - **Tác dụng:** Intro bây giờ chạy như video: người dùng xem thụ động, không cần biết phải cuộn. Phù hợp hơn với thiết bị cảm ứng và người lần đầu ghé site. Bỏ scroll handler giảm overhead và loại bỏ hoàn toàn vấn đề conflict giữa scroll intro với scroll trang.
 - **Làm như thế nào:** Thêm `autoPlayRef` (ref, đọc từ RAF loop) và `autoPlay` (state, cho UI). Boot effect set `autoPlayRef.current = true` khi hình load xong. Trong RAF loop `frame()`: khi `autoPlayRef && resting && !holdTimer` → start `setTimeout(forward, dur)` (3500ms hoặc 2000ms cho FAQ). `forward()` đã có sẵn logic xử lý cuối chuỗi (`leave()`) nên timeout chỉ cần gọi `forward()` đơn giản. `onClick`: click ngoài button/link/data-menu → toggle `autoPlayRef`, clear hold timer khi pause, `kick()` khi resume. Bỏ toàn bộ `scrub`, `onWheel`, `onTouchStart`, `onTouchMove`, `back()`, hằng `SCROLL`.
+
+---
+
+## Phiên 21/11/2026 — Shop 3D gallery
+
+- **Thời gian làm việc:** ghi nhận lúc 01:07 21/11/2026.
+- **Làm việc gì:** (1) Build trang lưu niệm 3D dạng standalone Artifact (HTML + Three.js) với hành lang WebGL, 9 sản phẩm, walk/focus/product-page/bag-drawer/list-view. (2) Tích hợp gallery 3D vào trang `/cua-hang` trong dự án Next.js: tạo component `Shop3DGallery`, thêm toggle "Danh sách / Phòng trưng bày 3D" vào `ShopPage`.
+- **Ứng dụng/module:** `web/src/components/shop/shop-gallery-3d.tsx` (mới), `web/src/app/cua-hang/page.tsx`.
+- **Tác dụng:** Người dùng có thể khám phá sản phẩm theo hai chế độ: grid list cũ (lọc theo danh mục) hoặc hành lang 3D dạng bảo tàng (cuộn/kéo đi dọc, click sản phẩm để zoom + xem panel chi tiết, thêm giỏ hàng ngay từ panel).
+- **Làm như thế nào:** Three.js (đã có trong deps v0.187.0) khởi tạo qua dynamic `import("three")` bên trong `useEffect` để tránh SSR. Canvas textures cho sản phẩm tự vẽ bằng Canvas 2D API (gradient + category icon + tên + giá) — không phụ thuộc ảnh ngoài. Camera pose theo mô hình (r, yaw, y, pitch), walk bằng scroll/drag, glide animation bằng lerp + easeOut4. Click product → focus mode (zoom vào khung) → hiện panel phải slide in. `walkRef` expose hàm walk cho nút ← →. Cleanup đầy đủ (cancelAnimationFrame, dispose geometry/material, ResizeObserver disconnect). TypeScript types dùng `import type * as ThreeTypes from "three"` để annotate các kiểu trong dynamic import callback.
+
+## 2026-11-21 06:29 +07
+
+- **Thời gian:** Thứ Bảy 21/11/2026, 06:29 +07
+- **Làm việc gì:** Fix gallery 3D walkthrough — tường sai và tranh không sát tường
+- **Module/ứng dụng:** `web/src/components/home/intro/gallery-walkthrough-hero.tsx`
+- **Tác dụng:** Gallery 3D giờ khớp 100% với Dawson Wells Gallery gốc — tường đúng kiến trúc, tranh sát tường đúng vị trí
+- **Làm như thế nào:** Phát hiện DW không dùng procedural walls mà load toàn bộ kiến trúc từ `gallery-architecture.glb` (Blender file). Thay toàn bộ procedural PlaneGeometry walls bằng GLTFLoader: load GLB, ẩn 6 mesh cụ thể (`Doorway Header`, `Wall Far Left`, `Foreground Partition`...), áp ceiling material, rồi thêm 2 thin plane replacements đúng vị trí DW (`[-1.9, 2.4, -1.955]` và `[-3.145, 2.2, 7.05]`). Tranh `guido-229` treo trên partition wall x≈-3.14 (không phải west wall x=-5.06) nên trước đó bị "trôi" giữa không khí.

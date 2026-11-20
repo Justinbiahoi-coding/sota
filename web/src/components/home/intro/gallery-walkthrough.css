@@ -1,0 +1,286 @@
+:root.gallery-active > body > header,
+:root.gallery-active header.sticky {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.gallery-journey {
+  --g-ink: #12110f;
+  --g-paper: #f3f0e9;
+  --g-ivory: #efede7;
+  --g-serif: "Iowan Old Style", "Baskerville", "Times New Roman", serif;
+  --g-sans: "Helvetica Neue", "Neue Haas Grotesk Text Pro", Arial, sans-serif;
+  background: #d8d3c9;
+  width: 100%;
+  position: relative;
+  margin-top: -4rem;
+}
+
+.gallery-stage {
+  --intro-opacity: 1;
+  --canvas-opacity: 1;
+  --hero-details-opacity: 0;
+  z-index: 50;
+  isolation: isolate;
+  background: #d8d3c9;
+  width: 100%;
+  height: 100svh;
+  position: sticky;
+  top: 0;
+  overflow: hidden;
+}
+
+.gallery-canvas-shell,
+.gallery-canvas-shell canvas {
+  width: 100%;
+  height: 100%;
+}
+.gallery-canvas-shell {
+  z-index: 1;
+  opacity: var(--canvas-opacity);
+  background: #d8d3c9;
+  position: absolute;
+  inset: 0;
+}
+.gallery-canvas-shell canvas {
+  touch-action: pan-y;
+  display: block;
+}
+
+.gallery-exposure {
+  z-index: 6;
+  pointer-events: none;
+  background:
+    linear-gradient(#0c0b0933, #0000 28% 70%, #0c0b0942),
+    linear-gradient(90deg, #0c0b0933, #0000 30% 78%, #0c0b0914);
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-intro {
+  z-index: 7;
+  color: #f8f5ee;
+  max-width: min(50rem, 74vw);
+  opacity: var(--intro-opacity);
+  pointer-events: none;
+  text-shadow: 0 2px 28px #0003;
+  transition: opacity 80ms linear;
+  position: absolute;
+  bottom: clamp(4.5rem, 9vh, 7.5rem);
+  left: clamp(1.25rem, 5vw, 5.5rem);
+}
+.gallery-intro__eyebrow,
+.gallery-intro__location {
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  margin: 0;
+  font-family: var(--g-sans);
+  font-size: 0.61rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.gallery-intro h1 {
+  font-family: var(--g-serif);
+  letter-spacing: -0.055em;
+  margin: 1rem 0 1.25rem;
+  font-size: clamp(3.8rem, 8.4vw, 9rem);
+  font-weight: 400;
+  line-height: 0.82;
+}
+.gallery-intro__location {
+  opacity: 0.72;
+}
+
+.scroll-cue {
+  z-index: 7;
+  color: #fff;
+  letter-spacing: 0.17em;
+  opacity: var(--intro-opacity);
+  text-transform: uppercase;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: var(--g-sans);
+  font-size: 0.58rem;
+  display: flex;
+  position: absolute;
+  bottom: 2rem;
+  right: clamp(1.25rem, 3.2vw, 3.6rem);
+}
+.scroll-cue i {
+  background: #ffffff47;
+  width: 1px;
+  height: 3.2rem;
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+.scroll-cue i::after {
+  content: "";
+  background: #fff;
+  width: 100%;
+  height: 100%;
+  animation: 2.2s cubic-bezier(0.7, 0, 0.3, 1) infinite scroll-line;
+  position: absolute;
+  top: -100%;
+  left: 0;
+}
+@keyframes scroll-line {
+  0% { transform: translateY(0); }
+  70%, 100% { transform: translateY(200%); }
+}
+
+.hero-projection {
+  z-index: 5;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, width, height, opacity;
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+}
+.hero-projection img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+
+.hero-handoff-metadata {
+  z-index: 8;
+  color: #fff;
+  opacity: var(--hero-details-opacity);
+  pointer-events: none;
+  text-shadow: 0 2px 24px #00000094;
+  will-change: opacity;
+  grid-template-columns: minmax(8rem, 0.8fr) minmax(16rem, 2.2fr) minmax(22rem, 1.3fr);
+  align-items: end;
+  gap: 2rem;
+  display: grid;
+  position: absolute;
+  bottom: clamp(1.5rem, 4vw, 4rem);
+  left: clamp(1.4rem, 4vw, 4.5rem);
+  right: clamp(1.4rem, 4vw, 4.5rem);
+}
+.hero-handoff-metadata > p {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-family: var(--g-sans);
+  margin: 0 0 0.48rem;
+  font-size: 0.64rem;
+}
+.hero-handoff-metadata h2 {
+  font-family: var(--g-serif);
+  letter-spacing: -0.05em;
+  margin: 0;
+  font-size: clamp(3.4rem, 7.2vw, 8rem);
+  font-weight: 400;
+  line-height: 0.82;
+}
+.hero-handoff-metadata dl {
+  grid-template-columns: 0.6fr 1.1fr 1fr;
+  gap: 1rem;
+  margin: 0;
+  display: grid;
+}
+.hero-handoff-metadata dl div {
+  gap: 0.38rem;
+  display: grid;
+}
+.hero-handoff-metadata dt {
+  letter-spacing: 0.14em;
+  opacity: 0.72;
+  text-transform: uppercase;
+  font-family: var(--g-sans);
+  font-size: 0.54rem;
+}
+.hero-handoff-metadata dd {
+  font-family: var(--g-serif);
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.gallery-loader {
+  z-index: 250;
+  color: var(--g-paper);
+  opacity: 1;
+  visibility: visible;
+  background: #151411;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.4rem, 5vw, 5rem);
+  transition: opacity 0.7s cubic-bezier(0.7, 0, 0.3, 1), visibility 0.7s;
+  display: flex;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+.gallery-loader.is-dismissed {
+  opacity: 0;
+  visibility: hidden;
+}
+.gallery-loader__wordmark {
+  font-family: var(--g-serif);
+  letter-spacing: -0.045em;
+  margin-bottom: 8vh;
+  font-size: clamp(2.7rem, 7vw, 7.5rem);
+}
+.gallery-loader__status {
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+  font-family: var(--g-sans);
+  font-size: 0.59rem;
+  display: flex;
+}
+.gallery-loader__track {
+  background: #fff3;
+  height: 1px;
+  overflow: hidden;
+}
+.gallery-loader__track span {
+  background: var(--g-paper);
+  transform-origin: left;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.18s ease-out;
+  display: block;
+}
+
+@media (max-width: 760px) {
+  .gallery-intro {
+    max-width: calc(100vw - 2.4rem);
+    bottom: 5rem;
+    left: 1.2rem;
+  }
+  .gallery-intro h1 {
+    font-size: clamp(3.7rem, 17vw, 6rem);
+  }
+  .scroll-cue {
+    bottom: 1.2rem;
+    right: 1.2rem;
+  }
+  .scroll-cue span {
+    display: none;
+  }
+  .hero-handoff-metadata {
+    display: block;
+  }
+  .hero-handoff-metadata > p {
+    margin-bottom: 0.75rem;
+  }
+  .hero-handoff-metadata h2 {
+    margin-bottom: 2rem;
+    font-size: clamp(3.4rem, 16vw, 5.7rem);
+  }
+  .hero-handoff-metadata dl {
+    grid-template-columns: 0.55fr 1.1fr;
+  }
+  .hero-handoff-metadata dl div:last-child {
+    display: none;
+  }
+}
