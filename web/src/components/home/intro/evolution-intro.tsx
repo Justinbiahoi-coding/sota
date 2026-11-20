@@ -1,10 +1,12 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, AtSign, Lock, UserRound } from "lucide-react"
 import { makeVeil, ready, type Veil } from "./veil"
 import { readGrain } from "@/lib/grain"
+import { createClient } from "@/lib/supabase/client"
 
 // The opening, laid out like pear.no: a full-screen story over the whole site (images and films by
 // Pear, pear.no, made with AI). A rail down the left (mark, menu, progress ticks), a rule across the
@@ -24,7 +26,7 @@ import { readGrain } from "@/lib/grain"
 // fades it away.
 // Media: public/intro/ (films re-encoded from Pear's frame sequences, stills are their end frames).
 
-type Section = "hero" | "collection" | "shop" | "account" | "exhibits" | "gallery" | "tickets" | "faq" | "map" | "end"
+type Section = "hero" | "collection" | "shop" | "account" | "exhibits" | "stories" | "gallery" | "tickets" | "notes" | "faq" | "map" | "end"
 // light: a pale painting, ink type over it; glow: its point of light; img: the picture, when it is not
 // named after the rest; tall: its pos holds on every screen (a tall plate framed at one height)
 type Rest = { id: string; section: Section; chapter: string; loop?: string; pos?: string; light?: boolean; glow?: [number, number]; img?: string; tall?: boolean }
@@ -46,11 +48,13 @@ const SHARED: Rest[] = [
   { id: "shop", section: "shop", chapter: "Cửa hàng" },
   { id: "share", section: "account", chapter: "Tài khoản", light: true },
   { id: "work", section: "exhibits", chapter: "Triển lãm", img: "plate", pos: "50% 0%", tall: true },
+  { id: "build", section: "stories", chapter: "Khám phá thêm", img: "plate", pos: "50% 53%", tall: true },
   { id: "blueprint", section: "gallery", chapter: "Tham quan 3D", light: true },
   { id: "plan", section: "tickets", chapter: "Đặt vé", light: true },
+  { id: "terms", section: "notes", chapter: "Lưu ý" },
   // the questions: one rest per question over the same painting, the ring turning between them
   ...Array.from({ length: 5 }, (_, k): Rest => ({ id: k ? `garden-${k}` : "garden", img: "garden", section: "faq", chapter: "Hỏi đáp" })),
-  { id: "sky", section: "map", chapter: "Bản đồ" },
+  { id: "sky", section: "map", chapter: "Tài khoản" },
   { id: "couple", section: "end", chapter: "Sota", loop: "couple" },
 ]
 // SHARED_STEPS[i] carries the story from SHARED[i] to SHARED[i + 1]
@@ -58,19 +62,21 @@ const SHARED_STEPS: Step[] = [
   { film: "harvest" }, // up into the tree, a hand reaching for the golden pear
   { film: "share" }, // the youth with the pear, cutting it, the halves handed across
   { veil: "burn" }, // the halves burn away onto the top of a tall plate: sky and clouds
+  { pan: true }, // down the plate to the pear being gilded on its scaffold
   { film: "coda", fade: true }, // the scaffold, down to the drawing in her hands
   { film: "plan", fade: true, veil: "soak" }, // the golden pear on its scaffold, seen from above
-  { film: "tree" }, // the plan fades, then the pear she cuts falls into the tree
+  { veil: "burn" }, // the plan burns away onto the woman with the shears by her pear tree
+  { film: "tree" }, // the pear she cuts falls, through a ring of light, into the tree
   ...Array.from({ length: 4 }, (): Step => ({ spin: true })),
   { film: "flysky" }, // through the leaves and clouds to the stars
   { film: "trans" }, // the stars down to the couple watering the tree
 ]
 const FAQ = [
-  { q: "Mua vé ở đâu?", a: "Chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ, thanh toán. Vé có mã QR để quét ở cửa." },
-  { q: "Đặt vé nhiều nơi một lúc được không?", a: "Được. Vé nhiều bảo tàng và triển lãm nằm chung một giỏ, thanh toán một lần." },
-  { q: "Hiện vật lấy từ đâu?", a: "Từ Smithsonian Open Access, bộ ảnh và dữ liệu hiện vật Smithsonian công bố theo giấy phép CC0." },
-  { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi, hủy vé chưa dùng ngay trên trang tài khoản." },
-  { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán và theo dõi trong Đơn hàng của tôi." },
+  { q: "Mua vé ở đâu?", a: "Ngay trên Sota: chọn bảo tàng hoặc triển lãm, chọn ngày và khung giờ còn chỗ rồi thanh toán. Vé có mã QR để quét ở cửa." },
+  { q: "Đặt vé nhiều nơi một lúc được không?", a: "Được. Vé của các bảo tàng và triển lãm nằm chung một giỏ hàng, thanh toán một lần." },
+  { q: "Hiện vật trên Sota lấy từ đâu?", a: "Từ Smithsonian Open Access: ảnh và thông tin hiện vật Smithsonian công bố miễn phí theo giấy phép CC0." },
+  { q: "Đổi ý thì hủy vé thế nào?", a: "Vào Vé của tôi trong trang tài khoản và hủy vé chưa dùng." },
+  { q: "Quà lưu niệm giao ra sao?", a: "Đặt trong Cửa hàng, nhập địa chỉ khi thanh toán rồi theo dõi trong Đơn hàng của tôi." },
 ]
 // where each question's line starts: a pear in the tree, as a fraction of the painting (pear.no's)
 const ANCHORS: [number, number][] = [[0.26, 0.534], [0.709, 0.354], [0.259, 0.907], [0.718, 0.815], [0.27, 0.236]]
@@ -78,7 +84,7 @@ const CLOUDS: [string, string, string, string][] = [["7%", "60%", "13vw", "38s"]
 const FADE = 700 // ms, for the words, leaving and jumping
 const HOLD = 0.11 // of each gap between two rests, the stretch at either end that holds the rest
 const VEIL = 0.35 // of a film with a veil, the stretch the hand-over takes
-const BOOT = 6000 // ms: the arrival gives up waiting on the film after this
+const BOOT = 3000 // ms: the arrival gives up waiting on the film after this
 const clamp = (v: number, a = 0, b = 1) => Math.min(b, Math.max(a, v))
 const src = (name: string, ext: "mp4" | "jpg") => `/intro/${name}.${ext}`
 
@@ -101,6 +107,7 @@ export function EvolutionIntro() {
   // the chapters, as the menu and the rail count them: where each section starts (the questions span
   // several rests and count once)
   const heads = useMemo(() => rests.map((_, i) => i).filter((i) => i === 0 || rests[i - 1].section !== rests[i].section), [rests])
+  const router = useRouter()
   const autoPlayRef = useRef(false)
   const [autoPlay, setAutoPlay] = useState(false)
   const [closed, setClosed] = useState(false)
@@ -130,6 +137,9 @@ export function EvolutionIntro() {
     setTimeout(() => setClosed(true), FADE)
   }, [])
 
+  const onAuthDone = useCallback(() => { leave(); router.refresh() }, [leave, router])
+  const onAuthSkip = useCallback(() => { leave(); router.push('/dang-nhap') }, [leave, router])
+
   // the arrival: the painting sharpens as its film comes in (never faster than about two seconds), then
   // the blurred copy fades off it
   useEffect(() => {
@@ -144,7 +154,7 @@ export function EvolutionIntro() {
     v.addEventListener("loadedmetadata", progress)
     v.addEventListener("canplaythrough", full)
     v.addEventListener("playing", full)
-    if (v.readyState >= 4) full()
+    if (v.readyState >= 4) full(); else progress()
     const give = setTimeout(full, BOOT)
     const tick = (now: number) => {
       const dt = last ? Math.min(0.1, (now - last) / 1000) : 0.016
@@ -155,7 +165,7 @@ export function EvolutionIntro() {
       img.style.transform = `scale(${(1.06 - 0.06 * k).toFixed(4)})`
       const p = Math.round(m * 100)
       if (p !== pct) { pct = p; setLoaded(p) }
-      if (m >= 1) { ready_.current = true; autoPlayRef.current = true; setBooted(true); setAutoPlay(true); return }
+      if (m >= 1) { ready_.current = true; setBooted(true); return }
       raf = requestAnimationFrame(tick)
     }
     raf = requestAnimationFrame(tick)
@@ -213,8 +223,7 @@ export function EvolutionIntro() {
         c.style.top = `${(H * 0.602).toFixed(0)}px`
         c.style.transform = `translate(${(-50 + mx * 2.4).toFixed(2)}%,${(-50 + my * 2).toFixed(2)}%) rotateY(${ang.toFixed(2)}deg) translateZ(${R}px) rotateY(${(-ang).toFixed(2)}deg) translateY(${(Math.sin(a) * 26 - (1 - rr) * 34).toFixed(1)}px) scale(${(rr * fit * (0.58 + 0.42 * o ** 1.4)).toFixed(3)})`
         const blur = Math.round((1 - o) * 8.4) / 2
-        c.style.filter = blur > 0.05 ? `blur(${blur}px)` : ""
-        c.style.zIndex = String(Math.round(o * 100))
+        c.style.filter = `blur(${blur}px)`
         c.classList.toggle("on", o > 0.9 && rr > 0.92 && k === Math.round(rho) % n)
       })
       // the line, from the front question's pear in the painting (cover-fit) to the near side of its pane
@@ -320,18 +329,28 @@ export function EvolutionIntro() {
         p = target = ramp.from + (ramp.to - ramp.from) * e * e * (3 - 2 * e)
         if (e >= 1) { const k = ramp.k; ramp = null; if (steps[k].film) play(k, 0) }
       } else if (playing >= 0) {
-        const v = vids[playing]!, fv = v.duration ? v.currentTime / v.duration : 0
-        if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
-        else p = target = playing + HOLD + (lead(playing) + fv * (1 - lead(playing))) * (1 - 2 * HOLD)
+        const v = vids[playing]
+        if (!v) {
+          playing = -1
+        } else {
+          const fv = v.duration ? v.currentTime / v.duration : 0
+          if (v.ended || fv >= 0.998) { p = target = playing + 1; playing = -1 }
+          else p = target = playing + HOLD + (lead(playing) + fv * (1 - lead(playing))) * (1 - 2 * HOLD)
+        }
       } else {
-        p += (target - p) * 0.13
+        p += (target - p) * 0.16
         if (Math.abs(target - p) < 0.0005) p = target
       }
       draw()
-      // auto-advance: at each rest, hold for 3.5s then forward
+      // auto-advance: hold at each rest then forward; stop at map (auth chapter)
       if (autoPlayRef.current && resting && playing < 0 && !ramp && !holdTimer && !left.current) {
-        const dur = rests[near].section === "faq" ? 2000 : 3500
-        holdTimer = setTimeout(() => { holdTimer = null; if (autoPlayRef.current && !left.current) forward() }, dur)
+        if (rests[near].section === "map") {
+          autoPlayRef.current = false; setAutoPlay(false)
+        } else {
+          const sec = rests[near].section
+          const dur = (sec === "account" || sec === "tickets") ? 1 : 1500
+          holdTimer = setTimeout(() => { holdTimer = null; if (autoPlayRef.current && !left.current) forward() }, dur)
+        }
       }
       // (a veil keeps moving while it is on screen, even with the hand still)
       if (playing >= 0 || ramp || p !== target || live) raf = requestAnimationFrame(frame)
@@ -383,7 +402,7 @@ export function EvolutionIntro() {
       const t = e.target as HTMLElement
       if (t.closest("[data-menu]")) return
       if (t.closest("[data-start]")) { clearHold(); autoPlayRef.current = true; setAutoPlay(true); if (ready_.current) forward(); return }
-      if (t.closest("a, button")) return
+      if (t.closest("a, button, input, label, form")) return
       const next = !autoPlayRef.current
       autoPlayRef.current = next; setAutoPlay(next)
       if (!next) { clearHold() } else { kick() }
@@ -490,7 +509,7 @@ export function EvolutionIntro() {
             </li>
           ))}
         </ol>
-        <button onClick={leave} className="placard mt-5 w-full border-t border-white/15 pt-4 text-left opacity-60 hover:opacity-100">Bỏ qua phần mở đầu</button>
+        <button onClick={onAuthSkip} className="placard mt-5 w-full border-t border-white/15 pt-4 text-left opacity-60 hover:opacity-100">Bỏ qua phần mở đầu</button>
       </nav>
 
       {/* ---------------------------------------------------------------- the sections */}
@@ -530,7 +549,7 @@ export function EvolutionIntro() {
       {/* questions, round the tree, as pear.no's: panes on a ring in depth that the scroll turns, so each
           comes to the front in turn with its answer, a line running to it from a pear in the tree; the
           engine sets all of it frame by frame, and breaks it into dots on the way out */}
-      <div ref={faq} className="faq pointer-events-none absolute inset-0 [perspective:1500px] [perspective-origin:50%_46%]" style={{ opacity: 0 }}>
+      <div ref={faq} className="faq pointer-events-none absolute inset-0 [perspective:1500px] [perspective-origin:50%_46%] [transform-style:preserve-3d]" style={{ opacity: 0 }}>
         <svg aria-hidden className="faq-lead absolute inset-0 size-full overflow-visible"><line /><rect width="8" height="8" /></svg>
         <h2 className="sign absolute inset-x-0 top-[calc(29.4%-40px)] whitespace-nowrap text-center font-heading text-[clamp(30px,8.1vw,177px)] font-light leading-[1.04] tracking-[-0.024em] text-[#fffaea]">
           <span className="sign-a">Hỏi trước khi </span>
@@ -546,8 +565,7 @@ export function EvolutionIntro() {
         ))}
       </div>
 
-      <Block show={shown("map")} side="right" title="Cả cụm, trên một tấm bản đồ." lead="Vị trí và giờ mở cửa của từng bảo tàng." label="Bản đồ"
-        body="Xem bảo tàng nào nằm ở đâu, hôm nay mở cửa tới mấy giờ và đang có triển lãm gì." cta={{ href: "/ban-do", label: "Xem bản đồ" }} />
+      <AuthPanel show={shown("map")} onDone={onAuthDone} onSkip={onAuthSkip} />
 
       {/* the close: the name, framed by rules, over the couple tending the tree */}
       <div {...shown("end")}>
@@ -556,20 +574,13 @@ export function EvolutionIntro() {
           <p className="ink mt-[6vh] text-center font-heading text-[clamp(5rem,16vw,12rem)] font-light italic leading-none tracking-tight [text-shadow:0_4px_40px_rgb(0_0_0/0.3)]">sota.</p>
           <p className="ink mx-auto mt-4 max-w-sm text-center font-heading [animation-delay:200ms] text-xl leading-snug [text-shadow:0_1px_16px_rgb(0_0_0/0.45)]">Cụm bảo tàng Smithsonian. Một lối vào.</p>
         </div>
-        <div className="absolute left-1/2 top-[73vh] -translate-x-1/2">
-          <button onClick={leave} className="placard inline-flex items-center gap-4 rounded-[3px] bg-[#111] py-1.5 pl-5 pr-1.5 text-white">
-            Vào Sota
-            <span className="grid size-8 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
-          </button>
-        </div>
       </div>
 
       {/* ---------------------------------------------------------------- along the bottom */}
       {!autoPlay && booted && !leaving && (
         <p className="placard pointer-events-none absolute bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap text-white/60 md:bottom-6">▶ Chạm để tiếp tục</p>
       )}
-      <p className="pointer-events-none absolute bottom-3 left-[calc(3.5rem+1.25rem)] text-[10px] opacity-55 md:bottom-6 md:left-[calc(72px+1.5rem)]" style={fade}>Hình ảnh: Pear (pear.no), tạo bằng AI</p>
-      <button onClick={leave} className="placard absolute bottom-3 right-4 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8" style={fade}>Bỏ qua</button>
+      <button onClick={onAuthSkip} className="placard absolute bottom-3 right-4 inline-flex items-center gap-2 rounded-full border border-white/35 px-5 py-2 opacity-60 transition-opacity hover:opacity-100 md:bottom-6 md:right-8" style={fade}>Bỏ qua</button>
       </div>
       <Link href="/" onClick={leave} aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
     </section>
@@ -595,6 +606,80 @@ function Plate() {
       <div className="absolute inset-y-0 left-[61%] hidden w-12 border-l border-white/30 md:block"
         style={{ backgroundImage: "linear-gradient(to bottom, rgb(255 255 255 / 0.7) 0 1px, transparent 1px)", backgroundSize: "60% 11vh", backgroundRepeat: "repeat-y", backgroundPositionY: "calc(var(--pan, 0) * -70vh)" }} />
       <span data-gauge className="placard absolute bottom-[7vh] left-[61%] hidden -translate-x-1/2 bg-[#0d4f9e] px-1 italic md:block" />
+    </div>
+  )
+}
+
+function AuthPanel({ show, onDone, onSkip }: { show: { "data-on": boolean; style: React.CSSProperties }; onDone: () => void; onSkip: () => void }) {
+  const [mode, setMode] = useState<"login" | "register">("login")
+  const [note, setNote] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  const send = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const f = new FormData(e.currentTarget)
+    const email = String(f.get("email") ?? "")
+    const password = String(f.get("password") ?? "")
+    if (mode === "register" && f.get("password") !== f.get("confirm")) { setNote("Hai mật khẩu chưa khớp."); return }
+    setLoading(true); setNote("")
+    const supabase = createClient()
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) { setNote(error.message); setLoading(false); return }
+      onDone()
+    } else {
+      const { error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: String(f.get("name") ?? "") } } })
+      if (error) { setNote(error.message); setLoading(false); return }
+      setNote("Kiểm tra email để xác nhận tài khoản.")
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div {...show}>
+      <div className="absolute bottom-[8vh] left-[calc(3.5rem+1.25rem)] right-5 md:bottom-auto md:left-auto md:right-[6vw] md:top-[20vh] md:w-[min(36vw,32rem)]">
+        <div className="mb-5 flex gap-2">
+          <button onClick={() => { setMode("login"); setNote("") }} className={`placard rounded-[3px] px-3 py-1.5 transition-opacity ${mode === "login" ? "bg-white/20 opacity-100" : "opacity-50 hover:opacity-80"}`}>Đăng nhập</button>
+          <button onClick={() => { setMode("register"); setNote("") }} className={`placard rounded-[3px] px-3 py-1.5 transition-opacity ${mode === "register" ? "bg-white/20 opacity-100" : "opacity-50 hover:opacity-80"}`}>Đăng ký</button>
+        </div>
+        <form onSubmit={send} className="grid gap-3" noValidate={false}>
+          {mode === "register" && (
+            <label className="glass flex h-14 items-center gap-3 rounded-full pl-5 pr-4">
+              <span aria-hidden className="rim rounded-full" /><UserRound aria-hidden className="size-4 shrink-0 opacity-70" />
+              <input name="name" type="text" required autoComplete="name" placeholder="Họ và tên" className="w-full bg-transparent text-white outline-none placeholder:text-white/70" />
+            </label>
+          )}
+          <label className="glass flex h-14 items-center gap-3 rounded-full pl-5 pr-4">
+            <span aria-hidden className="rim rounded-full" /><AtSign aria-hidden className="size-4 shrink-0 opacity-70" />
+            <input name="email" type="email" required autoComplete="email" placeholder="Email" className="w-full bg-transparent text-white outline-none placeholder:text-white/70" />
+          </label>
+          <label className="glass flex h-14 items-center gap-3 rounded-full pl-5 pr-4">
+            <span aria-hidden className="rim rounded-full" /><Lock aria-hidden className="size-4 shrink-0 opacity-70" />
+            <input name="password" type="password" required minLength={8} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="Mật khẩu" className="w-full bg-transparent text-white outline-none placeholder:text-white/70" />
+          </label>
+          {mode === "register" && (
+            <label className="glass flex h-14 items-center gap-3 rounded-full pl-5 pr-4">
+              <span aria-hidden className="rim rounded-full" /><Lock aria-hidden className="size-4 shrink-0 opacity-70" />
+              <input name="confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Nhập lại mật khẩu" className="w-full bg-transparent text-white outline-none placeholder:text-white/70" />
+            </label>
+          )}
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <button disabled={loading} className="placard inline-flex h-12 items-center gap-3 rounded-full bg-[#0b0b0d] px-7 shadow-[0_8px_24px_rgb(0_0_0/0.3)] transition-transform hover:scale-[1.02] disabled:opacity-60 disabled:cursor-not-allowed">
+              {loading ? "Đang xử lý…" : mode === "login" ? "Đăng nhập" : "Tạo tài khoản"}
+              <ArrowRight className="size-4" />
+            </button>
+            {mode === "login" && <Link href="/quen-mat-khau" className="placard opacity-60 hover:opacity-100">Quên mật khẩu?</Link>}
+          </div>
+          {note && <p aria-live="polite" className="mt-1 text-sm leading-relaxed text-white/80 [text-shadow:0_1px_8px_rgb(0_0_0/0.5)]">{note}</p>}
+        </form>
+        <p className="mt-4 text-sm text-white/50">
+          {mode === "login" ? "Chưa có tài khoản? " : "Đã có tài khoản? "}
+          <button onClick={() => { setMode(mode === "login" ? "register" : "login"); setNote("") }} className="text-white/75 underline underline-offset-4 hover:text-white">
+            {mode === "login" ? "Đăng ký ngay" : "Đăng nhập"}
+          </button>
+        </p>
+        <button onClick={onSkip} className="placard mt-6 inline-flex items-center gap-2 rounded-full border border-white/35 px-5 py-2 opacity-60 transition-opacity hover:opacity-100">Bỏ qua, vào Sota →</button>
+      </div>
     </div>
   )
 }

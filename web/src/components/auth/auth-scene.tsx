@@ -131,10 +131,6 @@ export function AuthScene({ mode }: { mode: Mode }) {
       <div className="pointer-events-none fixed inset-y-0 left-14 w-px bg-white/22 md:left-[72px]" />
       <div className="pointer-events-none fixed inset-x-0 top-14 h-px bg-white/22 md:top-[72px]" />
       <Link href="/" aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
-      <Link href="/" className="placard absolute right-4 top-3 inline-flex items-center gap-3 rounded-[3px] bg-[#111] py-1.5 pl-4 pr-1.5 md:right-8 md:top-[18px]">
-        Về Sota
-        <span className="grid size-7 place-items-center rounded-[2px] border border-white/25"><ArrowRight className="size-3.5" /></span>
-      </Link>
 
       {/* (on a phone the words and the form run down the page, which scrolls; wider, they float apart) */}
       <div className="relative flex min-h-full flex-col justify-between gap-10 pb-14 pl-[calc(3.5rem+1.25rem)] pr-5 pt-[calc(3.5rem+1.5rem)] md:block md:p-0">
@@ -182,7 +178,6 @@ export function AuthScene({ mode }: { mode: Mode }) {
 
       </div>
 
-      <p className="pointer-events-none fixed bottom-3 left-[calc(3.5rem+1.25rem)] text-[10px] opacity-55 md:bottom-6 md:left-[calc(72px+1.5rem)]">Hình ảnh: Pear (pear.no), tạo bằng AI</p>
     </main>
   )
 }
