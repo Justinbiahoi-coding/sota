@@ -400,3 +400,4 @@
 @keyframes write { from { mask-position: 100% 0; } to { mask-position: 0 0; } }
 .write { display: inline-block; padding-right: 0.15em; mask-image: linear-gradient(90deg, #000 45%, transparent 55%); mask-size: 220% 100%; mask-position: 100% 0; }
 .writing .write { animation: write 1.6s cubic-bezier(0.45, 0.05, 0.3, 1) 0.35s both; }
+@keyframes mapPanelSlide { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: translateX(0); } }
