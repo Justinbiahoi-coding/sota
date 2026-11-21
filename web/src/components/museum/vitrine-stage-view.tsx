@@ -11,6 +11,8 @@ import {
   Sparkles,
   ChevronDown,
   Check,
+  Box,
+  X,
 } from "lucide-react"
 import { type Artifact, museumBySlug, museums } from "@/lib/mock-data"
 import { BrassPlacardPin } from "@/components/renaissance/deco-assets"
@@ -39,6 +41,7 @@ export function VitrineStageView({
 }: VitrineStageViewProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [show3D, setShow3D] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Sync initial slug if provided
@@ -67,6 +70,9 @@ export function VitrineStageView({
   const active = artifacts[currentIndex] || artifacts[0]
   const museum = museumBySlug(active.museumSlug)
   const catalog = active.id.replace("art-", "SI-").toUpperCase()
+
+  // Reset 3D view when switching artifacts
+  useEffect(() => { setShow3D(false) }, [currentIndex])
 
   const handlePrev = () => {
     setCurrentIndex((prev) => (prev > 0 ? prev - 1 : artifacts.length - 1))
@@ -315,19 +321,65 @@ export function VitrineStageView({
                   Xem hồ sơ đầy đủ <ArrowUpRight className="size-3.5" />
                 </Link>
 
-                <Link
-                  href={`/dat-ve?museum=${active.museumSlug}`}
-                  className="w-full sm:w-auto"
-                >
-                  <span className="flex w-full items-center justify-center gap-1 rounded-full border border-stone-400 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-stone-200 hover:border-[#d4af37] hover:text-white transition-all">
-                    Đặt vé <Sparkles className="size-3 text-[#d4af37]" />
-                  </span>
-                </Link>
+                {active.sketchfabUid ? (
+                  <button
+                    type="button"
+                    onClick={() => setShow3D(true)}
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 rounded-full border border-[#d4af37]/70 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-[#fbe396] hover:border-[#d4af37] hover:bg-[#d4af37]/15 transition-all"
+                  >
+                    <Box className="size-3.5 text-[#d4af37]" /> Xem 3D
+                  </button>
+                ) : (
+                  <Link href={`/dat-ve?museum=${active.museumSlug}`} className="w-full sm:w-auto">
+                    <span className="flex w-full items-center justify-center gap-1 rounded-full border border-stone-400 px-3.5 py-2 text-xs font-semibold uppercase tracking-wider text-stone-200 hover:border-[#d4af37] hover:text-white transition-all">
+                      Đặt vé <Sparkles className="size-3 text-[#d4af37]" />
+                    </span>
+                  </Link>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
+
+      {/* 3D viewer overlay (Sketchfab embed) */}
+      <AnimatePresence>
+        {show3D && active.sketchfabUid && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-sm"
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+              <div>
+                <p className="placard text-[0.62rem] tracking-wider text-[#d4af37] uppercase font-bold">
+                  Mô hình 3D tương tác
+                </p>
+                <h3 className="font-heading text-lg italic text-white">{active.title}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShow3D(false)}
+                className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-white/5 text-white hover:border-[#d4af37] hover:bg-[#d4af37] hover:text-[#08162b] transition-all"
+                aria-label="Đóng xem 3D"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+            <div className="relative flex-1">
+              <iframe
+                key={active.sketchfabUid}
+                title={active.title}
+                src={`https://sketchfab.com/models/${active.sketchfabUid}/embed?autostart=1&preload=1&ui_infos=0&ui_watermark=0&ui_ar=0`}
+                className="absolute inset-0 h-full w-full"
+                allow="autoplay; fullscreen; xr-spatial-tracking"
+                loading="lazy"
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

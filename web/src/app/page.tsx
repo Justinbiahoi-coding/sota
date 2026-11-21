@@ -1,18 +1,13 @@
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
-import { IsoCluster } from "@/components/home/iso-cluster"
-import { EvolutionIntro } from "@/components/home/intro/evolution-intro"
+import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
 import { exhibitions, highlightArtifacts, museumBySlug, museums, products, formatPrice } from "@/lib/mock-data"
 import { HomeAddToCart } from "@/components/home/home-add-to-cart"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
-import { TiltedCard } from "@/components/reactbits/tilted-card"
 import { FlippableVitrineCard } from "@/components/reactbits/flippable-card"
-import { RenaissanceDivider, BrassPlacardPin } from "@/components/renaissance/deco-assets"
+import { RenaissanceDivider } from "@/components/renaissance/deco-assets"
 import { SplitText } from "@/components/reactbits/split-text"
-import { DecryptedText } from "@/components/reactbits/decrypted-text"
-import { CountUp } from "@/components/reactbits/count-up"
-import { StarBorder } from "@/components/reactbits/star-border"
 import { MuseumButton } from "@/components/reactbits/museum-button"
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
@@ -21,91 +16,10 @@ const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} đến $
 export default function Home() {
   return (
     <>
-      <EvolutionIntro />
-
-      {/* ---------------------------------------------------------------- hero */}
-      <section className="relative mx-auto grid max-w-[1560px] items-center gap-12 px-6 pb-16 pt-12 md:px-12 xl:px-16 lg:grid-cols-12 lg:pb-24 lg:pt-20">
-        <div className="lg:col-span-5">
-          {/* Badge with DecryptedText (ReactBits) */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
-            <BrassPlacardPin />
-            <span className="placard text-[0.68rem] tracking-wider text-[#92400e] font-medium">
-              <DecryptedText
-                text="Smithsonian Institution · Washington, D.C."
-                speed={30}
-                maxIterations={12}
-                animateOn="view"
-              />
-            </span>
-          </div>
-
-          {/* Heading with SplitText (ReactBits) */}
-          <h1 className="mt-6 text-5xl font-light leading-[1.05] tracking-tight sm:text-6xl xl:text-7xl">
-            <SplitText text="Hai mươi mốt bảo tàng," delay={0.03} stagger={0.03} className="text-[#171717]" />
-            <span className="block font-heading italic text-[#92400e]">
-              <SplitText text="một lối vào chung." delay={0.12} stagger={0.03} />
-            </span>
-          </h1>
-
-          <p className="mt-6 max-w-md text-base leading-relaxed text-stone-600">
-            Khám phá hơn 145 triệu hiện vật quý giá từ cụm bảo tàng Smithsonian, dạo qua các gian trưng bày nghệ thuật và đặt vé trọn gói trong một lần thanh toán.
-          </p>
-
-          {/* CTA Buttons with StarBorder (ReactBits) */}
-          <div className="mt-9 flex flex-wrap items-center gap-4">
-            <Link href="/dat-ve">
-              <StarBorder color="#d4af37" speed="4s" className="shadow-[0_4px_20px_rgba(212,175,55,0.3)]">
-                <span className="flex items-center gap-2 py-1 px-2 text-xs font-semibold tracking-wider uppercase text-white">
-                  <span className="text-[#d4af37]">✦</span> Đặt vé tham quan
-                </span>
-              </StarBorder>
-            </Link>
-            <MuseumButton href="/bao-tang" variant="outline" size="md">
-              Xem các bảo tàng
-            </MuseumButton>
-          </div>
-
-          {/* Key Metric Counters with CountUp (ReactBits) */}
-          <div className="mt-12 grid grid-cols-3 gap-4 border-t border-stone-200/90 pt-6">
-            <div>
-              <p className="font-heading text-2xl font-semibold text-[#08162b] sm:text-3xl">
-                <CountUp to={145} suffix="M+" duration={2.2} />
-              </p>
-              <p className="placard text-[0.65rem] text-stone-500 uppercase">Mẫu vật & Hiện vật</p>
-            </div>
-            <div>
-              <p className="font-heading text-2xl font-semibold text-[#92400e] sm:text-3xl">
-                <CountUp to={21} duration={1.8} />
-              </p>
-              <p className="placard text-[0.65rem] text-stone-500 uppercase">Bảo tàng thành viên</p>
-            </div>
-            <div>
-              <p className="font-heading text-2xl font-semibold text-emerald-700 sm:text-3xl">
-                <CountUp to={100} suffix="%" duration={1.5} />
-              </p>
-              <p className="placard text-[0.65rem] text-stone-500 uppercase">Miễn phí vào cửa</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 3D Cluster Map with SpotlightCard (ReactBits) */}
-        <figure className="relative lg:col-span-7">
-          <SpotlightCard
-            spotlightColor="rgba(212, 175, 55, 0.22)"
-            borderColor="rgba(212, 175, 55, 0.6)"
-            className="aspect-[760/470] w-full p-4 bg-card/95 shadow-xl border-stone-200/90"
-          >
-            <IsoCluster museums={museums} />
-          </SpotlightCard>
-          <figcaption className="placard mt-3 flex justify-between text-xs text-stone-500">
-            <span className="hidden sm:inline">Rê chuột lên từng bảo tàng để xem vị trí tương quan</span>
-            <span className="text-[#92400e] font-medium">Bản đồ 3D kiến trúc · Sota Space</span>
-          </figcaption>
-        </figure>
-      </section>
+      <GalleryWalkthroughHero />
 
       {/* ---------------------------------------------------------------- open today */}
-      <section className="relative border-t border-stone-200/80 bg-stone-50/50">
+      <section id="today" className="relative border-t border-stone-200/80 bg-stone-50/50">
         <span className="pointer-events-none absolute left-8 top-0 -translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
         <span className="pointer-events-none absolute right-8 top-0 translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
 

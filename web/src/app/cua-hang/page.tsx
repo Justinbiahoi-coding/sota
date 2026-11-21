@@ -3,7 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
-import { ShoppingBag, Check } from "lucide-react"
+import { ShoppingBag, Check, LayoutGrid, Boxes } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { formatPrice, products, type Product, type ProductCategory } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
@@ -15,6 +15,7 @@ import {
   RenaissanceDivider,
   GildedMuseumFrame,
 } from "@/components/renaissance/deco-assets"
+import { Shop3DGallery } from "@/components/shop/shop-gallery-3d"
 
 const CATEGORIES: { label: string; value: ProductCategory | "all" }[] = [
   { label: "Tất cả vật phẩm", value: "all" },
@@ -96,6 +97,7 @@ function ProductCard({ product }: { product: Product }) {
 
 export default function ShopPage() {
   const [category, setCategory] = useState<ProductCategory | "all">("all")
+  const [view, setView] = useState<"grid" | "gallery">("grid")
 
   const filtered =
     category === "all" ? products : products.filter((p) => p.category === category)
@@ -124,36 +126,75 @@ export default function ShopPage() {
 
       <RenaissanceDivider title="Bộ sưu tập lưu niệm" />
 
-      {/* Category filter tabs */}
-      <div className="mb-10 flex flex-wrap gap-2.5">
-        {CATEGORIES.map((cat) => (
+      {/* View toggle */}
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex gap-2">
           <button
-            key={cat.value}
-            onClick={() => setCategory(cat.value)}
+            onClick={() => setView("grid")}
             className={cn(
-              "placard rounded-full border px-4 py-2 text-xs transition-all duration-300",
-              category === cat.value
+              "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
+              view === "grid"
                 ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
-                : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60 hover:text-stone-900",
+                : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60",
             )}
           >
-            {cat.label}
+            <LayoutGrid className="size-3.5" />
+            Danh sách
           </button>
-        ))}
+          <button
+            onClick={() => setView("gallery")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
+              view === "gallery"
+                ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
+                : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60",
+            )}
+          >
+            <Boxes className="size-3.5" />
+            Phòng trưng bày 3D
+          </button>
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white py-24 text-center shadow-sm">
-          <RenaissanceCorners />
-          <p className="font-heading text-2xl font-light text-[#171717]">Không có sản phẩm nào trong danh mục này</p>
-          <p className="mt-2 text-sm text-stone-500">Vui lòng chọn danh mục khác.</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {filtered.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+      {/* 3D gallery view */}
+      {view === "gallery" && (
+        <Shop3DGallery products={products} />
+      )}
+
+      {/* Category filter + grid — only in grid view */}
+      {view === "grid" && (
+        <>
+          <div className="mb-10 flex flex-wrap gap-2.5">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat.value}
+                onClick={() => setCategory(cat.value)}
+                className={cn(
+                  "placard rounded-full border px-4 py-2 text-xs transition-all duration-300",
+                  category === cat.value
+                    ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
+                    : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60 hover:text-stone-900",
+                )}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {filtered.length === 0 ? (
+            <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white py-24 text-center shadow-sm">
+              <RenaissanceCorners />
+              <p className="font-heading text-2xl font-light text-[#171717]">Không có sản phẩm nào trong danh mục này</p>
+              <p className="mt-2 text-sm text-stone-500">Vui lòng chọn danh mục khác.</p>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {filtered.map((p) => (
+                <ProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

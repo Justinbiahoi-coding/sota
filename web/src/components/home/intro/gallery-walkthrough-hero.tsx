@@ -35,10 +35,10 @@ const ARTWORKS: ArtworkDef[] = [
   { id: "guido-dibujo-8", image: "/gallery/Dibujo+8+by+Guido+Mauas.webp", position: [7.2, 1.92, -2.87], rotation: [0, 0, 0], width: 1.32, height: 1.76, frame: "metal", frameThickness: 0.038, lightPosition: [7.2, 4.3, -1.25] },
   { id: "guido-dsc03185", image: "/gallery/DSC03185_edited+by+Guido+Mauas.webp", position: [8.15, 1.88, 1.37], rotation: [0, Math.PI, 0], width: 1.72, height: 1.313, frame: "metal", frameThickness: 0.038, lightPosition: [8.15, 4.28, -0.35] },
   { id: "guido-dibujo-31", image: "/gallery/Dibujo+31+by+Guido+Mauas.webp", position: [10.1, 1.92, -2.87], rotation: [0, 0, 0], width: 1.337, height: 1.75, frame: "walnut", frameThickness: 0.045, lightPosition: [10.1, 4.3, -1.25] },
-  { id: "end-of-gallery", image: "/gallery/EndOfGallery.webp", position: [13.88, 2.02, -0.75], rotation: [0, -Math.PI / 2, 0], width: 3.46, height: 2.595, frame: "black", frameThickness: 0.065, lightPosition: [11.25, 4.32, -0.75], castsShadow: true, hero: true },
+  { id: "end-of-gallery", image: "/gallery/EndOfGallery.webp", position: [13.88, 2.02, -0.75], rotation: [0, -Math.PI / 2, 0], width: 3.46, height: 2.836, frame: "black", frameThickness: 0.065, lightPosition: [11.25, 4.32, -0.75], castsShadow: true, hero: true },
 ]
 
-const FINALE: FinaleInfo = { artist: "Dawson Wells", title: "EndOfGallery", year: "2026", medium: "Oil on canvas", dimensions: "Variable dimensions", image: "/gallery/EndOfGallery.webp" }
+const FINALE: FinaleInfo = { artist: "Dawson Wells", title: "Smithsonian Castle in Bloom", year: "2026", medium: "Oil on canvas", dimensions: "250 × 205 cm", image: "/gallery/EndOfGallery.webp" }
 
 const DESKTOP_KEYS: CamKey[] = [
   { progress: 0, position: [0.3, 1.65, 10.35], lookAt: [-1.7, 1.72, 4.2], fov: 44 },

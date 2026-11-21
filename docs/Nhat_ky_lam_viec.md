@@ -1,5 +1,25 @@
 # Nhật ký làm việc
 
+---
+
+## Phiên 2026-11-21 08:16 +07
+
+- **Thời gian:** Thứ Bảy 21/11/2026, 08:16 +07
+- **Làm việc gì:** Thay tranh mèo cuối hành lang gallery bằng tranh cung điện Smithsonian mùa hoa anh đào; deploy lên Vercel production
+- **Module/ứng dụng:** `web/public/gallery/EndOfGallery.webp`, `web/src/components/home/intro/gallery-walkthrough-hero.tsx`
+- **Tác dụng:** `EndOfGallery.webp` (tranh hero kết thúc gallery 3D walkthrough, 2064×1548) được thay bằng tranh cung điện Smithsonian (2500×2050, nén WebP 1.0MB, PSNR 44dB); cập nhật mesh height từ 2.595→2.836 cho đúng tỉ lệ 1.22:1; FINALE metadata cập nhật; site deployed production tại sota-theta-orcin.vercel.app
+- **Làm như thế nào:** `cwebp -q 88 -m 6` nén PNG 8.2MB→1.0MB; xác định đúng file target qua camera path analysis (EndOfGallery ở [13.88,2.02,-0.75] là điểm lookAt cuối hành lang); `vercel --prod` qua Vercel CLI v66.6.0
+
+---
+
+## Phiên 2026-11-21 07:26 +07
+
+- **Thời gian:** Thứ Bảy 21/11/2026, 07:26 +07
+- **Làm việc gì:** Xóa hiệu ứng cursor lấp lánh (stardust trail); thêm mục "Hiện vật" vào nav bar với dropdown hover 3 bảo tàng; hoàn thiện trang Lịch sử Tự nhiên với đầy đủ 37 tiêu bản
+- **Module/ứng dụng:** `web/src/components/reactbits/gallery-background.tsx`, `web/src/components/site/nav-links.tsx`, `web/src/components/site/nav.ts`, `web/src/lib/natural-history-specimens.ts`, `web/src/components/museum/natural-history-page.tsx`
+- **Tác dụng:** Bỏ hiệu ứng stardust trail theo chuột (distract người dùng, nặng vì dùng 2 canvas); nav có thêm "Hiện vật" dropdown hiện 3 bảo tàng kèm mô tả ngắn khi hover; trang NHM dùng hết 37 tiêu bản có Sketchfab UID với 8 categories mới (thêm co-sinh-vat, san-ho, dia-chat, thuc-vat, khao-co) và era paleozoic
+- **Làm như thế nào:** Xóa `TrailParticle` interface, `trailParticles` array, spawn logic, cursor glow radial gradient, toàn bộ render trail, và `topCanvas` layer thừa trong `GalleryBackground`; thêm field `dropdown` vào kiểu dữ liệu `NAV` item, dùng `AnimatePresence` + `motion.div` cho dropdown, dùng `onMouseEnter/Leave` trên container div; mở rộng specimens từ 6 → 37 với data art-028 đến art-055 từ mock-data
+
 File này ghi lại mỗi lần làm việc với AI cho dự án Sota (Space of the Art) — mỗi mục trả lời 5 câu hỏi: **thời gian làm việc, làm việc gì, cho module/ứng dụng nào, để làm gì (tác dụng), và làm bằng cách nào**. Mục đích: cả nhóm (và bản thân sau này) xem lại được vì sao 1 quyết định/đoạn code tồn tại mà không phải đọc lại toàn bộ hội thoại.
 
 **Về trường "Thời gian":** là thời điểm ghi nhật ký (lấy từ lệnh `date` thật lúc đó), không phải thời lượng đo chính xác task tốn bao lâu — AI không có cách đo chính xác thời gian thực ngồi làm, nên ghi thời điểm để ít nhất biết buổi làm việc diễn ra khi nào.
