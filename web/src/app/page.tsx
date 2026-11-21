@@ -2,7 +2,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
 import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
-import { MuseumMapSection } from "@/components/home/museum-map-section"
 import { VideoSection } from "@/components/home/video-section"
 import { exhibitions, museums } from "@/lib/mock-data"
 import { MuseumButton } from "@/components/reactbits/museum-button"
@@ -150,11 +149,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      {/* ════════════════════════════════════════════════════════
-          MUSEUMS — Interactive map (Colosseum-style)
-      ════════════════════════════════════════════════════════ */}
-      <MuseumMapSection />
 
       {/* ════════════════════════════════════════════════════════
           ACCELERATOR — Benefits / Features
