@@ -117,19 +117,18 @@ export function MuseumMapSection() {
               const isActive = p.slug === active
               return (
                 <div key={p.slug}>
-                  {/* colored building art — transparent WebP, fades in on hover */}
+                  {/* full-map overlay — same 1456×1080 as base, one building lit per file */}
                   <img
                     src={p.art}
                     alt=""
                     aria-hidden
                     style={{
-                      position:"absolute",
-                      left: p.zone.left, top: p.zone.top,
-                      width: p.zone.width, height: p.zone.height,
-                      objectFit: "fill",
+                      position:"absolute", inset:0,
+                      width:"100%", height:"100%",
+                      objectFit: "cover",
                       pointerEvents: "none", zIndex: 2,
                       opacity: isActive ? 1 : 0,
-                      transition: "opacity .3s ease-in-out",
+                      transition: "opacity .35s ease-in-out",
                     }}
                   />
 
