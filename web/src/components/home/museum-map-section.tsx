@@ -112,24 +112,24 @@ export function MuseumMapSection() {
               style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }}
             />
 
-            {/* Building hover zones + glow */}
+            {/* Building hover zones + screen-blend colorize */}
             {PINS.map(p => {
               const isActive = p.slug === active
               return (
                 <div key={p.slug}>
-                  {/* Soft radial glow at building center when active */}
+                  {/* screen blend: colorizes lighter building pixels, dark areas stay black */}
                   <div style={{
                     position:"absolute",
-                    left: p.glow.left, top: p.glow.top,
-                    width: 260, height: 260,
-                    transform: "translate(-50%,-50%)",
-                    background: `radial-gradient(circle, ${p.accent}50 0%, ${p.accent}18 40%, transparent 70%)`,
+                    left: p.zone.left, top: p.zone.top,
+                    width: p.zone.width, height: p.zone.height,
+                    backgroundColor: p.accent,
+                    mixBlendMode: "screen",
                     pointerEvents: "none", zIndex: 2,
-                    opacity: isActive ? 1 : 0,
+                    opacity: isActive ? 0.82 : 0,
                     transition: "opacity .3s ease-in-out",
                   }} />
 
-                  {/* Invisible click/hover zone over the building footprint */}
+                  {/* hover/click zone */}
                   <div
                     onClick={() => setActive(p.slug)}
                     onMouseEnter={() => setActive(p.slug)}
@@ -189,21 +189,21 @@ export function MuseumMapSection() {
               <Link
                 href={sel.href}
                 style={{
-                  display:"inline-flex", alignItems:"center", gap:8,
-                  padding:"12px 28px",
-                  border:`1px solid ${sel.accent}66`,
+                  display:"inline-flex", alignItems:"center", gap:10,
                   color: sel.accent,
-                  fontSize:11, fontFamily:"var(--font-label)", letterSpacing:"0.14em",
+                  fontSize:11, fontFamily:"var(--font-label)", letterSpacing:"0.16em",
                   textTransform:"uppercase", textDecoration:"none",
-                  transition:"background .2s, border-color .2s",
+                  borderBottom:`1px solid ${sel.accent}55`,
+                  paddingBottom:3,
+                  transition:"border-color .2s, gap .2s",
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.background = sel.accent + "18"
-                  e.currentTarget.style.borderColor = sel.accent + "aa"
+                  e.currentTarget.style.borderColor = sel.accent
+                  e.currentTarget.style.gap = "14px"
                 }}
                 onMouseLeave={e => {
-                  e.currentTarget.style.background = "transparent"
-                  e.currentTarget.style.borderColor = sel.accent + "66"
+                  e.currentTarget.style.borderColor = sel.accent + "55"
+                  e.currentTarget.style.gap = "10px"
                 }}
               >
                 {sel.cta} →
