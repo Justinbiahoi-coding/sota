@@ -69,6 +69,12 @@ export function MuseumMapSection() {
         >
           <img src="/colosseum-map.webp" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:4 }} />
 
+          {/* Radial vignette — fades outer forest into page background, matches Colosseum style */}
+          <div style={{
+            position: "absolute", inset: 0, pointerEvents: "none", zIndex: 6,
+            background: "radial-gradient(ellipse 58% 60% at 37% 44%, transparent 62%, #1e1b1f 92%)",
+          }} />
+
           {/* Building zones — large Link covering each building footprint.
               Hover here (anywhere on the building) triggers the highlight. */}
           {PINS.map(p => {
@@ -114,7 +120,7 @@ export function MuseumMapSection() {
                 style={{
                   position: "absolute",
                   ...PIN_POS[p.slug],
-                  zIndex: 5,
+                  zIndex: 7,
                   pointerEvents: "none",
                   display: "flex",
                   alignItems: "center",
