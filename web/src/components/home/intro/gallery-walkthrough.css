@@ -179,8 +179,8 @@
   will-change: opacity;
 }
 
-/* early elements (tabs, CTA, status) */
-.cwf-hero-tabs,
+/* early elements (subtitle, CTA, status) */
+.cwf-subtitle,
 .cwf-cta-row,
 .cwf-status,
 .cwf-scroll-more,

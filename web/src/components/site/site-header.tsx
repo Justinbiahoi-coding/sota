@@ -42,7 +42,7 @@ const RIGHT_NAV = NAV.slice(2)
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-40 bg-[#08162b]/80 backdrop-blur-md text-[#f8f6f0] border-b border-white/[0.06]">
+    <header className="absolute top-0 left-0 right-0 z-40 text-[#f8f6f0] bg-gradient-to-b from-black/40 to-transparent">
       <div className="mx-auto flex h-14 max-w-[1560px] items-center justify-center px-6">
         {/* Left nav links */}
         <nav className="hidden md:flex items-center gap-8" aria-label="Chính">

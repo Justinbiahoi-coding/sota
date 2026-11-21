@@ -888,13 +888,10 @@ export function GalleryWalkthroughHero() {
               ))}
             </h2>
 
-            {/* page tabs below title */}
-            <nav className="cwf-hero-tabs" style={{ pointerEvents: "auto" }}>
-              <a href="/bao-tang">Bảo tàng</a>
-              <a href="/bao-tang/lich-su-tu-nhien">Hiện vật</a>
-              <a href="/cua-hang">Cửa hàng</a>
-              <a href="/kham-pha">Khám phá thêm</a>
-            </nav>
+            <p className="cwf-subtitle">
+              Khám phá di sản văn hoá nhân loại<br />
+              qua 6 bảo tàng Smithsonian
+            </p>
 
             <div className="cwf-cta-row">
               <a href="/bao-tang" className="cwf-cta-btn" style={{ pointerEvents: "auto" }}>
