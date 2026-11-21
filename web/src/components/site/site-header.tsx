@@ -42,46 +42,40 @@ const RIGHT_NAV = NAV.slice(2)
 
 export function SiteHeader() {
   return (
-    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-[#08162b] border-b border-white/[0.06]">
-      {/* matches Colosseum: position:absolute, solid bg, 72px height, centered nav */}
-      <div className="relative flex h-[72px] max-w-[1560px] mx-auto items-center justify-between px-8">
-        {/* Nav links — absolutely centered like Colosseum's .site-nav__desktop */}
-        <nav className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8" aria-label="Chính" style={{ marginLeft: "-19px" }}>
+    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
+      <div className="relative flex h-[72px] max-w-[1560px] mx-auto items-center px-8">
+
+        {/* Seal — truly centered via absolute left-1/2 */}
+        <Link
+          href="/"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-stone-300 hover:text-white transition-colors"
+          aria-label="Sota — Trang chủ"
+        >
+          <SmithsonianSeal size={38} />
+        </Link>
+
+        {/* Left nav — right-aligned toward seal */}
+        <nav className="hidden md:flex items-center gap-8 mr-auto" aria-label="Chính">
           {LEFT_NAV.map(n => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="text-sm text-stone-400 hover:text-white transition-colors whitespace-nowrap"
-            >
-              {n.label}
-            </Link>
-          ))}
-
-          {/* Center seal */}
-          <Link
-            href="/"
-            className="mx-2 flex items-center justify-center text-stone-300 hover:text-white transition-colors"
-            aria-label="Sota — Trang chủ"
-          >
-            <SmithsonianSeal size={38} />
-          </Link>
-
-          {RIGHT_NAV.map(n => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="text-sm text-stone-400 hover:text-white transition-colors whitespace-nowrap"
-            >
+            <Link key={n.href} href={n.href}
+              className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
               {n.label}
             </Link>
           ))}
         </nav>
 
-        {/* Left spacer (keeps utility icons right-aligned) */}
-        <div className="flex-1" />
+        {/* Right nav — left-aligned away from seal */}
+        <nav className="hidden md:flex items-center gap-8 ml-auto">
+          {RIGHT_NAV.map(n => (
+            <Link key={n.href} href={n.href}
+              className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
+              {n.label}
+            </Link>
+          ))}
+        </nav>
 
-        {/* Utility icons — right edge like Colosseum's .site-nav__actions */}
-        <div className="flex items-center gap-3">
+        {/* Utility icons */}
+        <div className="flex items-center gap-3 ml-6">
           <CartIcon />
           <AuthActions />
         </div>
