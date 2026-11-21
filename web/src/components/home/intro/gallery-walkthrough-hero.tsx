@@ -110,8 +110,10 @@ export function GalleryWalkthroughHero() {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [loadProgress, setLoadProgress] = useState(0)
   const [dismissed, setDismissed] = useState(false)
-  // Always skip scroll-driven walkthrough — animation auto-plays on load
-  const [skipGallery] = useState(() => true)
+  // Skip walkthrough if already seen this session; guests see it every new session
+  const [skipGallery] = useState(() => {
+    try { return !!sessionStorage.getItem(SESSION_KEY) } catch { return false }
+  })
 
   const finaleArt = ARTWORKS[ARTWORKS.length - 1]
 
