@@ -69,6 +69,14 @@ export function MuseumMapSection() {
         >
           <img src="/colosseum-map.webp" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:4 }} />
 
+          {/* dark overlays on the 2 untagged buildings — using Colosseum's robinhood + tempo positions */}
+          {[
+            { left:"4.2011%",  top:"33.8959%", width:"20.2892%", height:"26.3117%" },
+            { left:"41.5544%", top:"51.4656%", width:"24.4306%", height:"31.3978%" },
+          ].map((pos, i) => (
+            <div key={i} style={{ position:"absolute", ...pos, backgroundColor:"rgba(8,6,4,0.62)", pointerEvents:"none" }} />
+          ))}
+
           {/* building art overlays */}
           {ARTS.map(a => (
             <img key={a.slug} src={a.src} alt="" style={{
