@@ -849,7 +849,7 @@ export function GalleryWalkthroughHero() {
 
   return (
     <>
-      <section ref={sectionRef} className="gallery-journey" style={{ height: skipGallery ? "100svh" : "1000svh" }} aria-labelledby="gallery-title">
+      <section ref={sectionRef} className="gallery-journey" style={{ height: skipGallery ? "100svh" : "300svh" }} aria-labelledby="gallery-title">
         <div className="gallery-stage" ref={stageRef}>
           <div className="gallery-canvas-shell" aria-hidden="true">
             <canvas ref={canvasRef} />
