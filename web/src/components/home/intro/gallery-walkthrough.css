@@ -164,7 +164,7 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 6vh 1.5rem 0;
+  padding: 72px 1.5rem 0;
   text-shadow: 0 2px 20px rgba(0,0,0,0.9);
 }
 /* vignette on ::before so it fades independently of children */

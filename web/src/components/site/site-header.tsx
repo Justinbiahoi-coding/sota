@@ -42,45 +42,46 @@ const RIGHT_NAV = NAV.slice(2)
 
 export function SiteHeader() {
   return (
-    <header className="absolute top-0 left-0 right-0 z-40 text-[#f8f6f0] bg-gradient-to-b from-black/40 to-transparent">
-      <div className="mx-auto flex h-14 max-w-[1560px] items-center justify-center px-6">
-        {/* Left nav links */}
-        <nav className="hidden md:flex items-center gap-8" aria-label="Chính">
+    <header className="absolute top-0 left-0 right-0 z-40 text-[#f8f6f0] bg-[#08162b] border-b border-white/[0.06]">
+      {/* matches Colosseum: position:absolute, solid bg, 72px height, centered nav */}
+      <div className="relative flex h-[72px] max-w-[1560px] mx-auto items-center justify-between px-8">
+        {/* Nav links — absolutely centered like Colosseum's .site-nav__desktop */}
+        <nav className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-8" aria-label="Chính" style={{ marginLeft: "-19px" }}>
           {LEFT_NAV.map(n => (
             <Link
               key={n.href}
               href={n.href}
-              className="text-[0.78rem] tracking-[0.08em] text-stone-300 hover:text-white transition-colors"
+              className="text-sm text-stone-400 hover:text-white transition-colors whitespace-nowrap"
             >
               {n.label}
             </Link>
           ))}
-        </nav>
 
-        {/* Center seal */}
-        <Link
-          href="/"
-          className="mx-10 flex items-center justify-center text-stone-300 hover:text-white transition-colors"
-          aria-label="Sota — Trang chủ"
-        >
-          <SmithsonianSeal size={38} />
-        </Link>
+          {/* Center seal */}
+          <Link
+            href="/"
+            className="mx-2 flex items-center justify-center text-stone-300 hover:text-white transition-colors"
+            aria-label="Sota — Trang chủ"
+          >
+            <SmithsonianSeal size={38} />
+          </Link>
 
-        {/* Right nav links */}
-        <nav className="hidden md:flex items-center gap-8">
           {RIGHT_NAV.map(n => (
             <Link
               key={n.href}
               href={n.href}
-              className="text-[0.78rem] tracking-[0.08em] text-stone-300 hover:text-white transition-colors"
+              className="text-sm text-stone-400 hover:text-white transition-colors whitespace-nowrap"
             >
               {n.label}
             </Link>
           ))}
         </nav>
 
-        {/* Utility icons — right edge */}
-        <div className="absolute right-6 flex items-center gap-2">
+        {/* Left spacer (keeps utility icons right-aligned) */}
+        <div className="flex-1" />
+
+        {/* Utility icons — right edge like Colosseum's .site-nav__actions */}
+        <div className="flex items-center gap-3">
           <CartIcon />
           <AuthActions />
         </div>
