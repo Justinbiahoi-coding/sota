@@ -143,85 +143,63 @@ export function MuseumMapSection() {
               </div>
             )
           })}
-        </div>
 
-        {/* CARD — below map, horizontal */}
-        <div style={{ marginTop: 24 }}>
+          {/* CARD — absolute right, in the dark vignette area */}
           <div style={{
-            display:"grid",
-            gridTemplateColumns:"6px 1fr 6px",
-            gridTemplateRows:"6px 1fr 6px",
+            position: "absolute",
+            right: 24, top: "50%", transform: "translateY(-50%)",
+            width: 280, zIndex: 8,
+            display: "flex", flexDirection: "column", gap: 0,
+            border: `1px solid ${sel.accent}44`,
+            backgroundColor: "#15121acc",
+            backdropFilter: "blur(16px)",
+            transition: "border-color .25s",
           }}>
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
+            {/* corner bands */}
+            <div style={{ height: 4, background: `linear-gradient(90deg, ${sel.accent}66, transparent)` }} />
+            <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
 
-            <div style={{
-              display:"flex", alignItems:"center", justifyContent:"space-between", gap:32,
-              padding:"24px 32px",
-              border:`1px solid ${sel.accent}33`,
-              backgroundColor:"#1e1b1f",
-              backgroundImage:"linear-gradient(rgba(40,34,44,.6),rgba(40,34,44,.6))",
-              transition:"border-color .25s",
-            }}>
-              {/* left: flares + name */}
-              <div style={{ display:"flex", alignItems:"center", gap:20, flexShrink:0 }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {["99","55"].map(a => <Flare key={a} color={sel.accent + a} />)}
-                </div>
-                <div>
-                  <p style={{ margin:0, fontSize:11, letterSpacing:"0.15em", textTransform:"uppercase", color: sel.accent, fontFamily:"var(--font-label)", opacity:0.8 }}>
-                    {sel.hours ? "Mở cửa hàng ngày" : "Smithsonian"}
-                  </p>
-                  <h3 style={{ margin:"4px 0 0", fontSize:28, fontStyle:"italic", fontWeight:400, color:"#fff", fontFamily:"var(--font-display)", whiteSpace:"nowrap" }}>
-                    {sel.title}
-                  </h3>
-                </div>
-              </div>
-
-              {/* center: hours + desc */}
-              <div style={{ flex:1, minWidth:0, borderLeft:`1px solid ${sel.accent}22`, paddingLeft:32 }}>
-                {sel.hours && (
-                  <p style={{ margin:"0 0 4px", fontSize:32, fontStyle:"italic", fontWeight:400, color:"#fff", fontFamily:"var(--font-display)", lineHeight:1 }}>
-                    {sel.hours}
-                  </p>
-                )}
-                <p style={{ margin:0, fontSize:15, lineHeight:1.5, color:"#b4aabb", maxWidth:480 }}>
-                  {sel.desc}
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                <p style={{ margin:0, fontSize:9, letterSpacing:"0.2em", textTransform:"uppercase", color: sel.accent, fontFamily:"var(--font-label)", opacity:0.8, lineHeight:1.4 }}>
+                  {sel.hours ? "Mở cửa hàng ngày" : "Smithsonian"}
                 </p>
+                <Flare color={sel.accent + "88"} />
               </div>
 
-              {/* right: flares + CTA */}
-              <div style={{ display:"flex", alignItems:"center", gap:20, flexShrink:0 }}>
-                <Link
-                  href={sel.href}
-                  style={{
-                    display:"inline-flex", alignItems:"center", gap:6,
-                    padding:"10px 20px",
-                    border:`1px solid ${sel.accent}66`,
-                    color: sel.accent,
-                    fontSize:12, fontFamily:"var(--font-label)", letterSpacing:"0.12em", textTransform:"uppercase", textDecoration:"none",
-                    whiteSpace:"nowrap",
-                    transition:"background .2s",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = sel.accent + "18")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  {sel.cta} →
-                </Link>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {["55","99"].map(a => <Flare key={a} color={sel.accent + a} />)}
-                </div>
-              </div>
+              <h3 style={{ margin:0, fontSize:22, fontStyle:"italic", fontWeight:400, color:"#fff", fontFamily:"var(--font-display)", lineHeight:1.1 }}>
+                {sel.title}
+              </h3>
+
+              {sel.hours && (
+                <p style={{ margin:0, fontSize:26, fontStyle:"italic", fontWeight:400, color: sel.accent, fontFamily:"var(--font-display)", lineHeight:1 }}>
+                  {sel.hours}
+                </p>
+              )}
+
+              <p style={{ margin:0, fontSize:12, lineHeight:1.6, color:"#9d95a5" }}>
+                {sel.desc}
+              </p>
+
+              <Link
+                href={sel.href}
+                style={{
+                  display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
+                  padding:"9px 0",
+                  border:`1px solid ${sel.accent}55`,
+                  color: sel.accent,
+                  fontSize:10, fontFamily:"var(--font-label)", letterSpacing:"0.14em", textTransform:"uppercase", textDecoration:"none",
+                  transition:"background .2s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = sel.accent + "18")}
+                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+              >
+                {sel.cta} →
+              </Link>
             </div>
-
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
-            <span style={{ background: sel.accent + "44" }} />
+            <div style={{ height: 4, background: `linear-gradient(90deg, transparent, ${sel.accent}66)` }} />
           </div>
-        </div>
+
+        </div>{/* /MAP */}
 
       </div>
     </section>
