@@ -883,12 +883,10 @@ export function GalleryWalkthroughHero() {
             {/* floral poppy canvas — letterbloom effect over SMITHSONIAN */}
             <canvas ref={florCanvasRef} className="cwf-floral-canvas" aria-hidden="true" />
 
-            {/* museum badges row */}
+            {/* museum names bar */}
             <div className="cwf-museum-badges">
               {museums.map(m => (
-                <span key={m.slug} style={{ borderColor: `${m.accent}80`, color: "#fff" }}>
-                  {m.nameEn}
-                </span>
+                <span key={m.slug}>{m.nameEn}</span>
               ))}
             </div>
 
