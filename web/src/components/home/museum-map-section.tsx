@@ -69,49 +69,64 @@ export function MuseumMapSection() {
         >
           <img src="/colosseum-map.webp" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:4 }} />
 
-          {/* dark overlays on the 2 untagged buildings — using Colosseum's robinhood + tempo positions */}
-          {[
-            { left:"4.2011%",  top:"33.8959%", width:"20.2892%", height:"26.3117%" },
-            { left:"41.5544%", top:"51.4656%", width:"24.4306%", height:"31.3978%" },
-          ].map((pos, i) => (
-            <div key={i} style={{ position:"absolute", ...pos, backgroundColor:"rgba(8,6,4,0.62)", pointerEvents:"none" }} />
-          ))}
-
-          {/* building art overlays */}
-          {ARTS.map(a => (
-            <img key={a.slug} src={a.src} alt="" style={{
-              position:"absolute", left:a.left, top:a.top, width:a.width, height:a.height,
-              display:"block", objectFit:"cover",
-              opacity: a.slug === active ? 1 : 0,
-              transition:"opacity .25s ease-in-out",
-            }} />
-          ))}
-
-          {/* pins — Link for navigation, hover sets active */}
+          {/* Building zones — large Link covering each building footprint.
+              Hover here (anywhere on the building) triggers the highlight. */}
           {PINS.map(p => {
+            const art = ARTS.find(a => a.slug === p.slug)!
             const isActive = p.slug === active
             return (
               <Link
                 key={p.slug}
                 href={p.href}
+                aria-label={p.label}
                 onMouseEnter={() => setActive(p.slug)}
                 style={{
                   position: "absolute",
+                  left: art.left, top: art.top, width: art.width, height: art.height,
+                  display: "block",
+                  cursor: "pointer",
+                  zIndex: 2,
+                  textDecoration: "none",
+                }}
+              >
+                {/* art overlay fills the zone */}
+                <img
+                  src={art.src}
+                  alt=""
+                  style={{
+                    position: "absolute", inset: 0, width: "100%", height: "100%",
+                    display: "block",
+                    opacity: isActive ? 1 : 0,
+                    transition: "opacity .25s ease-in-out",
+                    pointerEvents: "none",
+                  }}
+                />
+              </Link>
+            )
+          })}
+
+          {/* Pin badges — visual labels only, pointer-events:none so hover falls through to building zone */}
+          {PINS.map(p => {
+            const isActive = p.slug === active
+            return (
+              <div
+                key={`badge-${p.slug}`}
+                style={{
+                  position: "absolute",
                   ...PIN_POS[p.slug],
-                  zIndex: isActive ? 3 : 2,
+                  zIndex: 5,
+                  pointerEvents: "none",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
                   height: 28,
                   paddingInline: 12,
-                  border: `1px solid ${isActive ? p.accent : "#666"}`,
-                  backgroundColor: isActive ? p.accent + "28" : "#3a3a3a",
-                  boxShadow: isActive ? `0 0 0 1px ${p.accent}44, 0 2px 12px ${p.accent}33` : "none",
+                  border: `1px solid ${isActive ? p.accent : "#555"}`,
+                  backgroundColor: isActive ? p.accent + "22" : "#2a2a2acc",
+                  boxShadow: isActive ? `0 2px 16px ${p.accent}44` : "none",
                   fontSize: 11,
-                  cursor: "pointer",
-                  color: isActive ? p.accent : "#c0c0c0",
+                  color: isActive ? p.accent : "#b0b0b0",
                   whiteSpace: "nowrap",
-                  textDecoration: "none",
                   letterSpacing: "0.04em",
                   transition: "background-color .2s, border-color .2s, color .2s, box-shadow .2s",
                   fontFamily: "var(--font-label)",
@@ -119,7 +134,7 @@ export function MuseumMapSection() {
               >
                 <span style={{ width:7, height:7, borderRadius:"50%", background: p.accent, flexShrink:0 }} />
                 {p.label}
-              </Link>
+              </div>
             )
           })}
         </div>
