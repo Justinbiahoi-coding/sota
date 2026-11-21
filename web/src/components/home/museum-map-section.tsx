@@ -69,6 +69,18 @@ export function MuseumMapSection() {
         >
           <img src="/colosseum-map.webp" alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block", borderRadius:4 }} />
 
+          {/* Dark silhouettes on 2 untagged buildings — art overlays filtered to pure black */}
+          {[
+            { src: "/map-art-robinhood.webp", left:"4.2011%",  top:"33.8959%", width:"20.2892%", height:"26.3117%" },
+            { src: "/map-art-tempo.webp",     left:"41.5544%", top:"51.4656%", width:"24.4306%", height:"31.3978%" },
+          ].map((item, i) => (
+            <img key={i} src={item.src} alt="" style={{
+              position:"absolute", left:item.left, top:item.top, width:item.width, height:item.height,
+              display:"block", pointerEvents:"none", zIndex:1,
+              filter:"brightness(0) opacity(0.85)",
+            }} />
+          ))}
+
           {/* Building zones — large Link covering each building footprint.
               Hover here (anywhere on the building) triggers the highlight. */}
           {PINS.map(p => {
