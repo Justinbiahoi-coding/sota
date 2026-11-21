@@ -179,9 +179,8 @@
   will-change: opacity;
 }
 
-/* early elements (badges, subtitle, CTA) */
-.cwf-museum-badges,
-.cwf-subtitle,
+/* early elements (museum names, CTA, status) */
+.cwf-museum-names,
 .cwf-cta-row,
 .cwf-status,
 .cwf-scroll-more,
@@ -233,29 +232,30 @@
 }
 
 /* museum badge icons row */
-/* museum names bar — plain text row like Colosseum reference */
-.cwf-museum-badges {
+/* museum names — plain text below SMITHSONIAN title */
+.cwf-museum-names {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.25rem 1.5rem;
-  padding: 0.65rem 1rem;
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(6px);
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 3;
 }
-.cwf-museum-badges span {
+.cwf-museum-names span {
   font-family: var(--g-sans);
-  font-size: 0.58rem;
-  letter-spacing: 0.16em;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.7);
   text-shadow: none;
   white-space: nowrap;
+}
+.cwf-dot {
+  display: inline-block;
+  margin: 0 0.6em;
+  opacity: 0.5;
 }
 
 /* main title */

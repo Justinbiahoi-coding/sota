@@ -883,14 +883,7 @@ export function GalleryWalkthroughHero() {
             {/* floral poppy canvas — letterbloom effect over SMITHSONIAN */}
             <canvas ref={florCanvasRef} className="cwf-floral-canvas" aria-hidden="true" />
 
-            {/* museum names bar */}
-            <div className="cwf-museum-badges">
-              {museums.map(m => (
-                <span key={m.slug}>{m.nameEn}</span>
-              ))}
-            </div>
-
-            {/* SMITHSONIAN — appears last with letter stagger */}
+            {/* SMITHSONIAN — typewriter reveal */}
             <h2 ref={titleRef} className="cwf-main-title">
               {SMITHSONIAN_LETTERS.map((ch, i) => (
                 <span key={i} className="cwf-letter" style={{ "--i": String(i) } as React.CSSProperties}>
@@ -899,10 +892,12 @@ export function GalleryWalkthroughHero() {
               ))}
             </h2>
 
-            <p className="cwf-subtitle">
-              Khám phá di sản văn hoá nhân loại<br />
-              qua {museums.length} bảo tàng Smithsonian
-            </p>
+            {/* 3 museum names below title */}
+            <div className="cwf-museum-names">
+              {museums.map((m, i) => (
+                <span key={m.slug}>{i > 0 && <span className="cwf-dot">·</span>}{m.nameEn}</span>
+              ))}
+            </div>
 
             <div className="cwf-cta-row">
               <a href="/bao-tang" className="cwf-cta-btn" style={{ pointerEvents: "auto" }}>
