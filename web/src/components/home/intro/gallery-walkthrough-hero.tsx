@@ -96,6 +96,8 @@ function interpKeyframes(keys: CamKey[], p: number, out: { position: [number, nu
   return out
 }
 
+const SESSION_KEY = "sota-gallery-played"
+
 export function GalleryWalkthroughHero() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -103,6 +105,10 @@ export function GalleryWalkthroughHero() {
   const heroOverlayRef = useRef<HTMLDivElement>(null)
   const [loadProgress, setLoadProgress] = useState(0)
   const [dismissed, setDismissed] = useState(false)
+  // Skip gallery scroll if already played this session
+  const [skipGallery] = useState(() => {
+    try { return !!sessionStorage.getItem(SESSION_KEY) } catch { return false }
+  })
 
   const finaleArt = ARTWORKS[ARTWORKS.length - 1]
 
@@ -112,6 +118,20 @@ export function GalleryWalkthroughHero() {
     const stage = stageRef.current
     const heroOverlay = heroOverlayRef.current
     if (!canvas || !section || !stage || !heroOverlay) return
+    if (skipGallery) {
+      // Show finale hero immediately, skip 3D gallery
+      setLoadProgress(1)
+      setDismissed(true)
+      stage.style.setProperty("--hero-details-opacity", "1")
+      stage.style.setProperty("--intro-opacity", "0")
+      stage.style.setProperty("--canvas-opacity", "0")
+      heroOverlay.style.transform = "translate3d(0px,0px,0)"
+      heroOverlay.style.width = "100%"
+      heroOverlay.style.height = "100%"
+      heroOverlay.style.opacity = "1"
+      heroOverlay.style.visibility = "visible"
+      return
+    }
     let disposed = false
 
     Promise.all([
@@ -436,6 +456,9 @@ export function GalleryWalkthroughHero() {
         const detailsOp = remap01(p, 0.885, 0.915)
         stage.style.setProperty("--hero-details-opacity", String(detailsOp.toFixed(3)))
 
+        // mark session once fully at finale
+        if (p >= 0.99) { try { sessionStorage.setItem(SESSION_KEY, "1") } catch { /* ignore */ } }
+
         // hero projection
         const artObj = scene.getObjectByName(`artwork-${finaleArt.id}`)
         if (artObj && heroOverlay) {
@@ -497,7 +520,7 @@ export function GalleryWalkthroughHero() {
 
   return (
     <>
-      <section ref={sectionRef} className="gallery-journey" style={{ height: "1000svh" }} aria-labelledby="gallery-title">
+      <section ref={sectionRef} className="gallery-journey" style={{ height: skipGallery ? "100svh" : "1000svh" }} aria-labelledby="gallery-title">
         <div className="gallery-stage" ref={stageRef}>
           <div className="gallery-canvas-shell" aria-hidden="true">
             <canvas ref={canvasRef} />
@@ -527,7 +550,7 @@ export function GalleryWalkthroughHero() {
             {/* museum badges — like protocol icons in Colosseum */}
             <div className="cwf-museum-badges">
               {museums.map(m => (
-                <span key={m.slug} style={{ color: m.accent, borderColor: `${m.accent}55` }}>
+                <span key={m.slug} style={{ borderColor: `${m.accent}80`, color: "#fff" }}>
                   {m.nameEn}
                 </span>
               ))}
