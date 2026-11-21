@@ -581,3 +581,31 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Module/ứng dụng:** `web/src/components/home/intro/gallery-walkthrough-hero.tsx`
 - **Tác dụng:** Gallery 3D giờ khớp 100% với Dawson Wells Gallery gốc — tường đúng kiến trúc, tranh sát tường đúng vị trí
 - **Làm như thế nào:** Phát hiện DW không dùng procedural walls mà load toàn bộ kiến trúc từ `gallery-architecture.glb` (Blender file). Thay toàn bộ procedural PlaneGeometry walls bằng GLTFLoader: load GLB, ẩn 6 mesh cụ thể (`Doorway Header`, `Wall Far Left`, `Foreground Partition`...), áp ceiling material, rồi thêm 2 thin plane replacements đúng vị trí DW (`[-1.9, 2.4, -1.955]` và `[-3.145, 2.2, 7.05]`). Tranh `guido-229` treo trên partition wall x≈-3.14 (không phải west wall x=-5.06) nên trước đó bị "trôi" giữa không khí.
+
+---
+
+## Phiên 2026-11-21 18:03 +07
+
+- **Thời gian:** Thứ Bảy 21/11/2026, 18:03 +07
+- **Làm việc gì:** Viết lại floral canvas theo chuẩn Letterbloom — poppy 4 cánh crinkled, lá răng cưa, nụ hạt, dây leo hữu cơ
+- **Module/ứng dụng:** `web/src/components/home/intro/gallery-walkthrough-hero.tsx`, `gallery-walkthrough.css`
+- **Tác dụng:** Hoa poppy trên chữ SMITHSONIAN giờ giống hệt tham chiếu Letterbloom "red poppy" — 4 cánh nhăn với spring animation mở tuần tự, lá feathery serrated 5.5 răng, seed pods với crown, thân dây leo organic, hand-drawn boil 120ms. Chữ nằm trên hoa (z-index weave) giống ảnh gốc.
+- **Làm như thế nào:** Thay toàn bộ `startFlorAnim()` (~70 dòng cũ → ~170 dòng mới). Dùng seeded PRNG mulberry32 cho garden nhất quán. Vine path dùng sinusoidal heading variation (40 bước). Mỗi chữ sinh 1-2 thân chính + nhánh phụ + bridge. Poppy: 4 cánh 24-điểm ellipse với sine harmonics (`0.045*sin(5θ) + 0.03*sin(9θ) + 0.012*sin(15θ)`), spring mở `1-e^(-8t)*cos(14t)`, core đen + 11 stamen dots + seed cap. Lá: sawtooth 5.5 răng lệch 2 bên 0.09. Pod: capsule + crown disc + 5 rays + 3 rib lines. Boil: hash-based jitter mỗi 120ms. CSS: canvas z-index:1 behind text z-index:2.
+
+---
+
+- **Thời gian:** Chủ nhật 22/11/2026, 01:09 +07 (session kéo dài từ 00:33)
+- **Làm việc gì:** Navbar liquid glass + seal căn giữa + Museum Map Section (hover-to-highlight + card dưới map)
+- **Module/ứng dụng:** `web/src/components/site/site-header.tsx`, `web/src/components/site/nav.ts`, `web/src/app/globals.css`, `web/src/app/layout.tsx`, `web/src/components/home/museum-map-section.tsx`, `web/public/map-art-*.webp`
+- **Tác dụng:** Navbar trở thành frosted glass (`bg-black/40 backdrop-blur-md`), seal căn chính giữa tuyệt đối bằng CSS grid `1fr auto 1fr`. Nav 4 items: Tham quan / Đặt vé / Bảo tàng / Cửa hàng. Nền toàn trang đổi thành `#1e1b1f` Colosseum dark. Museum Map Section giống 100% Colosseum: map isometric có 6 pin, hover pin → building sáng lên (art overlay opacity 0→1), card dưới map cập nhật theo.
+- **Làm như thế nào:** Copy 8 art overlay .webp từ colosseum-worldsfair-clone sang `web/public/`. CSS grid `1fr auto 1fr` đảm bảo seal luôn ở 50% bất kể 2 bên content khác độ rộng. Museum Map dùng kỹ thuật của Colosseum: mỗi art image là full-size map với CHỈ 1 building có màu (phần còn lại transparent), `opacity: 0 → 1` khi hover. 6 pin = 3 bảo tàng (link `/bao-tang/`) + đặt vé + cửa hàng + trang chủ. `onMouseEnter` trên `<Link>` set active state, card nằm dưới map (không che chi tiết bản đồ).
+
+---
+
+## Phiên 2026-11-22 01:09 +07
+
+- **Thời gian:** Chủ nhật 22/11/2026, 01:09 +07
+- **Làm việc gì:** Thêm Video Section kiểu Colosseum (ornate pixel-art frame + YouTube lite embed) vào trang chủ, đặt ngay sau section About
+- **Module/ứng dụng:** `web/src/components/home/video-section.tsx`, `web/src/components/home/ornament-assets.ts`, `web/src/app/page.tsx`, `web/public/video-poster.jpg`
+- **Tác dụng:** Trang chủ có thêm video section với khung viền pixel-art tím giống Colosseum World's Fair; thumbnail YouTube hiển thị ngay, iframe chỉ load khi click play (lite embed pattern — không cần YouTube API key, tốt cho performance)
+- **Làm như thế nào:** Extract 4 SVG data URI ornament tiles từ `colosseum-worldsfair-clone/index.html` (--wf-asset-1..4); lưu vào `ornament-assets.ts`; CSS `background-repeat: repeat-x/y` với `background-size` khớp viewBox SVG (212×66 cho top/bottom, 67×214 cho left/right); `VideoSection` component dùng `useState(playing)` — khi false hiện `<img>` thumbnail YouTube + nút play, khi true thay bằng `<iframe src="embed URL?autoplay=1">`; fallback `onError` cho maxresdefault → hqdefault
