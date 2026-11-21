@@ -135,62 +135,274 @@ export function GalleryWalkthroughHero() {
       ctx.scale(dpr, dpr)
       const cr = fc.getBoundingClientRect()
       const spans = Array.from(title.querySelectorAll(".cwf-letter"))
-      const rng = (a: number, b: number) => a + Math.random() * (b - a)
-      interface Stem { bx: number; by: number; cp1x: number; cp1y: number; cp2x: number; cp2y: number; ex: number; ey: number; delay: number; color: string }
-      const stems: Stem[] = spans.flatMap((span, i) => {
+      if (!spans.length) return
+
+      // Seeded PRNG (mulberry32) — consistent garden every time
+      let _s = 42
+      const rnd = () => { _s |= 0; _s = _s + 0x6D2B79F5 | 0; let t = Math.imul(_s ^ _s >>> 15, 1 | _s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }
+      const rng = (a: number, b: number) => a + rnd() * (b - a)
+      const TAU = Math.PI * 2
+
+      // Ember palette from Letterbloom spec
+      const C_STEM = "#A8A08A"
+      const C_FLINE = "#FFD0B8"
+      const C_CORE = "#0E0B0A"
+      const C_VEIN = "rgba(28,28,27,0.18)"
+
+      const S = spans[0].getBoundingClientRect().height
+
+      // === Geometry ===
+      type V = [number, number]
+      interface StemG { pts: V[]; delay: number; w: number }
+      interface LeafG { p: V; a: number; len: number; delay: number }
+      interface PoppyG { p: V; R: number; rot: number; delay: number; ph1: number; ph2: number; col: string }
+      interface PodG { p: V; a: number; len: number; delay: number }
+
+      const gStems: StemG[] = [], gLeaves: LeafG[] = [], gPoppies: PoppyG[] = [], gPods: PodG[] = []
+
+      // Vine: sinusoidal heading variation → organic curves
+      function mkVine(bx: number, by: number, dir: number, len: number): V[] {
+        const N = 40, step = len / N
+        const amp = rng(0.35, 0.8) * rng(0.8, 1.4), waves = rng(1, 2.6), bend = rng(-0.6, 0.6), phase = rnd() * TAU
+        const pts: V[] = []
+        let x = bx, y = by
+        for (let i = 0; i <= N; i++) {
+          pts.push([x, y])
+          const u = i / N
+          const h = dir + bend * u + amp * Math.sin(u * Math.PI * waves + phase) * Math.min(1, 3 * u)
+          x += Math.cos(h) * step; y += Math.sin(h) * step
+        }
+        return pts
+      }
+
+      // Spiral curl tip
+      function mkCurl(px: number, py: number, dir: number): V[] {
+        const pts: V[] = []; let x = px, y = py, a = dir
+        const r0 = rng(0.05, 0.1) * S
+        for (let i = 0; i < 14; i++) {
+          pts.push([x, y]); const r = r0 * (1 - i / 28); a += rng(0.3, 0.5)
+          x += Math.cos(a) * r * 0.4; y += Math.sin(a) * r * 0.4
+        }
+        return pts
+      }
+
+      // === Build garden per letter ===
+      spans.forEach((span, li) => {
         const r = span.getBoundingClientRect()
-        const cx = r.left - cr.left + r.width / 2
-        const by = r.top - cr.top + r.height * 0.05
-        return Array.from({ length: Math.random() < 0.3 ? 2 : 1 }, (_, si) => {
-          const bx = cx + rng(-r.width * 0.3, r.width * 0.3)
-          const len = rng(44, 82)
-          const angle = rng(-Math.PI * 0.88, -Math.PI * 0.12)
-          const ex = bx + Math.cos(angle) * len
-          const ey = by + Math.sin(angle) * len
-          const bend = rng(-16, 16)
-          return { bx, by, cp1x: bx + bend, cp1y: by - len * 0.4, cp2x: ex - bend * 0.5, cp2y: ey + len * 0.3, ex, ey, delay: i * 110 + si * 180, color: FLORAL_COLORS[(i + si * 3) % FLORAL_COLORS.length] }
-        })
-      })
-      const t0 = performance.now()
-      function florFrame() {
-        if (disposed.current) return
-        const t = performance.now() - t0
-        ctx.clearRect(0, 0, W, H)
-        for (const s of stems) {
-          const sp = Math.min(1, Math.max(0, (t - s.delay) / 1100))
-          const se = 1 - (1 - sp) ** 3
-          if (se <= 0) continue
-          ctx.beginPath(); ctx.strokeStyle = "#8AA6A3"; ctx.lineWidth = 1.6; ctx.lineCap = "round"
-          const steps = 24, drawTo = Math.floor(se * steps)
-          for (let k = 0; k <= drawTo; k++) {
-            const u = k / steps, m = 1 - u
-            const x = m**3*s.bx + 3*m**2*u*s.cp1x + 3*m*u**2*s.cp2x + u**3*s.ex
-            const y = m**3*s.by + 3*m**2*u*s.cp1y + 3*m*u**2*s.cp2y + u**3*s.ey
-            if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+        const cx = r.left - cr.left + r.width / 2, baseY = r.top - cr.top + r.height * 0.05, lw = r.width
+        const pChance = rng(0.28, 0.5), lean = rng(-0.3, 0.3), bloom = rng(0.85, 1.3)
+
+        const nUp = rnd() < 0.45 ? 2 : 1
+        for (let si = 0; si < nUp; si++) {
+          const bx = cx + rng(-lw * 0.35, lw * 0.35)
+          const dir = -Math.PI / 2 + lean / 2 + rng(-0.35, 0.35)
+          const len = rng(0.6, 1.1) * S
+          const pts = mkVine(bx, baseY + rng(-S * 0.15, 0), dir, len)
+          const delay = li * 95 + si * 170
+          gStems.push({ pts, delay, w: S * 0.017 })
+
+          // Leaves along stem
+          const nL = Math.floor(rnd() * 2.8 * rng(0.6, 1.4))
+          for (let j = 0; j < nL; j++) {
+            const u = rng(0.2, 0.85), idx = Math.min(Math.floor(u * (pts.length - 2)), pts.length - 2)
+            const stemA = Math.atan2(pts[idx + 1][1] - pts[idx][1], pts[idx + 1][0] - pts[idx][0])
+            gLeaves.push({ p: pts[idx], a: stemA + (j % 2 === 0 ? 1 : -1) * rng(0.55, 1.05), len: rng(0.14, 0.32) * S, delay: delay + u * 500 })
           }
-          ctx.stroke()
-          if (se > 0.75) {
-            const pp = (se - 0.75) / 0.25
-            const spring = Math.min(1, 1 - Math.exp(-8 * pp) * Math.cos(14 * pp))
-            const R = 9 * spring
-            if (R > 0.5) {
-              for (let pi = 0; pi < 5; pi++) {
-                const pa = (pi / 5) * Math.PI * 2 - Math.PI / 2
-                ctx.beginPath(); ctx.fillStyle = s.color + "C0"
-                ctx.ellipse(s.ex + Math.cos(pa) * R * 0.72, s.ey + Math.sin(pa) * R * 0.72, R * 0.68 * spring, R * 0.42 * spring, pa, 0, Math.PI * 2)
-                ctx.fill()
-              }
-              ctx.beginPath(); ctx.fillStyle = "#1a0808"; ctx.arc(s.ex, s.ey, R * 0.26, 0, Math.PI * 2); ctx.fill()
-              if (R > 5.5) {
-                for (let d = 0; d < 7; d++) {
-                  const da = (d / 7) * Math.PI * 2
-                  ctx.beginPath(); ctx.fillStyle = "#f5c518"
-                  ctx.arc(s.ex + Math.cos(da) * R * 0.38, s.ey + Math.sin(da) * R * 0.38, 1.3, 0, Math.PI * 2); ctx.fill()
-                }
-              }
+
+          // Stem tip → poppy, pod, or curl
+          const tip = pts[pts.length - 1], prev = pts[pts.length - 2]
+          const tipA = Math.atan2(tip[1] - prev[1], tip[0] - prev[0])
+
+          if ((si === 0 && li % 3 === 0) || rnd() < pChance) {
+            gPoppies.push({ p: tip, R: rng(0.17, 0.33) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + 420, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
+            if (rnd() < 0.1) {
+              gPoppies.push({ p: [tip[0] + rng(-S * 0.15, S * 0.15), tip[1] + rng(-S * 0.1, S * 0.1)], R: rng(0.13, 0.25) * bloom * S * rng(0.6, 0.9), rot: rng(-0.5, 0.5), delay: delay + 540, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
+            }
+          } else if (rnd() < 0.45) {
+            gPods.push({ p: tip, a: tipA, len: rng(0.11, 0.16) * S, delay: delay + 380 })
+          } else {
+            gStems.push({ pts: mkCurl(tip[0], tip[1], tipA), delay: delay + 350, w: S * 0.012 })
+          }
+
+          // 30% fork into side branch
+          if (si === 0 && rnd() < 0.3) {
+            const fU = rng(0.35, 0.7), fIdx = Math.floor(fU * (pts.length - 1))
+            const fp = pts[fIdx], fnext = pts[Math.min(fIdx + 1, pts.length - 1)]
+            const fDir = Math.atan2(fnext[1] - fp[1], fnext[0] - fp[0]) + rng(-0.8, 0.8)
+            const brPts = mkVine(fp[0], fp[1], fDir, len * rng(0.35, 0.55))
+            gStems.push({ pts: brPts, delay: delay + fU * 400, w: S * 0.014 })
+            const brTip = brPts[brPts.length - 1]
+            if (rnd() < pChance) {
+              gPoppies.push({ p: brTip, R: rng(0.13, 0.25) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + fU * 400 + 350, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
+            } else {
+              gLeaves.push({ p: brTip, a: fDir + rng(-0.3, 0.3), len: rng(0.14, 0.28) * S, delay: delay + fU * 400 + 300 })
             }
           }
         }
+
+        // Downward stem (40%)
+        if (rnd() < 0.4) {
+          const pts = mkVine(cx + rng(-lw * 0.3, lw * 0.3), baseY + rng(0, S * 0.15), Math.PI / 2 + rng(-0.4, 0.4), rng(0.35, 0.65) * S)
+          const delay = li * 95 + 160
+          gStems.push({ pts, delay, w: S * 0.014 })
+          const tip = pts[pts.length - 1], prev = pts[pts.length - 2]
+          gLeaves.push({ p: tip, a: Math.atan2(tip[1] - prev[1], tip[0] - prev[0]) + rng(-0.4, 0.4), len: rng(0.1, 0.22) * S, delay: delay + 320 })
+        }
+
+        // Side curl on first letter
+        if (li === 0) gStems.push({ pts: mkVine(cx - lw * 0.3, baseY - rng(0.1, 0.4) * S, Math.PI + rng(-0.3, 0.3), rng(0.45, 0.75) * S), delay: 120, w: S * 0.014 })
+
+        // Bridge to previous letter
+        if (li > 0 && rnd() < 0.55) {
+          const pr = spans[li - 1].getBoundingClientRect()
+          const pcx = pr.left - cr.left + pr.width / 2
+          const fx = cx - lw * 0.15, fy = baseY - rng(0.15, 0.5) * S
+          const tx = pcx + pr.width * 0.1, ty = pr.top - cr.top + pr.height * 0.05 - rng(0.15, 0.5) * S
+          const bulge = rng(-0.5, 0.5) * S
+          const cp1x = fx + (tx - fx) * 0.3 + rng(-10, 10), cp2x = tx + (fx - tx) * 0.3 + rng(-10, 10)
+          const pts: V[] = []; for (let i = 0; i <= 24; i++) { const t = i / 24, m = 1 - t; pts.push([m ** 3 * fx + 3 * m ** 2 * t * cp1x + 3 * m * t ** 2 * cp2x + t ** 3 * tx, m ** 3 * fy + 3 * m ** 2 * t * (fy + bulge) + 3 * m * t ** 2 * (ty + bulge) + t ** 3 * ty]) }
+          gStems.push({ pts, delay: li * 95 + 90, w: S * 0.013 })
+        }
+      })
+
+      // === Hand-drawn boil: deterministic jitter per element per 120ms ===
+      const boilAmt = Math.max(0.8, S * 0.01)
+      function boil(id: number, frame: number): V {
+        let h = (id * 2654435761 + frame * 1597334677) | 0
+        h = ((h >>> 16) ^ h) * 0x45d9f3b | 0; h = ((h >>> 16) ^ h) * 0x45d9f3b | 0
+        const x = (((h >>> 16) ^ h) >>> 0) / 2147483648 - 1
+        h = (h * 0x85ebca6b) | 0
+        return [x * boilAmt, (((h >>> 16) ^ h) >>> 0) / 2147483648 * boilAmt - boilAmt]
+      }
+
+      const t0 = performance.now()
+
+      // --- Draw stem ---
+      function drawStem(s: StemG, t: number, id: number, bf: number) {
+        const se = 1 - (1 - Math.min(1, Math.max(0, (t - s.delay) / Math.max(320, s.pts.length * 15)))) ** 3
+        if (se <= 0) return
+        const drawTo = Math.floor(se * (s.pts.length - 1))
+        const [bx, by] = boil(id, bf)
+        ctx.beginPath(); ctx.strokeStyle = C_STEM; ctx.lineWidth = s.w; ctx.lineCap = "round"; ctx.lineJoin = "round"
+        for (let k = 0; k <= drawTo; k++) { const x = s.pts[k][0] + bx, y = s.pts[k][1] + by; k === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y) }
+        ctx.stroke()
+      }
+
+      // --- Draw feathery serrated leaf ---
+      function drawLeaf(lf: LeafG, t: number, id: number, bf: number) {
+        const rawP = Math.min(1, Math.max(0, (t - lf.delay) / 350))
+        const spring = 1 - Math.exp(-7 * rawP) * Math.cos(15 * rawP)
+        if (spring < 0.01) return
+        const L = lf.len * spring
+        const [bx, by] = boil(id, bf)
+        ctx.save(); ctx.translate(lf.p[0] + bx, lf.p[1] + by); ctx.rotate(lf.a)
+        const N = 18
+        ctx.beginPath()
+        for (let i = 0; i <= N; i++) {
+          const u = i / N, x = u * L, baseW = 0.3 * L * Math.sin(Math.PI * u ** 0.8)
+          const tp = u * 5.5, tu = tp - Math.floor(tp)
+          const w = baseW * (0.28 + 0.72 * (tu < 0.7 ? tu / 0.7 : 1 - (tu - 0.7) / 0.3))
+          i === 0 ? ctx.moveTo(x, 0) : ctx.lineTo(x, -w)
+        }
+        for (let i = N; i >= 0; i--) {
+          const u = i / N, x = u * L, baseW = 0.3 * L * Math.sin(Math.PI * u ** 0.8)
+          const tp = (u + 0.09) * 5.5, tu = tp - Math.floor(tp)
+          ctx.lineTo(x, baseW * (0.28 + 0.72 * (tu < 0.7 ? tu / 0.7 : 1 - (tu - 0.7) / 0.3)))
+        }
+        ctx.closePath(); ctx.fillStyle = C_STEM; ctx.fill()
+        if (L > 5) { ctx.beginPath(); ctx.moveTo(L * 0.05, 0); ctx.lineTo(L * 0.85, 0); ctx.strokeStyle = C_VEIN; ctx.lineWidth = Math.max(0.7, L * 0.022); ctx.lineCap = "round"; ctx.stroke() }
+        ctx.restore()
+      }
+
+      // --- Draw seed pod ---
+      function drawPod(pod: PodG, t: number, id: number, bf: number) {
+        const spring = 1 - Math.exp(-7 * Math.min(1, Math.max(0, (t - pod.delay) / 350))) * Math.cos(15 * Math.min(1, Math.max(0, (t - pod.delay) / 350)))
+        if (spring < 0.01) return
+        const L = pod.len * spring; const [bx, by] = boil(id, bf)
+        ctx.save(); ctx.translate(pod.p[0] + bx, pod.p[1] + by); ctx.rotate(pod.a)
+        ctx.beginPath(); ctx.ellipse(L * 0.55, 0, L * 0.55, L * 0.44, 0, 0, TAU); ctx.fillStyle = C_STEM; ctx.fill()
+        ctx.beginPath(); ctx.ellipse(L * 1.12, 0, L * 0.1, L * 0.36, 0, 0, TAU); ctx.fill()
+        for (let i = 0; i < 5; i++) { const a = (i / 5) * TAU - Math.PI / 2; ctx.beginPath(); ctx.moveTo(L * 1.06, Math.sin(a) * L * 0.1); ctx.lineTo(L * 1.24, Math.sin(a) * L * 0.3); ctx.strokeStyle = C_STEM; ctx.lineWidth = Math.max(0.5, L * 0.04); ctx.lineCap = "round"; ctx.stroke() }
+        ctx.strokeStyle = "rgba(28,28,27,0.12)"; ctx.lineWidth = Math.max(0.7, L * 0.045)
+        for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.moveTo(L * 0.15, i * L * 0.12); ctx.lineTo(L * 0.95, i * L * 0.1); ctx.stroke() }
+        ctx.restore()
+      }
+
+      // --- Draw 4-petal crinkled poppy ---
+      function drawPoppy(pop: PoppyG, t: number, id: number, bf: number) {
+        const rawP = Math.min(1, Math.max(0, (t - pop.delay) / 800))
+        if (rawP < 0.01) return
+        const R = pop.R; const [bx, by] = boil(id, bf)
+        ctx.save(); ctx.translate(pop.p[0] + bx, pop.p[1] + by); ctx.rotate(pop.rot)
+
+        const petals = [
+          { cx: -R * 0.42, cy: -R * 0.24, rx: R * 0.6, ry: R * 0.56, tilt: -0.4, d: 0 },
+          { cx: R * 0.44, cy: -R * 0.22, rx: R * 0.6, ry: R * 0.56, tilt: 0.4, d: 85 },
+          { cx: -R * 0.38, cy: R * 0.24, rx: R * 0.6, ry: R * 0.5, tilt: 0.3, d: 170 },
+          { cx: R * 0.4, cy: R * 0.26, rx: R * 0.6, ry: R * 0.5, tilt: -0.3, d: 255 },
+        ]
+
+        for (let pi = 0; pi < 4; pi++) {
+          const pt = petals[pi]
+          const petalT = Math.max(0, Math.min(1, (rawP * 800 - pt.d) / 600))
+          const s = Math.min(1, 1 - Math.exp(-8 * petalT) * Math.cos(14 * petalT))
+          if (s < 0.01) continue
+
+          ctx.save()
+          ctx.translate(0, R * 0.45); ctx.scale(s, s); ctx.translate(0, -R * 0.45)
+          ctx.rotate(pt.tilt * (1 - s) * 0.5)
+
+          // Crinkled petal — 24-point ellipse with sine harmonics on radius
+          ctx.beginPath()
+          for (let j = 0; j <= 24; j++) {
+            const theta = (j / 24) * TAU
+            const crinkle = 1 + 0.045 * Math.sin(5 * theta + pop.ph1 + pi) + 0.03 * Math.sin(9 * theta + pop.ph2) + 0.012 * Math.sin(15 * theta + 2 * pi)
+            const x = pt.cx + Math.cos(theta) * pt.rx * crinkle, y = pt.cy + Math.sin(theta) * pt.ry * crinkle
+            j === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
+          }
+          ctx.closePath(); ctx.fillStyle = pop.col; ctx.fill()
+
+          // Fine petal lines radiating from centre (3 per petal)
+          if (R >= 10 && petalT > 0.4) {
+            const lineP = Math.min(1, (petalT - 0.4) / 0.5)
+            ctx.lineCap = "round"
+            for (const [off, alpha, wMul] of [[-0.32, 0.75, 0.75], [0.05, 0.9, 0.9], [0.36, 0.75, 0.75]] as [number, number, number][]) {
+              const lineA = Math.atan2(pt.cy, pt.cx) + off
+              const dist = Math.sqrt(pt.cx ** 2 + pt.cy ** 2)
+              const reach = dist + 0.6 * Math.max(pt.rx, pt.ry)
+              ctx.globalAlpha = lineP * alpha; ctx.strokeStyle = C_FLINE; ctx.lineWidth = R * 0.032 * wMul
+              ctx.beginPath(); ctx.moveTo(Math.cos(lineA) * dist * 0.32, Math.sin(lineA) * dist * 0.32)
+              ctx.lineTo(Math.cos(lineA) * reach * lineP, Math.sin(lineA) * reach * lineP); ctx.stroke()
+            }
+            ctx.globalAlpha = 1
+          }
+          ctx.restore()
+        }
+
+        // Dark core + stamen dot ring + seed cap
+        const coreP = Math.min(1, Math.max(0, (rawP * 800 - 340) / 520))
+        const coreSc = 1 - (1 - coreP) ** 3
+        if (coreSc > 0.01) {
+          ctx.beginPath(); ctx.ellipse(0, -R * 0.02, R * 0.24 * coreSc, R * 0.21 * coreSc, 0, 0, TAU); ctx.fillStyle = C_CORE; ctx.fill()
+          if (R >= 9) for (let d = 0; d < 11; d++) {
+            const dp = Math.min(1, Math.max(0, (coreP * 520 - d * 25) / 150))
+            if (dp <= 0) continue; const da = (d / 11) * TAU
+            ctx.beginPath(); ctx.arc(Math.cos(da) * R * 0.33 * coreSc, -R * 0.02 + Math.sin(da) * R * 0.33 * coreSc, R * 0.045 * dp, 0, TAU); ctx.fillStyle = C_CORE; ctx.fill()
+          }
+          ctx.beginPath(); ctx.ellipse(0, -R * 0.02, R * 0.085 * coreSc, R * 0.075 * coreSc, 0, 0, TAU); ctx.fillStyle = C_STEM; ctx.fill()
+        }
+        ctx.restore()
+      }
+
+      // === Render loop ===
+      function florFrame() {
+        if (disposed.current) return
+        const t = performance.now() - t0, bf = Math.floor(t / 120)
+        ctx.clearRect(0, 0, W, H)
+        gStems.forEach((s, i) => drawStem(s, t, i, bf))
+        gLeaves.forEach((l, i) => drawLeaf(l, t, i + 1000, bf))
+        gPods.forEach((p, i) => drawPod(p, t, i + 2000, bf))
+        gPoppies.forEach((p, i) => drawPoppy(p, t, i + 3000, bf))
         requestAnimationFrame(florFrame)
       }
       requestAnimationFrame(florFrame)
