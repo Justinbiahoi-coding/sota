@@ -27,7 +27,7 @@ export default function Home() {
       {/* ════════════════════════════════════════════════════════
           ABOUT — "Welcome to the World's Fair"
       ════════════════════════════════════════════════════════ */}
-      <section className="bg-[#f5ede0] py-24 px-6 overflow-clip relative">
+      <section className="bg-[#1e1b1f] py-24 px-6 overflow-clip relative">
         {/* subtle watermark */}
         <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 opacity-[0.04]">
           <Image src="/gallery/EndOfGallery.webp" alt="" fill className="object-cover object-left" />
@@ -36,19 +36,19 @@ export default function Home() {
         <div className="relative mx-auto max-w-6xl grid md:grid-cols-[1fr_1.1fr] gap-16 items-center">
           {/* text */}
           <div>
-            <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#92400e] uppercase mb-4">
+            <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-4">
               Chào mừng đến với
             </p>
-            <h2 className="font-heading text-5xl md:text-6xl font-light text-[#171717] leading-[0.95] mb-6">
+            <h2 className="font-heading text-5xl md:text-6xl font-light text-white leading-[0.95] mb-6">
               Space<br />of <em>the Art</em>
             </h2>
             <div className="w-16 h-px bg-[#d4af37] mb-6" />
-            <p className="text-stone-600 leading-relaxed text-sm mb-4">
+            <p className="text-stone-300 leading-relaxed text-sm mb-4">
               Sota là cổng khám phá trực tuyến dành cho cụm bảo tàng Smithsonian —
               nơi hội tụ lịch sử tự nhiên, hàng không vũ trụ, nghệ thuật và văn hoá
               Hoa Kỳ trong một trải nghiệm số hoá thống nhất.
             </p>
-            <p className="text-stone-500 leading-relaxed text-sm">
+            <p className="text-stone-400 leading-relaxed text-sm">
               Với hơn 37 tiêu bản 3D độc quyền và bộ sưu tập triển lãm phong phú,
               Sota mang di sản nhân loại đến gần hơn với mọi người trên toàn thế giới.
             </p>
