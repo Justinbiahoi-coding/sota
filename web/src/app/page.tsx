@@ -2,195 +2,307 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
 import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
-import { exhibitions, highlightArtifacts, museumBySlug, museums, products, formatPrice } from "@/lib/mock-data"
-import { HomeAddToCart } from "@/components/home/home-add-to-cart"
-import { SpotlightCard } from "@/components/reactbits/spotlight-card"
-import { FlippableVitrineCard } from "@/components/reactbits/flippable-card"
-import { RenaissanceDivider } from "@/components/renaissance/deco-assets"
-import { SplitText } from "@/components/reactbits/split-text"
+import { exhibitions, museums } from "@/lib/mock-data"
 import { MuseumButton } from "@/components/reactbits/museum-button"
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
-const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} đến ${dateFmt.format(new Date(b))}`
+const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} — ${dateFmt.format(new Date(b))}`
+
+const TEAM = [
+  { name: "Thành viên 1", role: "Backend & API" },
+  { name: "Thành viên 2", role: "Database & Auth" },
+  { name: "Thành viên 3", role: "Frontend UX" },
+  { name: "Tuấn", role: "Layout, Store & UI" },
+  { name: "Thành viên 5", role: "DevOps & Testing" },
+]
 
 export default function Home() {
   return (
     <>
+      {/* ════════════════════════════════════════════════════════
+          MỞ ĐẦU — 3D gallery walkthrough
+      ════════════════════════════════════════════════════════ */}
       <GalleryWalkthroughHero />
 
-      {/* ---------------------------------------------------------------- open today */}
-      <section id="today" className="relative border-t border-stone-200/80 bg-stone-50/50">
-        <span className="pointer-events-none absolute left-8 top-0 -translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
-        <span className="pointer-events-none absolute right-8 top-0 translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
-
-        <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
-          <SectionHead index="01" title="Hôm nay mở cửa" href="/bao-tang" more="Tất cả 6 bảo tàng" />
-          
-          <SpotlightCard
-            spotlightColor="rgba(212, 175, 55, 0.18)"
-            borderColor="rgba(212, 175, 55, 0.5)"
-            className="mt-10 overflow-hidden bg-card border-stone-200 shadow-md"
-          >
-            <ol className="divide-y divide-stone-200/80">
-              {museums.map((m, i) => (
-                <li key={m.slug} style={{ "--museum-accent": m.accent } as React.CSSProperties}>
-                  <Link
-                    href={`/bao-tang/${m.slug}`}
-                    className="group grid grid-cols-[2.25rem_1fr] items-baseline gap-x-3 px-5 py-5 transition-all hover:bg-stone-50/80 md:grid-cols-[3rem_1fr_14rem_2rem] md:gap-x-6 md:px-7"
-                  >
-                    <span className="placard tabular-nums text-stone-400 font-mono text-sm font-semibold">{String(i + 1).padStart(2, "0")}</span>
-                    <span>
-                      <span className="font-heading text-xl transition-colors group-hover:text-[#92400e] md:text-2xl font-light text-[#171717]">
-                        {m.name}
-                      </span>
-                      <span className="mt-1 block text-xs text-stone-500">{m.nameEn}</span>
-                    </span>
-                    <span className="col-start-2 mt-2 flex items-center gap-2 text-sm tabular-nums text-stone-600 md:col-start-auto md:mt-0 font-medium">
-                      <span
-                        className="size-2 rounded-full"
-                        style={{ backgroundColor: m.accent, boxShadow: `0 0 8px ${m.accent}` }}
-                        aria-hidden
-                      />
-                      {m.opens} — {m.closes}
-                    </span>
-                    <ArrowUpRight className="hidden size-5 text-stone-400 transition-all group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-[#92400e] md:block" />
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </SpotlightCard>
+      {/* ════════════════════════════════════════════════════════
+          ABOUT — "Welcome to the World's Fair"
+      ════════════════════════════════════════════════════════ */}
+      <section className="bg-[#f5ede0] py-24 px-6 overflow-clip relative">
+        {/* subtle watermark */}
+        <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 opacity-[0.04]">
+          <Image src="/gallery/EndOfGallery.webp" alt="" fill className="object-cover object-left" />
         </div>
-      </section>
 
-      {/* ---------------------------------------------------------------- exhibitions */}
-      <section className="relative border-t border-stone-200/80">
-        <span className="pointer-events-none absolute left-8 top-0 -translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
-        <span className="pointer-events-none absolute right-8 top-0 translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
+        <div className="relative mx-auto max-w-6xl grid md:grid-cols-[1fr_1.1fr] gap-16 items-center">
+          {/* text */}
+          <div>
+            <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#92400e] uppercase mb-4">
+              Chào mừng đến với
+            </p>
+            <h2 className="font-heading text-5xl md:text-6xl font-light text-[#171717] leading-[0.95] mb-6">
+              Space<br />of <em>the Art</em>
+            </h2>
+            <div className="w-16 h-px bg-[#d4af37] mb-6" />
+            <p className="text-stone-600 leading-relaxed text-sm mb-4">
+              Sota là cổng khám phá trực tuyến dành cho cụm bảo tàng Smithsonian —
+              nơi hội tụ lịch sử tự nhiên, hàng không vũ trụ, nghệ thuật và văn hoá
+              Hoa Kỳ trong một trải nghiệm số hoá thống nhất.
+            </p>
+            <p className="text-stone-500 leading-relaxed text-sm">
+              Với hơn 37 tiêu bản 3D độc quyền và bộ sưu tập triển lãm phong phú,
+              Sota mang di sản nhân loại đến gần hơn với mọi người trên toàn thế giới.
+            </p>
+          </div>
 
-        <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
-          <SectionHead index="02" title="Triển lãm đang & sắp diễn ra" href="/trien-lam" more="Lịch triển lãm" />
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
-            {exhibitions.map((e) => {
-              const m = museumBySlug(e.museumSlug)!
-              return (
-                <SpotlightCard
-                  key={e.slug}
-                  spotlightColor="rgba(212, 175, 55, 0.2)"
-                  borderColor="rgba(212, 175, 55, 0.6)"
-                  style={{ "--museum-accent": m.accent } as React.CSSProperties}
-                  className="flex flex-col bg-card"
-                >
-                  <Link href={`/trien-lam/${e.slug}`} className="flex flex-1 flex-col">
-                    <div className="relative aspect-[16/10] overflow-hidden bg-stone-100">
-                      <Image
-                        src={e.image}
-                        alt={e.title}
-                        fill
-                        className="object-cover transition-transform duration-700 group-hover:scale-105"
-                        sizes="(max-width:768px) 100vw,33vw"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <span className="absolute left-3 top-3 rounded-full border border-white/20 bg-[#08162b]/80 px-3 py-1 placard text-[0.62rem] text-white backdrop-blur-md font-medium">
-                        {m.name}
-                      </span>
-                    </div>
-                    <div className="flex flex-1 flex-col justify-between p-6">
-                      <div>
-                        <h3 className="font-heading text-2xl font-light leading-snug text-[#171717] group-hover:text-[#92400e] transition-colors">
-                          {e.title}
-                        </h3>
-                        <p className="mt-2 line-clamp-2 text-xs text-stone-500 leading-relaxed">
-                          {e.description}
-                        </p>
-                      </div>
-                      <div className="mt-6 flex items-center justify-between border-t border-stone-200/80 pt-4">
-                        <p className="placard text-[0.68rem] text-stone-500 font-mono">{range(e.starts, e.ends)}</p>
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#92400e] group-hover:translate-x-1 transition-transform">
-                          Chi tiết <ArrowUpRight className="size-3.5" />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </SpotlightCard>
-              )
-            })}
+          {/* painting */}
+          <div className="relative aspect-[5/4] rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
+            <Image
+              src="/gallery/EndOfGallery.webp"
+              alt="Smithsonian Castle in Bloom"
+              fill
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            <div className="absolute bottom-0 left-0 right-0 p-5">
+              <p className="font-mono text-[0.6rem] tracking-widest uppercase text-white/60">Oil on canvas</p>
+              <p className="font-heading text-sm text-white font-light mt-0.5">Smithsonian Castle in Bloom · Dawson Wells</p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- curated artifacts with FlippableVitrineCard (ReactBits 3D Flip) */}
-      <section className="relative border-t border-stone-200/80 bg-stone-50/50">
-        <span className="pointer-events-none absolute left-8 top-0 -translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
-        <span className="pointer-events-none absolute right-8 top-0 translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
+      {/* ════════════════════════════════════════════════════════
+          EXHIBITIONS — Opportunities / Awards
+      ════════════════════════════════════════════════════════ */}
+      <section className="bg-[#0d1117] py-24 px-6">
+        <div className="mx-auto max-w-6xl">
+          <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">Triển lãm</p>
+          <div className="flex items-end justify-between mb-10 gap-4">
+            <h2 className="font-heading text-4xl md:text-5xl font-light text-white leading-tight">
+              Cơ hội<br /><em>khám phá</em>
+            </h2>
+            <MuseumButton href="/trien-lam" variant="outline" size="sm" icon>Lịch triển lãm</MuseumButton>
+          </div>
 
-        <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
-          <SectionHead index="03" title="Kiệt tác tuyển chọn" href="/hien-vat" more="Tất cả 16 hiện vật" />
-          
-          <RenaissanceDivider title="Bộ Sưu Tập Cổ Điển Smithsonian" />
+          {/* grand prize — featured exhibition */}
+          {exhibitions[0] && (
+            <Link
+              href={`/trien-lam/${exhibitions[0].slug}`}
+              className="group relative block overflow-hidden rounded-2xl mb-5 aspect-[21/8] bg-stone-900 shadow-xl"
+            >
+              <Image
+                src={exhibitions[0].image}
+                alt={exhibitions[0].title}
+                fill
+                className="object-cover opacity-55 group-hover:opacity-65 group-hover:scale-[1.02] transition-all duration-700"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent" />
+              <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-end max-w-xl">
+                <span className="inline-block font-mono text-[0.6rem] tracking-widest uppercase text-[#d4af37] border border-[#d4af37]/30 rounded-full px-3 py-1 mb-4 w-fit">
+                  Triển lãm nổi bật
+                </span>
+                <h3 className="font-heading text-3xl md:text-4xl font-light text-white mb-2 leading-snug">
+                  {exhibitions[0].title}
+                </h3>
+                <p className="text-stone-300/80 text-sm leading-relaxed line-clamp-2">
+                  {exhibitions[0].description}
+                </p>
+                <p className="mt-4 font-mono text-xs text-stone-500">
+                  {range(exhibitions[0].starts, exhibitions[0].ends)}
+                </p>
+              </div>
+            </Link>
+          )}
 
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {highlightArtifacts().map((a) => (
-              <FlippableVitrineCard key={a.slug} artifact={a} />
+          {/* secondary exhibitions */}
+          <div className="grid md:grid-cols-3 gap-4">
+            {exhibitions.slice(1, 4).map((e) => (
+              <Link
+                key={e.slug}
+                href={`/trien-lam/${e.slug}`}
+                className="group relative overflow-hidden rounded-xl aspect-[4/3] bg-stone-900 shadow-lg"
+              >
+                <Image
+                  src={e.image}
+                  alt={e.title}
+                  fill
+                  className="object-cover opacity-45 group-hover:opacity-60 group-hover:scale-105 transition-all duration-600"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                <div className="absolute inset-0 p-5 flex flex-col justify-end">
+                  <p className="font-mono text-[0.58rem] tracking-widest uppercase text-[#d4af37]/70 mb-1">
+                    {e.status === "upcoming" ? "Sắp diễn ra" : "Đang diễn ra"}
+                  </p>
+                  <h3 className="font-heading text-lg font-light text-white leading-snug">{e.title}</h3>
+                  <p className="mt-2 font-mono text-[0.6rem] text-stone-500">
+                    {range(e.starts, e.ends)}
+                  </p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ---------------------------------------------------------------- shop */}
-      <section className="relative border-t border-stone-200/80">
-        <span className="pointer-events-none absolute left-8 top-0 -translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
-        <span className="pointer-events-none absolute right-8 top-0 translate-x-1/2 -translate-y-1/2 text-xs text-[#d4af37]">✦</span>
+      {/* ════════════════════════════════════════════════════════
+          MUSEUMS — Ecosystem tracks
+      ════════════════════════════════════════════════════════ */}
+      <section className="bg-[#08162b] py-24 px-6 border-t border-white/[0.04]">
+        <div className="mx-auto max-w-6xl">
+          <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
+            Hệ thống bảo tàng
+          </p>
+          <div className="flex items-end justify-between mb-10 gap-4">
+            <h2 className="font-heading text-4xl md:text-5xl font-light text-white leading-tight">
+              Khám phá<br /><em>{museums.length} bảo tàng</em>
+            </h2>
+            <MuseumButton href="/bao-tang" variant="outline" size="sm" icon>Tất cả bảo tàng</MuseumButton>
+          </div>
 
-        <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
-          <SectionHead index="04" title="Cửa hàng lưu niệm Sota" href="/cua-hang" more="Xem toàn bộ 10 quà lưu niệm" />
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {products.slice(0, 4).map((p) => (
-              <SpotlightCard
-                key={p.slug}
-                spotlightColor="rgba(212, 175, 55, 0.2)"
-                borderColor="rgba(212, 175, 55, 0.55)"
-                className="flex flex-col bg-card p-3.5"
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {museums.map((m) => (
+              <Link
+                key={m.slug}
+                href={`/bao-tang/${m.slug}`}
+                className="group flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-5 hover:bg-white/[0.06] hover:border-[#d4af37]/25 transition-all duration-200"
               >
-                <Link href={`/cua-hang/${p.slug}`}>
-                  <div className="relative aspect-square overflow-hidden rounded-lg bg-stone-100 shadow-inner">
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      className="object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width:640px) 50vw,25vw"
-                    />
-                  </div>
-                </Link>
-                <div className="flex flex-1 flex-col pt-3.5">
-                  <p className="placard text-[0.65rem] text-stone-500 font-medium">{p.category}</p>
-                  <Link href={`/cua-hang/${p.slug}`}>
-                    <p className="mt-1 text-sm font-medium leading-snug hover:text-[#92400e] transition-colors line-clamp-1 text-[#171717]">{p.name}</p>
-                  </Link>
-                  <p className="mt-auto pt-3 font-heading text-lg font-semibold text-[#92400e]">{formatPrice(p.price)}</p>
-                  <HomeAddToCart product={p} />
+                <div className="flex items-start justify-between">
+                  <span
+                    className="size-2.5 rounded-full mt-0.5 shrink-0"
+                    style={{ backgroundColor: m.accent, boxShadow: `0 0 10px ${m.accent}88` }}
+                  />
+                  <ArrowUpRight className="size-4 text-stone-700 group-hover:text-[#d4af37] transition-colors shrink-0" />
                 </div>
-              </SpotlightCard>
+                <div className="flex-1">
+                  <h3 className="font-heading text-lg font-light text-white group-hover:text-[#d4af37] transition-colors leading-snug mb-1">
+                    {m.name}
+                  </h3>
+                  <p className="text-xs text-stone-500">{m.nameEn}</p>
+                </div>
+                <div className="border-t border-white/[0.06] pt-3 flex items-center justify-between">
+                  <p className="font-mono text-[0.6rem] text-stone-500 tracking-wide">
+                    {m.opens} — {m.closes}
+                  </p>
+                  <span className="size-1.5 rounded-full bg-emerald-400/70 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          ACCELERATOR — Benefits / Features
+      ════════════════════════════════════════════════════════ */}
+      <section className="relative bg-[#0a0603] py-24 px-6 overflow-clip">
+        {/* ghost painting */}
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
+          <Image src="/gallery/EndOfGallery.webp" alt="" fill className="object-cover object-top" />
+        </div>
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0603]/80 via-transparent to-[#0a0603]/80" />
+
+        <div className="relative z-10 mx-auto max-w-6xl">
+          <p className="text-center font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
+            Sota
+          </p>
+          <h2 className="text-center font-heading text-4xl md:text-5xl font-light text-white mb-4 leading-tight">
+            Trải nghiệm <em>toàn diện</em>
+          </h2>
+          <p className="text-center text-stone-500 text-sm mb-16 max-w-md mx-auto leading-relaxed">
+            Khám phá văn hoá và nghệ thuật nhân loại theo cách của bạn — miễn phí, không giới hạn.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-5">
+            {[
+              {
+                label: "Miễn phí vào cửa",
+                desc: "Truy cập toàn bộ 6 bảo tàng Smithsonian không giới hạn, bất kỳ lúc nào.",
+                badge: "Free admission",
+              },
+              {
+                label: "Cộng đồng toàn cầu",
+                desc: "Kết nối với hàng triệu người yêu nghệ thuật và lịch sử trên toàn thế giới.",
+                badge: "Global network",
+              },
+              {
+                label: "Nghiên cứu chuyên sâu",
+                desc: "Tiếp cận 37+ tiêu bản 3D độc quyền và tài liệu hướng dẫn từ chuyên gia.",
+                badge: "Expert research",
+              },
+            ].map((b) => (
+              <div
+                key={b.label}
+                className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-6 flex flex-col gap-4"
+              >
+                <span className="font-mono text-[0.55rem] tracking-widest uppercase text-[#d4af37]/60 border border-[#d4af37]/20 rounded-full px-2 py-0.5 w-fit">
+                  {b.badge}
+                </span>
+                <h3 className="font-heading text-xl font-light text-white">{b.label}</h3>
+                <p className="text-sm text-stone-400 leading-relaxed">{b.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-center text-stone-500 text-xs font-mono mt-14 tracking-wide">
+            Tham quan tại{" "}
+            <strong className="text-stone-300">Washington D.C.</strong>
+            {" "}· Mở cửa 10:00 — 17:30 hàng ngày
+          </p>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          TEAM — Meet the Judges
+      ════════════════════════════════════════════════════════ */}
+      <section className="bg-[#08162b] py-24 px-6 border-t border-white/[0.04]">
+        <div className="mx-auto max-w-4xl">
+          <p className="text-center font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
+            Nhóm phát triển
+          </p>
+          <h2 className="text-center font-heading text-4xl md:text-5xl font-light text-white mb-16 leading-tight">
+            Gặp gỡ <em>đội ngũ</em>
+          </h2>
+
+          {/* Sota team */}
+          <h3 className="font-mono text-[0.6rem] tracking-widest uppercase text-stone-600 mb-6 text-center">
+            Nhóm Sota · Group 08
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-14">
+            {TEAM.map((p) => (
+              <div
+                key={p.name}
+                className="flex flex-col items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 text-center"
+              >
+                <div className="size-10 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/25 ring-1 ring-white/5" />
+                <div>
+                  <p className="text-sm font-medium text-white leading-snug">{p.name}</p>
+                  <p className="text-[0.65rem] text-stone-500 mt-0.5">{p.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Partners */}
+          <h3 className="font-mono text-[0.6rem] tracking-widest uppercase text-stone-600 mb-6 text-center">
+            Đối tác & Bảo trợ
+          </h3>
+          <div className="flex flex-wrap justify-center gap-2">
+            {museums.map((m) => (
+              <Link
+                key={m.slug}
+                href={`/bao-tang/${m.slug}`}
+                className="group flex items-center gap-2 font-mono text-[0.6rem] tracking-widest text-stone-400 border border-white/[0.07] rounded-full px-3 py-1.5 uppercase hover:border-[#d4af37]/30 hover:text-white transition-colors"
+              >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ backgroundColor: m.accent }}
+                />
+                {m.nameEn}
+              </Link>
             ))}
           </div>
         </div>
       </section>
     </>
-  )
-}
-
-function SectionHead({ index, title, href, more }: { index: string; title: string; href: string; more: string }) {
-  return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
-      <div>
-        <p className="placard text-xs tracking-widest text-[#92400e] font-semibold">{index} · CHƯƠNG TRÌNH</p>
-        <h2 className="mt-2 text-3xl font-light tracking-tight md:text-4xl text-[#171717]">
-          <SplitText text={title} delay={0.02} stagger={0.03} />
-        </h2>
-      </div>
-      <MuseumButton href={href} variant="outline" size="sm" icon>
-        {more}
-      </MuseumButton>
-    </div>
   )
 }

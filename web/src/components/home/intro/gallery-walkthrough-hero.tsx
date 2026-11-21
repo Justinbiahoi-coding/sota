@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import type * as T from "three"
 import "./gallery-walkthrough.css"
+import { museums } from "@/lib/mock-data"
 
 type ArtworkDef = {
   id: string
@@ -523,22 +524,44 @@ export function GalleryWalkthroughHero() {
           </div>
 
           <div className="hero-handoff-metadata">
-            <p>{FINALE.artist}</p>
-            <h2>{FINALE.title}</h2>
-            <dl>
-              <div>
-                <dt>Year</dt>
-                <dd>{FINALE.year}</dd>
-              </div>
-              <div>
-                <dt>Medium</dt>
-                <dd>{FINALE.medium}</dd>
-              </div>
-              <div>
-                <dt>Dimensions</dt>
-                <dd>{FINALE.dimensions}</dd>
-              </div>
-            </dl>
+            {/* museum badges — like protocol icons in Colosseum */}
+            <div className="cwf-museum-badges">
+              {museums.map(m => (
+                <span key={m.slug} style={{ color: m.accent, borderColor: `${m.accent}55` }}>
+                  {m.nameEn}
+                </span>
+              ))}
+            </div>
+
+            {/* main title */}
+            <h2 className="cwf-main-title">SMITHSONIAN</h2>
+
+            {/* subtitle */}
+            <p className="cwf-subtitle">
+              Khám phá di sản văn hoá nhân loại<br />
+              qua {museums.length} bảo tàng Smithsonian
+            </p>
+
+            {/* CTA */}
+            <div className="cwf-cta-row">
+              <a href="/bao-tang" className="cwf-cta-btn" style={{ pointerEvents: "auto" }}>
+                ✦&nbsp;KHÁM PHÁ&nbsp;✦
+              </a>
+            </div>
+
+            {/* status */}
+            <p className="cwf-status">Mở cửa hàng ngày · 10:00 — 17:30 · Washington D.C.</p>
+
+            {/* scroll hint */}
+            <div className="cwf-scroll-more">
+              <span>Scroll for more</span>
+              <i />
+            </div>
+
+            {/* stats bottom-right */}
+            <div className="cwf-stats">
+              <span>{museums.length} bảo tàng &amp; <strong>37+ hiện vật 3D</strong></span>
+            </div>
           </div>
         </div>
       </section>

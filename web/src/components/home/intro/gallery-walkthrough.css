@@ -148,59 +148,138 @@
   height: 100%;
 }
 
+/* ── Colosseum-style hero overlay (fades in as painting fills screen) ── */
 .hero-handoff-metadata {
   z-index: 8;
   color: #fff;
   opacity: var(--hero-details-opacity);
   pointer-events: none;
-  text-shadow: 0 2px 24px #00000094;
   will-change: opacity;
-  grid-template-columns: minmax(8rem, 0.8fr) minmax(16rem, 2.2fr) minmax(22rem, 1.3fr);
-  align-items: end;
-  gap: 2rem;
-  display: grid;
   position: absolute;
-  bottom: clamp(1.5rem, 4vw, 4rem);
-  left: clamp(1.4rem, 4vw, 4.5rem);
-  right: clamp(1.4rem, 4vw, 4.5rem);
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 1.5rem;
 }
-.hero-handoff-metadata > p {
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+
+/* museum badge icons row */
+.cwf-museum-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+}
+.cwf-museum-badges span {
   font-family: var(--g-sans);
-  margin: 0 0 0.48rem;
-  font-size: 0.64rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 0.3em 0.8em;
+  opacity: 0.85;
 }
-.hero-handoff-metadata h2 {
+
+/* main title */
+.cwf-main-title {
   font-family: var(--g-serif);
-  letter-spacing: -0.05em;
-  margin: 0;
-  font-size: clamp(3.4rem, 7.2vw, 8rem);
+  font-size: clamp(3.5rem, 10vw, 9rem);
   font-weight: 400;
-  line-height: 0.82;
-}
-.hero-handoff-metadata dl {
-  grid-template-columns: 0.6fr 1.1fr 1fr;
-  gap: 1rem;
-  margin: 0;
-  display: grid;
-}
-.hero-handoff-metadata dl div {
-  gap: 0.38rem;
-  display: grid;
-}
-.hero-handoff-metadata dt {
-  letter-spacing: 0.14em;
-  opacity: 0.72;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-family: var(--g-sans);
-  font-size: 0.54rem;
+  margin: 0 0 1.25rem;
+  line-height: 0.9;
+  text-shadow: 0 4px 40px rgba(0,0,0,0.6);
 }
-.hero-handoff-metadata dd {
+
+/* subtitle */
+.cwf-subtitle {
   font-family: var(--g-serif);
-  margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.25;
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  font-weight: 400;
+  color: rgba(255,255,255,0.75);
+  margin: 0 0 2rem;
+  line-height: 1.6;
+  max-width: 36rem;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
+
+/* CTA row */
+.cwf-cta-row {
+  margin-bottom: 1.25rem;
+}
+.cwf-cta-btn {
+  display: inline-block;
+  font-family: var(--g-sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(212,175,55,0.15);
+  border: 1.5px solid rgba(212,175,55,0.65);
+  border-radius: 4px;
+  padding: 0.85em 2.4em;
+  text-decoration: none;
+  pointer-events: auto;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s, border-color 0.2s;
+}
+.cwf-cta-btn:hover {
+  background: rgba(212,175,55,0.28);
+  border-color: rgba(212,175,55,0.9);
+}
+
+/* status text */
+.cwf-status {
+  font-family: var(--g-sans);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin: 0 0 2.5rem;
+}
+
+/* scroll more cue */
+.cwf-scroll-more {
+  position: absolute;
+  bottom: clamp(1.5rem, 4vw, 3rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.cwf-scroll-more span {
+  font-family: var(--g-sans);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.45);
+}
+.cwf-scroll-more i {
+  display: block;
+  width: 1px;
+  height: 2.5rem;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent);
+}
+
+/* stats bottom-right */
+.cwf-stats {
+  position: absolute;
+  bottom: clamp(1.5rem, 4vw, 3rem);
+  right: clamp(1.4rem, 4vw, 4.5rem);
+  font-family: var(--g-serif);
+  font-size: clamp(0.75rem, 1.5vw, 1rem);
+  color: rgba(255,255,255,0.7);
+  text-align: right;
+  line-height: 1.4;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
 }
 
 .gallery-loader {
@@ -267,20 +346,23 @@
   .scroll-cue span {
     display: none;
   }
-  .hero-handoff-metadata {
-    display: block;
+  .cwf-museum-badges {
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
   }
-  .hero-handoff-metadata > p {
+  .cwf-museum-badges span {
+    font-size: 0.48rem;
+    padding: 0.25em 0.6em;
+  }
+  .cwf-main-title {
+    font-size: clamp(2.8rem, 14vw, 5rem);
     margin-bottom: 0.75rem;
   }
-  .hero-handoff-metadata h2 {
-    margin-bottom: 2rem;
-    font-size: clamp(3.4rem, 16vw, 5.7rem);
+  .cwf-subtitle {
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
   }
-  .hero-handoff-metadata dl {
-    grid-template-columns: 0.55fr 1.1fr;
-  }
-  .hero-handoff-metadata dl div:last-child {
+  .cwf-stats {
     display: none;
   }
 }
