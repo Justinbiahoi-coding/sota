@@ -186,82 +186,99 @@ export function GalleryWalkthroughHero() {
         return pts
       }
 
-      // === Build garden per letter ===
+      // === Build garden per letter — stems from letter CENTER, weave through text ===
+      // Helper: add leaves along a stem path
+      function addLeaves(pts: V[], delay: number, count: number) {
+        for (let j = 0; j < count; j++) {
+          const u = rng(0.2, 0.85), idx = Math.min(Math.floor(u * (pts.length - 2)), pts.length - 2)
+          const stemA = Math.atan2(pts[idx + 1][1] - pts[idx][1], pts[idx + 1][0] - pts[idx][0])
+          gLeaves.push({ p: pts[idx], a: stemA + (j % 2 === 0 ? 1 : -1) * rng(0.55, 1.05), len: rng(0.12, 0.3) * S, delay: delay + u * 500 })
+        }
+      }
+      // Helper: add tip element (poppy, pod, or curl)
+      function addTip(pts: V[], delay: number, pChance: number, bloom: number) {
+        const tip = pts[pts.length - 1], prev = pts[pts.length - 2]
+        const tipA = Math.atan2(tip[1] - prev[1], tip[0] - prev[0])
+        if (rnd() < pChance) {
+          gPoppies.push({ p: tip, R: rng(0.17, 0.33) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + 420, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
+          if (rnd() < 0.12) gPoppies.push({ p: [tip[0] + rng(-S * 0.12, S * 0.12), tip[1] + rng(-S * 0.08, S * 0.08)], R: rng(0.12, 0.22) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + 540, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
+        } else if (rnd() < 0.45) {
+          gPods.push({ p: tip, a: tipA, len: rng(0.11, 0.16) * S, delay: delay + 380 })
+        } else {
+          gStems.push({ pts: mkCurl(tip[0], tip[1], tipA), delay: delay + 350, w: S * 0.012 })
+        }
+      }
+
       spans.forEach((span, li) => {
         const r = span.getBoundingClientRect()
-        const cx = r.left - cr.left + r.width / 2, baseY = r.top - cr.top + r.height * 0.05, lw = r.width
-        const pChance = rng(0.28, 0.5), lean = rng(-0.3, 0.3), bloom = rng(0.85, 1.3)
+        const cx = r.left - cr.left + r.width / 2, lw = r.width
+        // midY = vertical center of letter — stems grow FROM here in all directions
+        const midY = r.top - cr.top + r.height * 0.5
+        const pChance = rng(0.3, 0.55), lean = rng(-0.25, 0.25), bloom = rng(0.85, 1.3)
 
+        // 1–2 upward stems (from lower half of letter, grow up through it)
         const nUp = rnd() < 0.45 ? 2 : 1
         for (let si = 0; si < nUp; si++) {
-          const bx = cx + rng(-lw * 0.35, lw * 0.35)
-          const dir = -Math.PI / 2 + lean / 2 + rng(-0.35, 0.35)
-          const len = rng(0.6, 1.1) * S
-          const pts = mkVine(bx, baseY + rng(-S * 0.15, 0), dir, len)
-          const delay = li * 95 + si * 170
+          const bx = cx + rng(-lw * 0.3, lw * 0.3)
+          const by = midY + rng(0.1, 0.4) * S
+          const dir = -Math.PI / 2 + lean / 2 + rng(-0.5, 0.5)
+          const len = rng(0.45, 0.9) * S
+          const pts = mkVine(bx, by, dir, len)
+          const delay = li * 90 + si * 160
           gStems.push({ pts, delay, w: S * 0.017 })
+          addLeaves(pts, delay, Math.floor(rnd() * 2.5 * rng(0.6, 1.4)))
+          if ((si === 0 && li % 3 === 0) || rnd() < pChance + 0.1) addTip(pts, delay, 0.85, bloom)
+          else addTip(pts, delay, pChance, bloom)
 
-          // Leaves along stem
-          const nL = Math.floor(rnd() * 2.8 * rng(0.6, 1.4))
-          for (let j = 0; j < nL; j++) {
-            const u = rng(0.2, 0.85), idx = Math.min(Math.floor(u * (pts.length - 2)), pts.length - 2)
-            const stemA = Math.atan2(pts[idx + 1][1] - pts[idx][1], pts[idx + 1][0] - pts[idx][0])
-            gLeaves.push({ p: pts[idx], a: stemA + (j % 2 === 0 ? 1 : -1) * rng(0.55, 1.05), len: rng(0.14, 0.32) * S, delay: delay + u * 500 })
-          }
-
-          // Stem tip → poppy, pod, or curl
-          const tip = pts[pts.length - 1], prev = pts[pts.length - 2]
-          const tipA = Math.atan2(tip[1] - prev[1], tip[0] - prev[0])
-
-          if ((si === 0 && li % 3 === 0) || rnd() < pChance) {
-            gPoppies.push({ p: tip, R: rng(0.17, 0.33) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + 420, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
-            if (rnd() < 0.1) {
-              gPoppies.push({ p: [tip[0] + rng(-S * 0.15, S * 0.15), tip[1] + rng(-S * 0.1, S * 0.1)], R: rng(0.13, 0.25) * bloom * S * rng(0.6, 0.9), rot: rng(-0.5, 0.5), delay: delay + 540, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
-            }
-          } else if (rnd() < 0.45) {
-            gPods.push({ p: tip, a: tipA, len: rng(0.11, 0.16) * S, delay: delay + 380 })
-          } else {
-            gStems.push({ pts: mkCurl(tip[0], tip[1], tipA), delay: delay + 350, w: S * 0.012 })
-          }
-
-          // 30% fork into side branch
+          // 30% fork
           if (si === 0 && rnd() < 0.3) {
-            const fU = rng(0.35, 0.7), fIdx = Math.floor(fU * (pts.length - 1))
-            const fp = pts[fIdx], fnext = pts[Math.min(fIdx + 1, pts.length - 1)]
-            const fDir = Math.atan2(fnext[1] - fp[1], fnext[0] - fp[0]) + rng(-0.8, 0.8)
-            const brPts = mkVine(fp[0], fp[1], fDir, len * rng(0.35, 0.55))
+            const fU = rng(0.3, 0.65), fIdx = Math.floor(fU * (pts.length - 1))
+            const fp = pts[fIdx], fn = pts[Math.min(fIdx + 1, pts.length - 1)]
+            const brPts = mkVine(fp[0], fp[1], Math.atan2(fn[1] - fp[1], fn[0] - fp[0]) + rng(-0.8, 0.8), len * rng(0.3, 0.5))
             gStems.push({ pts: brPts, delay: delay + fU * 400, w: S * 0.014 })
-            const brTip = brPts[brPts.length - 1]
-            if (rnd() < pChance) {
-              gPoppies.push({ p: brTip, R: rng(0.13, 0.25) * bloom * S, rot: rng(-0.5, 0.5), delay: delay + fU * 400 + 350, ph1: rnd() * 7, ph2: rnd() * 7, col: FLORAL_COLORS[Math.floor(rnd() * FLORAL_COLORS.length)] })
-            } else {
-              gLeaves.push({ p: brTip, a: fDir + rng(-0.3, 0.3), len: rng(0.14, 0.28) * S, delay: delay + fU * 400 + 300 })
-            }
+            addTip(brPts, delay + fU * 400, pChance, bloom * 0.8)
           }
         }
 
-        // Downward stem (40%)
-        if (rnd() < 0.4) {
-          const pts = mkVine(cx + rng(-lw * 0.3, lw * 0.3), baseY + rng(0, S * 0.15), Math.PI / 2 + rng(-0.4, 0.4), rng(0.35, 0.65) * S)
-          const delay = li * 95 + 160
+        // Horizontal/diagonal stems — create the weaving vine look
+        if (rnd() < 0.6) {
+          const side = rnd() < 0.5 ? 1 : -1
+          const bx = cx + side * lw * rng(0.1, 0.4)
+          const dir = (side > 0 ? 0 : Math.PI) + rng(-0.4, 0.4)
+          const pts = mkVine(bx, midY + rng(-S * 0.15, S * 0.15), dir, rng(0.5, 1.0) * S)
+          const delay = li * 90 + 100
+          gStems.push({ pts, delay, w: S * 0.015 })
+          addLeaves(pts, delay, Math.floor(rnd() * 2))
+          addTip(pts, delay, pChance * 0.7, bloom * 0.85)
+        }
+
+        // Downward stem (50%)
+        if (rnd() < 0.5) {
+          const pts = mkVine(cx + rng(-lw * 0.3, lw * 0.3), midY + rng(-0.05, 0.1) * S, Math.PI / 2 + rng(-0.5, 0.5), rng(0.3, 0.6) * S)
+          const delay = li * 90 + 150
           gStems.push({ pts, delay, w: S * 0.014 })
-          const tip = pts[pts.length - 1], prev = pts[pts.length - 2]
-          gLeaves.push({ p: tip, a: Math.atan2(tip[1] - prev[1], tip[0] - prev[0]) + rng(-0.4, 0.4), len: rng(0.1, 0.22) * S, delay: delay + 320 })
+          addLeaves(pts, delay, Math.floor(rnd() * 2))
+          addTip(pts, delay, pChance * 0.5, bloom * 0.75)
         }
 
         // Side curl on first letter
-        if (li === 0) gStems.push({ pts: mkVine(cx - lw * 0.3, baseY - rng(0.1, 0.4) * S, Math.PI + rng(-0.3, 0.3), rng(0.45, 0.75) * S), delay: 120, w: S * 0.014 })
+        if (li === 0) {
+          const pts = mkVine(cx - lw * 0.3, midY + rng(-S * 0.15, S * 0.15), Math.PI + rng(-0.3, 0.3), rng(0.45, 0.75) * S)
+          gStems.push({ pts, delay: 100, w: S * 0.014 })
+          addLeaves(pts, 100, 2)
+        }
 
-        // Bridge to previous letter
-        if (li > 0 && rnd() < 0.55) {
+        // Bridge to previous letter (higher chance for dense weave)
+        if (li > 0 && rnd() < 0.7) {
           const pr = spans[li - 1].getBoundingClientRect()
-          const pcx = pr.left - cr.left + pr.width / 2
-          const fx = cx - lw * 0.15, fy = baseY - rng(0.15, 0.5) * S
-          const tx = pcx + pr.width * 0.1, ty = pr.top - cr.top + pr.height * 0.05 - rng(0.15, 0.5) * S
-          const bulge = rng(-0.5, 0.5) * S
-          const cp1x = fx + (tx - fx) * 0.3 + rng(-10, 10), cp2x = tx + (fx - tx) * 0.3 + rng(-10, 10)
+          const pcx = pr.left - cr.left + pr.width / 2, pMidY = pr.top - cr.top + pr.height * 0.5
+          const fx = cx - lw * 0.1, fy = midY + rng(-0.3, 0.3) * S
+          const tx = pcx + pr.width * 0.1, ty = pMidY + rng(-0.3, 0.3) * S
+          const bulge = rng(-0.4, 0.4) * S
+          const cp1x = fx + (tx - fx) * 0.3 + rng(-8, 8), cp2x = tx + (fx - tx) * 0.3 + rng(-8, 8)
           const pts: V[] = []; for (let i = 0; i <= 24; i++) { const t = i / 24, m = 1 - t; pts.push([m ** 3 * fx + 3 * m ** 2 * t * cp1x + 3 * m * t ** 2 * cp2x + t ** 3 * tx, m ** 3 * fy + 3 * m ** 2 * t * (fy + bulge) + 3 * m * t ** 2 * (ty + bulge) + t ** 3 * ty]) }
-          gStems.push({ pts, delay: li * 95 + 90, w: S * 0.013 })
+          gStems.push({ pts, delay: li * 90 + 80, w: S * 0.013 })
+          addLeaves(pts, li * 90 + 80, 1)
         }
       })
 
