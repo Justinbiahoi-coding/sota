@@ -179,8 +179,8 @@
   will-change: opacity;
 }
 
-/* early elements (museum names, CTA, status) */
-.cwf-museum-names,
+/* early elements (tabs, CTA, status) */
+.cwf-hero-tabs,
 .cwf-cta-row,
 .cwf-status,
 .cwf-scroll-more,
@@ -232,30 +232,33 @@
 }
 
 /* museum badge icons row */
-/* museum names — plain text below SMITHSONIAN title */
-.cwf-museum-names {
+/* hero page tabs bar — below SMITHSONIAN title */
+.cwf-hero-tabs {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
-  gap: 0;
+  gap: 0.25rem 2rem;
   margin-bottom: 1.5rem;
+  padding: 0.55rem 1.5rem;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(4px);
+  border-radius: 999px;
   position: relative;
   z-index: 3;
 }
-.cwf-museum-names span {
+.cwf-hero-tabs a {
   font-family: var(--g-sans);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.7);
+  color: rgba(255,255,255,0.75);
+  text-decoration: none;
   text-shadow: none;
+  transition: color 0.2s;
   white-space: nowrap;
 }
-.cwf-dot {
-  display: inline-block;
-  margin: 0 0.6em;
-  opacity: 0.5;
+.cwf-hero-tabs a:hover {
+  color: #fff;
 }
 
 /* main title */
