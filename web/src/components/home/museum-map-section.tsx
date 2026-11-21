@@ -3,9 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 
-// 6 destinations mapped to buildings on the new 1456×1080 map
-// zone = invisible hover area over each building (% of map)
-// glow = radial gradient center point (% of map)
+// 6 destinations — art overlay covers building footprint on the 1456×1080 map
+// art = colored building image (transparent bg), positioned/sized to match map
+// zone = same area, invisible hover target
 const PINS = [
   {
     slug: "lich-su-tu-nhien",
@@ -16,8 +16,8 @@ const PINS = [
     desc: "Hành trình 500 triệu năm qua các kỷ địa chất, từ đại dương nguyên thuỷ đến thế giới hiện đại.",
     hours: "10:00–17:30",
     cta: "Tham quan",
+    art: "/map-art-lich-su-tu-nhien.webp",
     zone: { left:"17%", top:"8%",  width:"30%", height:"33%" },
-    glow: { left:"32%", top:"24%" },
   },
   {
     slug: "phong-tranh-chan-dung",
@@ -28,8 +28,8 @@ const PINS = [
     desc: "Hơn 23.000 bức chân dung ghi lại lịch sử và văn hoá Hoa Kỳ từ thế kỷ 18 đến nay.",
     hours: "11:30–19:00",
     cta: "Tham quan",
+    art: "/map-art-phong-tranh-chan-dung.webp",
     zone: { left:"48%", top:"7%",  width:"28%", height:"32%" },
-    glow: { left:"62%", top:"23%" },
   },
   {
     slug: "lich-su-hoa-ky",
@@ -40,8 +40,8 @@ const PINS = [
     desc: "Di sản văn hoá và lịch sử dân tộc Mỹ qua các thế kỷ — từ cách mạng đến kỷ nguyên số.",
     hours: "10:00–17:30",
     cta: "Tham quan",
+    art: "/map-art-lich-su-hoa-ky.webp",
     zone: { left:"7%",  top:"33%", width:"30%", height:"28%" },
-    glow: { left:"22%", top:"47%" },
   },
   {
     slug: "cua-hang",
@@ -52,8 +52,8 @@ const PINS = [
     desc: "Quà lưu niệm và vật phẩm độc quyền từ Smithsonian — từ mô hình 3D đến sách nghệ thuật.",
     hours: null,
     cta: "Vào cửa hàng",
+    art: "/map-art-cua-hang.webp",
     zone: { left:"62%", top:"26%", width:"24%", height:"38%" },
-    glow: { left:"74%", top:"45%" },
   },
   {
     slug: "trang-chu",
@@ -64,8 +64,8 @@ const PINS = [
     desc: "Khám phá toàn bộ cụm bảo tàng Smithsonian trong một trải nghiệm số hoá thống nhất.",
     hours: null,
     cta: "Về trang chủ",
+    art: "/map-art-trang-chu.webp",
     zone: { left:"14%", top:"52%", width:"28%", height:"32%" },
-    glow: { left:"28%", top:"68%" },
   },
   {
     slug: "dat-ve",
@@ -76,8 +76,8 @@ const PINS = [
     desc: "Mua vé trước để ưu tiên vào cửa không chờ đợi — có vé gia đình và nhóm học sinh.",
     hours: null,
     cta: "Đặt ngay",
+    art: "/map-art-dat-ve.webp",
     zone: { left:"42%", top:"52%", width:"30%", height:"33%" },
-    glow: { left:"57%", top:"68%" },
   },
 ]
 
@@ -112,22 +112,26 @@ export function MuseumMapSection() {
               style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", display:"block" }}
             />
 
-            {/* Building hover zones + screen-blend colorize */}
+            {/* Building overlay images + hover zones */}
             {PINS.map(p => {
               const isActive = p.slug === active
               return (
                 <div key={p.slug}>
-                  {/* screen blend: colorizes lighter building pixels, dark areas stay black */}
-                  <div style={{
-                    position:"absolute",
-                    left: p.zone.left, top: p.zone.top,
-                    width: p.zone.width, height: p.zone.height,
-                    backgroundColor: p.accent,
-                    mixBlendMode: "screen",
-                    pointerEvents: "none", zIndex: 2,
-                    opacity: isActive ? 0.82 : 0,
-                    transition: "opacity .3s ease-in-out",
-                  }} />
+                  {/* colored building art — transparent WebP, fades in on hover */}
+                  <img
+                    src={p.art}
+                    alt=""
+                    aria-hidden
+                    style={{
+                      position:"absolute",
+                      left: p.zone.left, top: p.zone.top,
+                      width: p.zone.width, height: p.zone.height,
+                      objectFit: "contain",
+                      pointerEvents: "none", zIndex: 2,
+                      opacity: isActive ? 1 : 0,
+                      transition: "opacity .3s ease-in-out",
+                    }}
+                  />
 
                   {/* hover/click zone */}
                   <div
