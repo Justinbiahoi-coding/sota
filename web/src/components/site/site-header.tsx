@@ -43,19 +43,12 @@ const RIGHT_NAV = NAV.slice(2)
 export function SiteHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
-      <div className="relative flex h-[72px] max-w-[1560px] mx-auto items-center px-8">
+      {/* 3-col grid: 1fr | seal | 1fr — both sides equal so seal stays dead-center */}
+      <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-8"
+        style={{ gridTemplateColumns: "1fr auto 1fr" }}>
 
-        {/* Seal — truly centered via absolute left-1/2 */}
-        <Link
-          href="/"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-stone-300 hover:text-white transition-colors"
-          aria-label="Sota — Trang chủ"
-        >
-          <SmithsonianSeal size={38} />
-        </Link>
-
-        {/* Left nav — right-aligned toward seal */}
-        <nav className="hidden md:flex items-center gap-8 mr-auto" aria-label="Chính">
+        {/* Left nav — right-aligned in col 1 */}
+        <nav className="hidden md:flex items-center justify-end gap-8 pr-8" aria-label="Chính">
           {LEFT_NAV.map(n => (
             <Link key={n.href} href={n.href}
               className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
@@ -64,20 +57,23 @@ export function SiteHeader() {
           ))}
         </nav>
 
-        {/* Right nav — left-aligned away from seal */}
-        <nav className="hidden md:flex items-center gap-8 ml-auto">
+        {/* Seal — col 2 (auto width, truly centered) */}
+        <Link href="/" className="text-stone-300 hover:text-white transition-colors" aria-label="Sota — Trang chủ">
+          <SmithsonianSeal size={38} />
+        </Link>
+
+        {/* Right nav + utilities — col 3, left-aligned */}
+        <div className="hidden md:flex items-center gap-8 pl-8">
           {RIGHT_NAV.map(n => (
             <Link key={n.href} href={n.href}
               className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
               {n.label}
             </Link>
           ))}
-        </nav>
-
-        {/* Utility icons */}
-        <div className="flex items-center gap-3 ml-6">
-          <CartIcon />
-          <AuthActions />
+          <div className="flex items-center gap-3 ml-auto">
+            <CartIcon />
+            <AuthActions />
+          </div>
         </div>
 
         {/* Mobile menu */}
