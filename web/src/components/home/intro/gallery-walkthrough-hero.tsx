@@ -98,14 +98,18 @@ function interpKeyframes(keys: CamKey[], p: number, out: { position: [number, nu
 
 const SESSION_KEY = "sota-gallery-played"
 
+const FLORAL_COLORS = ["#D9603A", "#EB6F70", "#F28C5B", "#F07A5A", "#C8503A", "#D9C3A0"]
+const SMITHSONIAN_LETTERS = "SMITHSONIAN".split("")
+
 export function GalleryWalkthroughHero() {
   const sectionRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stageRef = useRef<HTMLDivElement>(null)
   const heroOverlayRef = useRef<HTMLDivElement>(null)
+  const florCanvasRef = useRef<HTMLCanvasElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
   const [loadProgress, setLoadProgress] = useState(0)
   const [dismissed, setDismissed] = useState(false)
-  // Skip gallery scroll if already played this session
   const [skipGallery] = useState(() => {
     try { return !!sessionStorage.getItem(SESSION_KEY) } catch { return false }
   })
@@ -118,21 +122,96 @@ export function GalleryWalkthroughHero() {
     const stage = stageRef.current
     const heroOverlay = heroOverlayRef.current
     if (!canvas || !section || !stage || !heroOverlay) return
+
+    function startFlorAnim(disposed: { current: boolean }) {
+      const fc = florCanvasRef.current
+      const title = titleRef.current
+      if (!fc || !title || disposed.current) return
+      const ctx = fc.getContext("2d")!
+      if (!ctx) return
+      const dpr = Math.min(devicePixelRatio, 2)
+      const W = fc.clientWidth, H = fc.clientHeight
+      fc.width = W * dpr; fc.height = H * dpr
+      ctx.scale(dpr, dpr)
+      const cr = fc.getBoundingClientRect()
+      const spans = Array.from(title.querySelectorAll(".cwf-letter"))
+      const rng = (a: number, b: number) => a + Math.random() * (b - a)
+      interface Stem { bx: number; by: number; cp1x: number; cp1y: number; cp2x: number; cp2y: number; ex: number; ey: number; delay: number; color: string }
+      const stems: Stem[] = spans.flatMap((span, i) => {
+        const r = span.getBoundingClientRect()
+        const cx = r.left - cr.left + r.width / 2
+        const by = r.top - cr.top + r.height * 0.05
+        return Array.from({ length: Math.random() < 0.3 ? 2 : 1 }, (_, si) => {
+          const bx = cx + rng(-r.width * 0.3, r.width * 0.3)
+          const len = rng(44, 82)
+          const angle = rng(-Math.PI * 0.88, -Math.PI * 0.12)
+          const ex = bx + Math.cos(angle) * len
+          const ey = by + Math.sin(angle) * len
+          const bend = rng(-16, 16)
+          return { bx, by, cp1x: bx + bend, cp1y: by - len * 0.4, cp2x: ex - bend * 0.5, cp2y: ey + len * 0.3, ex, ey, delay: i * 110 + si * 180, color: FLORAL_COLORS[(i + si * 3) % FLORAL_COLORS.length] }
+        })
+      })
+      const t0 = performance.now()
+      function florFrame() {
+        if (disposed.current) return
+        const t = performance.now() - t0
+        ctx.clearRect(0, 0, W, H)
+        for (const s of stems) {
+          const sp = Math.min(1, Math.max(0, (t - s.delay) / 1100))
+          const se = 1 - (1 - sp) ** 3
+          if (se <= 0) continue
+          ctx.beginPath(); ctx.strokeStyle = "#8AA6A3"; ctx.lineWidth = 1.6; ctx.lineCap = "round"
+          const steps = 24, drawTo = Math.floor(se * steps)
+          for (let k = 0; k <= drawTo; k++) {
+            const u = k / steps, m = 1 - u
+            const x = m**3*s.bx + 3*m**2*u*s.cp1x + 3*m*u**2*s.cp2x + u**3*s.ex
+            const y = m**3*s.by + 3*m**2*u*s.cp1y + 3*m*u**2*s.cp2y + u**3*s.ey
+            if (k === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)
+          }
+          ctx.stroke()
+          if (se > 0.75) {
+            const pp = (se - 0.75) / 0.25
+            const spring = Math.min(1, 1 - Math.exp(-8 * pp) * Math.cos(14 * pp))
+            const R = 9 * spring
+            if (R > 0.5) {
+              for (let pi = 0; pi < 5; pi++) {
+                const pa = (pi / 5) * Math.PI * 2 - Math.PI / 2
+                ctx.beginPath(); ctx.fillStyle = s.color + "C0"
+                ctx.ellipse(s.ex + Math.cos(pa) * R * 0.72, s.ey + Math.sin(pa) * R * 0.72, R * 0.68 * spring, R * 0.42 * spring, pa, 0, Math.PI * 2)
+                ctx.fill()
+              }
+              ctx.beginPath(); ctx.fillStyle = "#1a0808"; ctx.arc(s.ex, s.ey, R * 0.26, 0, Math.PI * 2); ctx.fill()
+              if (R > 5.5) {
+                for (let d = 0; d < 7; d++) {
+                  const da = (d / 7) * Math.PI * 2
+                  ctx.beginPath(); ctx.fillStyle = "#f5c518"
+                  ctx.arc(s.ex + Math.cos(da) * R * 0.38, s.ey + Math.sin(da) * R * 0.38, 1.3, 0, Math.PI * 2); ctx.fill()
+                }
+              }
+            }
+          }
+        }
+        requestAnimationFrame(florFrame)
+      }
+      requestAnimationFrame(florFrame)
+    }
+
     if (skipGallery) {
-      // Show finale hero immediately, skip 3D gallery
-      setLoadProgress(1)
-      setDismissed(true)
-      stage.style.setProperty("--hero-details-opacity", "1")
+      setLoadProgress(1); setDismissed(true)
+      const disposedRef = { current: false }
+      stage.style.setProperty("--cwf-early", "1")
+      stage.style.setProperty("--cwf-late", "1")
       stage.style.setProperty("--intro-opacity", "0")
       stage.style.setProperty("--canvas-opacity", "0")
       heroOverlay.style.transform = "translate3d(0px,0px,0)"
-      heroOverlay.style.width = "100%"
-      heroOverlay.style.height = "100%"
-      heroOverlay.style.opacity = "1"
-      heroOverlay.style.visibility = "visible"
-      return
+      heroOverlay.style.width = "100%"; heroOverlay.style.height = "100%"
+      heroOverlay.style.opacity = "1"; heroOverlay.style.visibility = "visible"
+      stage.classList.add("cwf-letters-active")
+      setTimeout(() => startFlorAnim(disposedRef), 800)
+      return () => { disposedRef.current = true }
     }
     let disposed = false
+    const disposedRef = { current: false }
 
     Promise.all([
       import("three"),
@@ -412,6 +491,7 @@ export function GalleryWalkthroughHero() {
       const targetLookVec = new THREE.Vector3()
 
       let rafHandle = 0
+      let florStarted = false
       const root = document.documentElement
       const onScroll = () => {
         const rect = section.getBoundingClientRect()
@@ -453,8 +533,17 @@ export function GalleryWalkthroughHero() {
         const introOp = p < 0.03 ? 1 : p < 0.06 ? 1 - (p - 0.03) / 0.03 : 0
         stage.style.setProperty("--intro-opacity", String(introOp.toFixed(3)))
 
-        const detailsOp = remap01(p, 0.885, 0.915)
-        stage.style.setProperty("--hero-details-opacity", String(detailsOp.toFixed(3)))
+        const earlyOp = remap01(p, 0.885, 0.915)
+        const lateOp = remap01(p, 0.925, 0.975)
+        stage.style.setProperty("--cwf-early", String(earlyOp.toFixed(3)))
+        stage.style.setProperty("--cwf-late", String(lateOp.toFixed(3)))
+
+        // trigger letter animation + floral canvas
+        if (lateOp > 0.08 && !florStarted) {
+          florStarted = true
+          stage.classList.add("cwf-letters-active")
+          setTimeout(() => startFlorAnim(disposedRef), 600)
+        }
 
         // mark session once fully at finale
         if (p >= 0.99) { try { sessionStorage.setItem(SESSION_KEY, "1") } catch { /* ignore */ } }
@@ -496,6 +585,7 @@ export function GalleryWalkthroughHero() {
       // ── cleanup ────────────────────────────────────────────
       const cleanup = () => {
         disposed = true
+        disposedRef.current = true
         cancelAnimationFrame(rafHandle)
         window.removeEventListener("scroll", onScroll)
         obs.disconnect()
@@ -514,9 +604,10 @@ export function GalleryWalkthroughHero() {
 
     return () => {
       disposed = true
+      disposedRef.current = true
       ;(canvas as unknown as { __gc?: () => void }).__gc?.()
     }
-  }, [])
+  }, [skipGallery])
 
   return (
     <>
@@ -547,7 +638,10 @@ export function GalleryWalkthroughHero() {
           </div>
 
           <div className="hero-handoff-metadata">
-            {/* museum badges — like protocol icons in Colosseum */}
+            {/* floral poppy canvas — letterbloom effect over SMITHSONIAN */}
+            <canvas ref={florCanvasRef} className="cwf-floral-canvas" aria-hidden="true" />
+
+            {/* museum badges row */}
             <div className="cwf-museum-badges">
               {museums.map(m => (
                 <span key={m.slug} style={{ borderColor: `${m.accent}80`, color: "#fff" }}>
@@ -556,32 +650,33 @@ export function GalleryWalkthroughHero() {
               ))}
             </div>
 
-            {/* main title */}
-            <h2 className="cwf-main-title">SMITHSONIAN</h2>
+            {/* SMITHSONIAN — appears last with letter stagger */}
+            <h2 ref={titleRef} className="cwf-main-title">
+              {SMITHSONIAN_LETTERS.map((ch, i) => (
+                <span key={i} className="cwf-letter" style={{ "--i": String(i) } as React.CSSProperties}>
+                  {ch}
+                </span>
+              ))}
+            </h2>
 
-            {/* subtitle */}
             <p className="cwf-subtitle">
               Khám phá di sản văn hoá nhân loại<br />
               qua {museums.length} bảo tàng Smithsonian
             </p>
 
-            {/* CTA */}
             <div className="cwf-cta-row">
               <a href="/bao-tang" className="cwf-cta-btn" style={{ pointerEvents: "auto" }}>
                 ✦&nbsp;KHÁM PHÁ&nbsp;✦
               </a>
             </div>
 
-            {/* status */}
             <p className="cwf-status">Mở cửa hàng ngày · 10:00 — 17:30 · Washington D.C.</p>
 
-            {/* scroll hint */}
             <div className="cwf-scroll-more">
               <span>Scroll for more</span>
               <i />
             </div>
 
-            {/* stats bottom-right */}
             <div className="cwf-stats">
               <span>{museums.length} bảo tàng &amp; <strong>37+ hiện vật 3D</strong></span>
             </div>

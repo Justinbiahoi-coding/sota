@@ -23,6 +23,8 @@
   --intro-opacity: 1;
   --canvas-opacity: 1;
   --hero-details-opacity: 0;
+  --cwf-early: 0;
+  --cwf-late: 0;
   z-index: 50;
   isolation: isolate;
   background: #d8d3c9;
@@ -152,9 +154,7 @@
 .hero-handoff-metadata {
   z-index: 8;
   color: #fff;
-  opacity: var(--hero-details-opacity);
   pointer-events: none;
-  will-change: opacity;
   position: absolute;
   inset: 0;
   display: flex;
@@ -163,9 +163,60 @@
   justify-content: center;
   text-align: center;
   padding: 0 1.5rem;
-  /* dark vignette so text reads over any painting */
-  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.65) 100%);
   text-shadow: 0 2px 20px rgba(0,0,0,0.9);
+}
+/* vignette on ::before so it fades independently of children */
+.hero-handoff-metadata::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0,0,0,0.42) 0%, rgba(0,0,0,0.68) 100%);
+  opacity: var(--cwf-early, 0);
+  pointer-events: none;
+  z-index: -1;
+  will-change: opacity;
+}
+
+/* early elements (badges, subtitle, CTA) */
+.cwf-museum-badges,
+.cwf-subtitle,
+.cwf-cta-row,
+.cwf-status,
+.cwf-scroll-more,
+.cwf-stats {
+  opacity: var(--cwf-early, 0);
+  will-change: opacity;
+}
+
+/* SMITHSONIAN — appears last */
+.cwf-main-title {
+  opacity: var(--cwf-late, 0);
+  will-change: opacity;
+}
+
+/* floral canvas */
+.cwf-floral-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* letter stagger — paused until .cwf-letters-active on stage */
+.cwf-letter {
+  display: inline-block;
+  animation: cwf-letter-in 0.72s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i) * 55ms + 0.08s);
+  animation-play-state: paused;
+}
+.gallery-stage.cwf-letters-active .cwf-letter {
+  animation-play-state: running;
+}
+@keyframes cwf-letter-in {
+  from { opacity: 0; transform: translateY(0.35em) scale(0.88); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* museum badge icons row */
@@ -200,6 +251,7 @@
   margin: 0 0 1.25rem;
   line-height: 0.9;
   text-shadow: 0 4px 40px rgba(0,0,0,0.6);
+  /* opacity controlled by --cwf-late via rule above */
 }
 
 /* subtitle */
