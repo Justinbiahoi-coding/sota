@@ -42,7 +42,7 @@ const RIGHT_NAV = NAV.slice(2)
 
 export function SiteHeader() {
   return (
-    <header className="absolute top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-[#08162b] border-b border-white/[0.06]">
+    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-[#08162b] border-b border-white/[0.06]">
       {/* matches Colosseum: position:absolute, solid bg, 72px height, centered nav */}
       <div className="relative flex h-[72px] max-w-[1560px] mx-auto items-center justify-between px-8">
         {/* Nav links — absolutely centered like Colosseum's .site-nav__desktop */}
