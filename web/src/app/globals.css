@@ -51,8 +51,8 @@
 
 :root {
   /* Museum 70-20-10 Rule: 70% Cream Limestone, 20% Deep Royal Navy, 10% Imperial Gold */
-  --background: #f7f4ec; /* 70% primary wall cream */
-  --foreground: #171717; /* high contrast gallery charcoal */
+  --background: #1e1b1f; /* Colosseum dark warm near-black */
+  --foreground: #f0ede8; /* light warm for legibility on dark */
   --card: #ffffff;       /* 70% pure vitrine white */
   --card-foreground: #171717;
   --popover: #ffffff;
