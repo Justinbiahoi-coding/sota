@@ -17,7 +17,7 @@ const PINS = [
     hours: "10:00–17:30",
     cta: "Tham quan",
     art: "/map-art-lich-su-tu-nhien.webp",
-    zone: { left:"17%", top:"8%",  width:"30%", height:"33%" },
+    zone: { left:"25%", top:"11%", width:"24%", height:"30%" },
   },
   {
     slug: "phong-tranh-chan-dung",
@@ -29,7 +29,7 @@ const PINS = [
     hours: "11:30–19:00",
     cta: "Tham quan",
     art: "/map-art-phong-tranh-chan-dung.webp",
-    zone: { left:"48%", top:"7%",  width:"28%", height:"32%" },
+    zone: { left:"44%", top:"10%", width:"22%", height:"28%" },
   },
   {
     slug: "lich-su-hoa-ky",
@@ -41,7 +41,7 @@ const PINS = [
     hours: "10:00–17:30",
     cta: "Tham quan",
     art: "/map-art-lich-su-hoa-ky.webp",
-    zone: { left:"7%",  top:"33%", width:"30%", height:"28%" },
+    zone: { left:"10%", top:"37%", width:"32%", height:"18%" },
   },
   {
     slug: "cua-hang",
@@ -53,7 +53,7 @@ const PINS = [
     hours: null,
     cta: "Vào cửa hàng",
     art: "/map-art-cua-hang.webp",
-    zone: { left:"62%", top:"26%", width:"24%", height:"38%" },
+    zone: { left:"74%", top:"12%", width:"13%", height:"38%" },
   },
   {
     slug: "trang-chu",
@@ -65,7 +65,7 @@ const PINS = [
     hours: null,
     cta: "Về trang chủ",
     art: "/map-art-trang-chu.webp",
-    zone: { left:"14%", top:"52%", width:"28%", height:"32%" },
+    zone: { left:"20%", top:"57%", width:"22%", height:"28%" },
   },
   {
     slug: "dat-ve",
@@ -77,7 +77,7 @@ const PINS = [
     hours: null,
     cta: "Đặt ngay",
     art: "/map-art-dat-ve.webp",
-    zone: { left:"42%", top:"52%", width:"30%", height:"33%" },
+    zone: { left:"41%", top:"56%", width:"30%", height:"32%" },
   },
 ]
 
@@ -126,7 +126,7 @@ export function MuseumMapSection() {
                       position:"absolute",
                       left: p.zone.left, top: p.zone.top,
                       width: p.zone.width, height: p.zone.height,
-                      objectFit: "contain",
+                      objectFit: "fill",
                       pointerEvents: "none", zIndex: 2,
                       opacity: isActive ? 1 : 0,
                       transition: "opacity .3s ease-in-out",
