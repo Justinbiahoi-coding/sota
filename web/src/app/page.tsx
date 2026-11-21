@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
 import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
+import { MuseumMapSection } from "@/components/home/museum-map-section"
 import { exhibitions, museums } from "@/lib/mock-data"
 import { MuseumButton } from "@/components/reactbits/museum-button"
 
@@ -145,51 +146,9 @@ export default function Home() {
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          MUSEUMS — Ecosystem tracks
+          MUSEUMS — Interactive map (Colosseum-style)
       ════════════════════════════════════════════════════════ */}
-      <section className="bg-[#08162b] py-24 px-6 border-t border-white/[0.04]">
-        <div className="mx-auto max-w-6xl">
-          <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
-            Hệ thống bảo tàng
-          </p>
-          <div className="flex items-end justify-between mb-10 gap-4">
-            <h2 className="font-heading text-4xl md:text-5xl font-light text-white leading-tight">
-              Khám phá<br /><em>{museums.length} bảo tàng</em>
-            </h2>
-            <MuseumButton href="/bao-tang" variant="outline" size="sm" icon>Tất cả bảo tàng</MuseumButton>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {museums.map((m) => (
-              <Link
-                key={m.slug}
-                href={`/bao-tang/${m.slug}`}
-                className="group flex flex-col gap-4 rounded-xl border border-white/[0.07] bg-white/[0.03] p-5 hover:bg-white/[0.06] hover:border-[#d4af37]/25 transition-all duration-200"
-              >
-                <div className="flex items-start justify-between">
-                  <span
-                    className="size-2.5 rounded-full mt-0.5 shrink-0"
-                    style={{ backgroundColor: m.accent, boxShadow: `0 0 10px ${m.accent}88` }}
-                  />
-                  <ArrowUpRight className="size-4 text-stone-700 group-hover:text-[#d4af37] transition-colors shrink-0" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="font-heading text-lg font-light text-white group-hover:text-[#d4af37] transition-colors leading-snug mb-1">
-                    {m.name}
-                  </h3>
-                  <p className="text-xs text-stone-500">{m.nameEn}</p>
-                </div>
-                <div className="border-t border-white/[0.06] pt-3 flex items-center justify-between">
-                  <p className="font-mono text-[0.6rem] text-stone-500 tracking-wide">
-                    {m.opens} — {m.closes}
-                  </p>
-                  <span className="size-1.5 rounded-full bg-emerald-400/70 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <MuseumMapSection />
 
       {/* ════════════════════════════════════════════════════════
           ACCELERATOR — Benefits / Features
