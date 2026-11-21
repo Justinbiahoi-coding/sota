@@ -45,7 +45,6 @@ function Flare({ color }: { color: string }) {
 
 export function MuseumMapSection() {
   const [active, setActive] = useState(PINS[0].slug)
-  const sel = PINS.find(p => p.slug === active) ?? PINS[0]
 
   return (
     <section style={{ backgroundColor: "#1e1b1f", paddingBlock: "96px 80px" }}>
@@ -143,61 +142,6 @@ export function MuseumMapSection() {
               </div>
             )
           })}
-
-          {/* CARD — absolute right, in the dark vignette area */}
-          <div style={{
-            position: "absolute",
-            right: 24, top: "50%", transform: "translateY(-50%)",
-            width: 280, zIndex: 8,
-            display: "flex", flexDirection: "column", gap: 0,
-            border: `1px solid ${sel.accent}44`,
-            backgroundColor: "#15121acc",
-            backdropFilter: "blur(16px)",
-            transition: "border-color .25s",
-          }}>
-            {/* corner bands */}
-            <div style={{ height: 4, background: `linear-gradient(90deg, ${sel.accent}66, transparent)` }} />
-            <div style={{ padding:"20px 22px", display:"flex", flexDirection:"column", gap:14 }}>
-
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                <p style={{ margin:0, fontSize:9, letterSpacing:"0.2em", textTransform:"uppercase", color: sel.accent, fontFamily:"var(--font-label)", opacity:0.8, lineHeight:1.4 }}>
-                  {sel.hours ? "Mở cửa hàng ngày" : "Smithsonian"}
-                </p>
-                <Flare color={sel.accent + "88"} />
-              </div>
-
-              <h3 style={{ margin:0, fontSize:22, fontStyle:"italic", fontWeight:400, color:"#fff", fontFamily:"var(--font-display)", lineHeight:1.1 }}>
-                {sel.title}
-              </h3>
-
-              {sel.hours && (
-                <p style={{ margin:0, fontSize:26, fontStyle:"italic", fontWeight:400, color: sel.accent, fontFamily:"var(--font-display)", lineHeight:1 }}>
-                  {sel.hours}
-                </p>
-              )}
-
-              <p style={{ margin:0, fontSize:12, lineHeight:1.6, color:"#9d95a5" }}>
-                {sel.desc}
-              </p>
-
-              <Link
-                href={sel.href}
-                style={{
-                  display:"inline-flex", alignItems:"center", justifyContent:"center", gap:6,
-                  padding:"9px 0",
-                  border:`1px solid ${sel.accent}55`,
-                  color: sel.accent,
-                  fontSize:10, fontFamily:"var(--font-label)", letterSpacing:"0.14em", textTransform:"uppercase", textDecoration:"none",
-                  transition:"background .2s",
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = sel.accent + "18")}
-                onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-              >
-                {sel.cta} →
-              </Link>
-            </div>
-            <div style={{ height: 4, background: `linear-gradient(90deg, transparent, ${sel.accent}66)` }} />
-          </div>
 
         </div>{/* /MAP */}
 
