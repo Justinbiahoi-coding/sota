@@ -492,11 +492,24 @@ export function GalleryWalkthroughHero() {
 
       let rafHandle = 0
       let florStarted = false
+      let scrollLock = -1
+      let locking = false
       const root = document.documentElement
       const onScroll = () => {
+        if (locking) return
         const rect = section.getBoundingClientRect()
         const scrollable = Math.max(rect.height - window.innerHeight, 1)
-        targetProgress = Math.min(1, Math.max(0, -rect.top / scrollable))
+        const rawP = Math.min(1, Math.max(0, -rect.top / scrollable))
+        // Record lock position first time gallery completes
+        if (rawP >= 0.99 && scrollLock < 0) scrollLock = window.scrollY
+        // Clamp scroll back to lock position
+        if (scrollLock >= 0 && window.scrollY < scrollLock - 2) {
+          locking = true
+          window.scrollTo({ top: scrollLock, behavior: "instant" })
+          locking = false
+          return
+        }
+        targetProgress = rawP
         const inGallery = rect.top < 10 && rect.bottom > window.innerHeight
         root.classList.toggle("gallery-active", inGallery)
       }
