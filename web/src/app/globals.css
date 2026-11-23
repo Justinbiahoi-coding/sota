@@ -522,6 +522,6 @@
 
 /* Glass panel — deep ocean navy overlay */
 .glass-panel {
-  background: rgba(8, 20, 42, 0.92) !important;
+  background: rgba(8, 20, 42, 0.78) !important;
   backdrop-filter: blur(20px);
 }
