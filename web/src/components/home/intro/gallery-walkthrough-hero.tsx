@@ -108,16 +108,16 @@ export function GalleryWalkthroughHero() {
   const heroOverlayRef = useRef<HTMLDivElement>(null)
   const florCanvasRef = useRef<HTMLCanvasElement>(null)
   const titleRef = useRef<HTMLHeadingElement>(null)
-  const [loadProgress, setLoadProgress] = useState(0)
-  const [dismissed, setDismissed] = useState(false)
-  const [atFinale, setAtFinale] = useState(false)
-  const atFinaleRef = useRef(false)
-  const [collapsed, setCollapsed] = useState(false)
-  const collapseRef = useRef(false)
   // Show walkthrough once per session; skip if already completed
   const [skipGallery] = useState(() => {
     try { return sessionStorage.getItem(SESSION_KEY) === "1" } catch { return false }
   })
+  const [loadProgress, setLoadProgress] = useState(() => skipGallery ? 1 : 0)
+  const [dismissed, setDismissed] = useState(() => skipGallery)
+  const [atFinale, setAtFinale] = useState(false)
+  const atFinaleRef = useRef(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const collapseRef = useRef(false)
 
   const finaleArt = ARTWORKS[ARTWORKS.length - 1]
 
@@ -871,7 +871,16 @@ export function GalleryWalkthroughHero() {
   return (
     <>
       <section ref={sectionRef} className="gallery-journey" style={{ height: (skipGallery || collapsed) ? "100svh" : "300svh" }} aria-labelledby="gallery-title">
-        <div className="gallery-stage" ref={stageRef}>
+        <div
+          className={`gallery-stage${(skipGallery || atFinale) ? " cwf-letters-active" : ""}`}
+          ref={stageRef}
+          style={{
+            "--cwf-early": skipGallery ? "1" : "0",
+            "--cwf-late": skipGallery ? "1" : "0",
+            "--intro-opacity": skipGallery ? "0" : "1",
+            "--canvas-opacity": skipGallery ? "0" : "1",
+          } as React.CSSProperties}
+        >
           <div className="gallery-canvas-shell" aria-hidden="true">
             <canvas ref={canvasRef} />
           </div>
@@ -908,7 +917,12 @@ export function GalleryWalkthroughHero() {
             <i />
           </div>
 
-          <div ref={heroOverlayRef} className="hero-projection" aria-hidden="true">
+          <div
+            ref={heroOverlayRef}
+            className="hero-projection"
+            aria-hidden="true"
+            style={skipGallery ? { opacity: 1, visibility: "visible", width: "100%", height: "100%", transform: "translate3d(0px,0px,0)" } : { opacity: 0, visibility: "hidden" }}
+          >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={FINALE.image} alt="" />
           </div>
@@ -951,7 +965,7 @@ export function GalleryWalkthroughHero() {
         </div>
       </section>
 
-      <div className={`gallery-loader${dismissed ? " is-dismissed" : ""}`} aria-hidden={dismissed}>
+      <div className={`gallery-loader${(dismissed || skipGallery) ? " is-dismissed" : ""}`} aria-hidden={dismissed || skipGallery}>
         <div className="gallery-loader__wordmark">Sota</div>
         <div className="gallery-loader__status">
           <span>Loading exhibition</span>
