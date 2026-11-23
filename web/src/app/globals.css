@@ -50,24 +50,24 @@
 }
 
 :root {
-  /* Museum 70-20-10 Rule: 70% Cream Limestone, 20% Deep Royal Navy, 10% Imperial Gold */
-  --background: #1e1b1f; /* Colosseum dark warm near-black */
-  --foreground: #f0ede8; /* light warm for legibility on dark */
-  --card: #ffffff;       /* 70% pure vitrine white */
-  --card-foreground: #171717;
-  --popover: #ffffff;
-  --popover-foreground: #171717;
+  /* Museum 70-20-10 Rule: 70% Deep Ocean, 20% Abyss Navy, 10% Imperial Gold */
+  --background: #0c1220; /* deep ocean navy */
+  --foreground: #f8f6f0; /* warm cream white */
+  --card: #0d1a2e;
+  --card-foreground: #f8f6f0;
+  --popover: #0d1a2e;
+  --popover-foreground: #f8f6f0;
   --primary: #08162b;    /* 20% secondary deep royal navy */
   --primary-foreground: #f8f6f0;
   --secondary: #08162b;  /* 20% deep royal navy */
   --secondary-foreground: #f8f6f0;
-  --muted: #ede8dc;
-  --muted-foreground: #57534e;
-  --accent: #d4af37;     /* 10% imperial museum gold */
+  --muted: #0d1a2e;
+  --muted-foreground: #94a3b8;
+  --accent: #d4af37;     /* imperial gold */
   --accent-foreground: #08162b;
   --destructive: #dc2626;
-  --border: rgba(28, 25, 23, 0.1);
-  --input: rgba(28, 25, 23, 0.14);
+  --border: rgba(212, 175, 55, 0.15);
+  --input: rgba(212, 175, 55, 0.1);
   --ring: #d4af37;
   --museum-accent: #d4af37;
   --chart-1: #d4af37;
@@ -400,4 +400,128 @@
 @keyframes write { from { mask-position: 100% 0; } to { mask-position: 0 0; } }
 .write { display: inline-block; padding-right: 0.15em; mask-image: linear-gradient(90deg, #000 45%, transparent 55%); mask-size: 220% 100%; mask-position: 100% 0; }
 .writing .write { animation: write 1.6s cubic-bezier(0.45, 0.05, 0.3, 1) 0.35s both; }
-@keyframes mapPanelSlide { from { opacity: 0; transform: translateX(48px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes mapPanelSlide { from { opacity: 0; transform: translateX(32px); filter: blur(6px); } to { opacity: 1; transform: translateX(0); filter: blur(0); } }
+
+/* ═══════════════════════════════════════════════════
+   WATER BACKGROUND SYSTEM
+   Two depth levels, same slow gradient-shift animation.
+   ═══════════════════════════════════════════════════ */
+@keyframes waterflow {
+  0%,100% { background-position: 0% 60%; }
+  50%      { background-position: 100% 40%; }
+}
+
+/* mid-depth — About, Video, Museum map */
+.bg-water {
+  background: linear-gradient(
+    135deg,
+    #010d1b 0%,
+    #011727 22%,
+    #012138 50%,
+    #011727 78%,
+    #010d1b 100%
+  );
+  background-size: 400% 400%;
+  animation: waterflow 28s ease infinite;
+}
+
+/* abyssal — Exhibitions, Accelerator, Team */
+.bg-water-deep {
+  background: linear-gradient(
+    160deg,
+    #00070e 0%,
+    #000c18 30%,
+    #010f22 60%,
+    #000c18 85%,
+    #00070e 100%
+  );
+  background-size: 300% 300%;
+  animation: waterflow 36s ease infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   LIQUID AMBIENT BLOBS
+   Add <div class="liquid-bg" aria-hidden="true">
+     <div class="lb lb1"/><div class="lb lb2"/><div class="lb lb3"/>
+   </div>
+   as first child of any position:relative section.
+   ═══════════════════════════════════════════════════ */
+.liquid-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(110px);
+  will-change: transform;
+}
+
+/* blob 1 — large cyan, top-left of page */
+.lb1 {
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle, rgba(0, 229, 255, 0.28) 0%, transparent 68%);
+  top: -10vh; left: -10vw;
+  animation: lb1 24s ease-in-out infinite;
+}
+/* blob 2 — electric blue, right side */
+.lb2 {
+  width: 50vw; height: 50vw;
+  background: radial-gradient(circle, rgba(0, 100, 255, 0.22) 0%, transparent 68%);
+  top: 20vh; right: -12vw;
+  animation: lb2 31s ease-in-out infinite;
+}
+/* blob 3 — sky, center */
+.lb3 {
+  width: 38vw; height: 38vw;
+  background: radial-gradient(circle, rgba(80, 210, 255, 0.18) 0%, transparent 68%);
+  top: 55vh; left: 30vw;
+  animation: lb3 38s ease-in-out infinite;
+}
+/* blob 4 — deep violet-blue, lower-left */
+.lb4 {
+  width: 45vw; height: 45vw;
+  background: radial-gradient(circle, rgba(60, 80, 255, 0.16) 0%, transparent 68%);
+  bottom: 5vh; left: -8vw;
+  animation: lb4 28s ease-in-out infinite;
+}
+/* blob 5 — pale aqua, upper-right */
+.lb5 {
+  width: 32vw; height: 32vw;
+  background: radial-gradient(circle, rgba(150, 230, 255, 0.14) 0%, transparent 68%);
+  top: 5vh; right: 15vw;
+  animation: lb5 20s ease-in-out infinite;
+}
+
+@keyframes lb1 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  33%      { transform: translate(6vw, 8vh) scale(1.07); }
+  66%      { transform: translate(-4vw, -5vh) scale(0.94); }
+}
+@keyframes lb2 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  40%      { transform: translate(-7vw, 6vh) scale(1.11); }
+  75%      { transform: translate(4vw, -8vh) scale(0.91); }
+}
+@keyframes lb3 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  25%      { transform: translate(-8vw, -6vh) scale(1.14); }
+  60%      { transform: translate(6vw, 9vh) scale(0.88); }
+}
+@keyframes lb4 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  45%      { transform: translate(9vw, -7vh) scale(1.09); }
+}
+@keyframes lb5 {
+  0%,100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-5vw, 10vh) scale(1.13); }
+}
+
+/* Glass panel — deep ocean navy overlay */
+.glass-panel {
+  background: rgba(8, 20, 42, 0.92) !important;
+  backdrop-filter: blur(20px);
+}

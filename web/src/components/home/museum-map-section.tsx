@@ -3,22 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 
-// 6 destinations — art overlay covers building footprint on the 1456×1080 map
-// art = colored building image (transparent bg), positioned/sized to match map
-// zone = same area, invisible hover target
+// 6 destinations — full-map overlay (512×341 panel per building, same as base map)
+// zone = hover target matching the lit building footprint (auto-calibrated from golden glow)
 const PINS = [
-  {
-    slug: "lich-su-tu-nhien",
-    href: "/bao-tang/lich-su-tu-nhien",
-    label: "Lịch sử Tự nhiên",
-    accent: "#38bdf8",
-    title: "Lịch sử Tự nhiên",
-    desc: "Hành trình 500 triệu năm qua các kỷ địa chất, từ đại dương nguyên thuỷ đến thế giới hiện đại.",
-    hours: "10:00–17:30",
-    cta: "Tham quan",
-    art: "/map-art-lich-su-tu-nhien.webp",
-    zone: { left:"25%", top:"11%", width:"24%", height:"30%" },
-  },
   {
     slug: "phong-tranh-chan-dung",
     href: "/bao-tang/phong-tranh-chan-dung",
@@ -29,7 +16,7 @@ const PINS = [
     hours: "11:30–19:00",
     cta: "Tham quan",
     art: "/map-art-phong-tranh-chan-dung.webp",
-    zone: { left:"44%", top:"10%", width:"22%", height:"28%" },
+    zone: { left:"48%", top:"15%", width:"34%", height:"33%" },
   },
   {
     slug: "lich-su-hoa-ky",
@@ -41,7 +28,7 @@ const PINS = [
     hours: "10:00–17:30",
     cta: "Tham quan",
     art: "/map-art-lich-su-hoa-ky.webp",
-    zone: { left:"10%", top:"37%", width:"32%", height:"18%" },
+    zone: { left:"4%", top:"37%", width:"40%", height:"34%" },
   },
   {
     slug: "cua-hang",
@@ -53,7 +40,7 @@ const PINS = [
     hours: null,
     cta: "Vào cửa hàng",
     art: "/map-art-cua-hang.webp",
-    zone: { left:"74%", top:"12%", width:"13%", height:"38%" },
+    zone: { left:"61%", top:"28%", width:"34%", height:"44%" },
   },
   {
     slug: "trang-chu",
@@ -65,7 +52,7 @@ const PINS = [
     hours: null,
     cta: "Về trang chủ",
     art: "/map-art-trang-chu.webp",
-    zone: { left:"20%", top:"57%", width:"22%", height:"28%" },
+    zone: { left:"15%", top:"63%", width:"38%", height:"34%" },
   },
   {
     slug: "dat-ve",
@@ -77,7 +64,19 @@ const PINS = [
     hours: null,
     cta: "Đặt ngay",
     art: "/map-art-dat-ve.webp",
-    zone: { left:"41%", top:"56%", width:"30%", height:"32%" },
+    zone: { left:"42%", top:"63%", width:"42%", height:"37%" },
+  },
+  {
+    slug: "lich-su-tu-nhien",
+    href: "/bao-tang/lich-su-tu-nhien",
+    label: "Lịch sử Tự nhiên",
+    accent: "#38bdf8",
+    title: "Lịch sử Tự nhiên",
+    desc: "Hành trình 500 triệu năm qua các kỷ địa chất, từ đại dương nguyên thuỷ đến thế giới hiện đại.",
+    hours: "10:00–17:30",
+    cta: "Tham quan",
+    art: "/map-art-lich-su-tu-nhien.webp",
+    zone: { left:"42%", top:"64%", width:"42%", height:"36%" },
   },
 ]
 
@@ -105,7 +104,7 @@ export function MuseumMapSection() {
         <div style={{ display:"grid", gridTemplateColumns:"60fr 40fr", gap:32, alignItems:"center" }}>
 
           {/* MAP */}
-          <div style={{ position:"relative", width:"100%", aspectRatio:"1456 / 1080" }}>
+          <div style={{ position:"relative", width:"100%", aspectRatio:"512 / 341" }}>
             <img
               src="/colosseum-map.webp"
               alt="Bản đồ cụm bảo tàng Smithsonian"

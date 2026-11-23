@@ -10,7 +10,7 @@ export function VideoSection() {
   const [playing, setPlaying] = useState(false)
 
   return (
-    <section style={{ backgroundColor: "#1e1b1f", paddingBlock: "0 80px" }}>
+    <section className="glass-panel" style={{ paddingBlock: "0 80px" }}>
       <div style={{ maxWidth: 1200, marginInline: "auto", paddingInline: 32 }}>
 
         {/* Ornate pixel-art frame — replicates Colosseum's cwf-frame structure */}

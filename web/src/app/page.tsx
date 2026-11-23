@@ -3,12 +3,13 @@ import Image from "next/image"
 import { ArrowUpRight } from "lucide-react"
 import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
 import { VideoSection } from "@/components/home/video-section"
-import { MuseumMapSection } from "@/components/home/museum-map-section"
+import { MuseumMapGL } from "@/components/home/museum-map-gl"
 import { exhibitions, museums } from "@/lib/mock-data"
 import { MuseumButton } from "@/components/reactbits/museum-button"
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
 const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} — ${dateFmt.format(new Date(b))}`
+
 
 const TEAM = [
   { name: "Thành viên 1", role: "Backend & API" },
@@ -29,16 +30,11 @@ export default function Home() {
       {/* ════════════════════════════════════════════════════════
           ABOUT — "Welcome to the World's Fair"
       ════════════════════════════════════════════════════════ */}
-      <section className="bg-[#1e1b1f] py-24 px-6 overflow-clip relative">
-        {/* subtle watermark */}
-        <div className="pointer-events-none absolute right-0 top-0 h-full w-1/2 opacity-[0.04]">
-          <Image src="/gallery/EndOfGallery.webp" alt="" fill className="object-cover object-left" />
-        </div>
-
+      <section className="glass-panel py-24 px-6 overflow-hidden relative">
         <div className="relative mx-auto max-w-6xl grid md:grid-cols-[1fr_1.1fr] gap-16 items-center">
           {/* text */}
           <div>
-            <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-4">
+            <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#8a7a3a] uppercase mb-4">
               Chào mừng đến với
             </p>
             <h2 className="font-heading text-5xl md:text-6xl font-light text-white leading-[0.95] mb-6">
@@ -59,15 +55,15 @@ export default function Home() {
           {/* painting */}
           <div className="relative aspect-[5/4] rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.25)] ring-1 ring-black/5">
             <Image
-              src="/gallery/EndOfGallery.webp"
-              alt="Smithsonian Castle in Bloom"
+              src="/museum-elephant.webp"
+              alt="Rotunda, National Museum of Natural History"
               fill
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
             <div className="absolute bottom-0 left-0 right-0 p-5">
-              <p className="font-mono text-[0.6rem] tracking-widest uppercase text-white/60">Oil on canvas</p>
-              <p className="font-heading text-sm text-white font-light mt-0.5">Smithsonian Castle in Bloom · Dawson Wells</p>
+              <p className="font-mono text-[0.6rem] tracking-widest uppercase text-white/60">Kenneth E. Behring Family Hall</p>
+              <p className="font-heading text-sm text-white font-light mt-0.5">National Museum of Natural History · Washington D.C.</p>
             </div>
           </div>
         </div>
@@ -81,9 +77,9 @@ export default function Home() {
       {/* ════════════════════════════════════════════════════════
           EXHIBITIONS — Opportunities / Awards
       ════════════════════════════════════════════════════════ */}
-      <section className="bg-[#0d1117] py-24 px-6">
-        <div className="mx-auto max-w-6xl">
-          <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">Triển lãm</p>
+      <section className="glass-panel py-24 px-6 relative overflow-hidden">
+        <div className="relative mx-auto max-w-6xl">
+          <p className="font-mono text-[0.65rem] tracking-[0.3em] text-[#8a7a3a] uppercase mb-2">Triển lãm</p>
           <div className="flex items-end justify-between mb-10 gap-4">
             <h2 className="font-heading text-4xl md:text-5xl font-light text-white leading-tight">
               Cơ hội<br /><em>khám phá</em>
@@ -154,17 +150,17 @@ export default function Home() {
       {/* ════════════════════════════════════════════════════════
           MUSEUMS — Interactive map
       ════════════════════════════════════════════════════════ */}
-      <MuseumMapSection />
+      <MuseumMapGL />
 
       {/* ════════════════════════════════════════════════════════
           ACCELERATOR — Benefits / Features
       ════════════════════════════════════════════════════════ */}
-      <section className="relative bg-[#0a0603] py-24 px-6 overflow-clip">
+      <section className="bg-water-deep relative py-24 px-6 overflow-hidden">
         {/* ghost painting */}
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07]">
-          <Image src="/gallery/EndOfGallery.webp" alt="" fill className="object-cover object-top" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.09]">
+          <Image src="/fossil-hall.webp" alt="" fill className="object-cover object-top" />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0603]/80 via-transparent to-[#0a0603]/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#060d19]/80 via-transparent to-[#060d19]/80" />
 
         <div className="relative z-10 mx-auto max-w-6xl">
           <p className="text-center font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
@@ -216,58 +212,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════
-          TEAM — Meet the Judges
-      ════════════════════════════════════════════════════════ */}
-      <section className="bg-[#08162b] py-24 px-6 border-t border-white/[0.04]">
-        <div className="mx-auto max-w-4xl">
-          <p className="text-center font-mono text-[0.65rem] tracking-[0.3em] text-[#d4af37]/70 uppercase mb-2">
-            Nhóm phát triển
-          </p>
-          <h2 className="text-center font-heading text-4xl md:text-5xl font-light text-white mb-16 leading-tight">
-            Gặp gỡ <em>đội ngũ</em>
-          </h2>
-
-          {/* Sota team */}
-          <h3 className="font-mono text-[0.6rem] tracking-widest uppercase text-stone-600 mb-6 text-center">
-            Nhóm Sota · Group 08
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-14">
-            {TEAM.map((p) => (
-              <div
-                key={p.name}
-                className="flex flex-col items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.03] p-4 text-center"
-              >
-                <div className="size-10 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/25 ring-1 ring-white/5" />
-                <div>
-                  <p className="text-sm font-medium text-white leading-snug">{p.name}</p>
-                  <p className="text-[0.65rem] text-stone-500 mt-0.5">{p.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Partners */}
-          <h3 className="font-mono text-[0.6rem] tracking-widest uppercase text-stone-600 mb-6 text-center">
-            Đối tác & Bảo trợ
-          </h3>
-          <div className="flex flex-wrap justify-center gap-2">
-            {museums.map((m) => (
-              <Link
-                key={m.slug}
-                href={`/bao-tang/${m.slug}`}
-                className="group flex items-center gap-2 font-mono text-[0.6rem] tracking-widest text-stone-400 border border-white/[0.07] rounded-full px-3 py-1.5 uppercase hover:border-[#d4af37]/30 hover:text-white transition-colors"
-              >
-                <span
-                  className="size-1.5 rounded-full"
-                  style={{ backgroundColor: m.accent }}
-                />
-                {m.nameEn}
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
     </>
   )
 }

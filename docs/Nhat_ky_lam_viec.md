@@ -2,6 +2,56 @@
 
 ---
 
+## Phiên 2026-11-23 09:07 +07
+
+- **Thời gian:** Thứ Hai, 23/11/2026, 09:07 ICT
+- **Làm việc gì:** Khôi phục gallery walkthrough + thêm skip button + đồng bộ page height sau walkthrough
+- **Ứng dụng/module:** `web/src/components/home/intro/gallery-walkthrough-hero.tsx`
+- **Tác dụng:** Walkthrough 3D gallery hiển thị cho user lần đầu mở tab (sessionStorage-based); skip button góc phải cho phép bỏ qua; sau khi hoàn thành walkthrough, section tự collapse từ 300svh về 100svh để scrollbar và layout đồng nhất với chế độ skip
+- **Làm như thế nào:** `useState(true)` → đọc `sessionStorage.getItem("sota-gallery-played")`; thêm `handleSkip()` instant-scroll đến cuối section; thêm `collapseRef` + `collapsed` state: khi `p≥0.99` trong RAF loop, sau 150ms tắt `onScroll` (qua `collapseRef`) rồi set `collapsed=true` và `scrollTo(0)` để page height = 100svh; skip button ẩn khi `atFinale=true`
+
+---
+
+## Phiên 2026-11-22 08:33 +07
+
+- **Thời gian:** Chủ nhật, 22/11/2026, 08:33 ICT
+- **Làm việc gì:** Sửa màu chữ và phối màu trang chủ (homepage) sau khi đổi nền từ dark navy sang trắng + overlay xanh navy
+- **Ứng dụng/module:** `web/src/app/page.tsx`, `web/src/app/globals.css`
+- **Tác dụng:** Các section dùng `glass-panel` (nền sáng `rgb(200,207,216)`) hiển thị chữ rõ ràng; section Accelerator/Features (có dark gradient riêng) giữ nền tối `bg-[#0c1220]`; section Team và Exhibitions heading dùng chữ tối thay vì trắng; label vàng dùng màu `#8a7a3a` đủ contrast trên nền sáng
+- **Làm như thế nào:** Phân loại 2 loại section: (1) section có dark overlay/gradient riêng → đổi class từ `glass-panel` sang `bg-[#0c1220]` để giữ nền tối; (2) section không có overlay → đổi `text-white` → `text-[#111]`, `border-white/[0.07]` → `border-black/[0.08]`, `bg-white/[0.03]` → `bg-white/60`, `hover:text-white` → `hover:text-[#92400e]`; label vàng `text-[#d4af37]/70` → `text-[#8a7a3a]` cho WCAG contrast
+
+---
+
+## Phiên 2026-11-22 07:10 +07
+
+- **Thời gian:** Chủ nhật, 22/11/2026, 07:10 ICT
+- **Làm việc gì:** Tạo trang chi tiết Bảo tàng Lịch sử Tự nhiên (NHM) với design 3 section: Hero video + NHM logo, Explore Our World, Ancient Collection dark section với Sand transition image
+- **Ứng dụng/module:** `web/src/components/museum/nhm-page.tsx` (mới), `web/src/app/bao-tang/lich-su-tu-nhien/page.tsx`, `web/public/nhm/` (assets), `web/src/components/site/nav.ts`, `web/src/components/site/site-header.tsx`
+- **Tác dụng:** `/bao-tang/lich-su-tu-nhien` hiển thị trang NHM với NHM SVG logo, hero video background (delay 2800ms), chapter auto-cycle 3500ms, SandTransitionImage (SVG filter dissolve), dark section pterodactyl, pill filters; Tham quan dropdown mới dẫn đến `/tham-quan/[slug]`; Bảo tàng dropdown dẫn đến `/bao-tang/[slug]`
+- **Làm như thế nào:** Copy assets vào `public/nhm/`, viết `NHMPage` component (framer-motion v14, usePresence cho sand effect), tổng quát hóa `MuseumDropdown` → `NavDropdown(navIndex)` trong header, tạo route `/tham-quan/lich-su-tu-nhien` cho 3D viewer, thêm pt-[72px] để tránh Sota fixed header
+
+---
+
+## Phiên 2026-11-22 06:54 +07
+
+- **Thời gian:** Chủ nhật, 22/11/2026, 06:54 ICT
+- **Làm việc gì:** Fix navbar dropdown Bảo tàng không hoạt động; sắp xếp lại thứ tự nav; thêm hover dropdown xổ 4 bảo tàng con
+- **Ứng dụng/module:** `web/src/components/site/site-header.tsx`, `web/src/components/site/nav.ts`
+- **Tác dụng:** Khi hover vào "Bảo tàng" trên navbar sẽ xổ dropdown 4 bảo tàng (Lịch sử Tự nhiên, Hàng không & Vũ trụ, Lịch sử Hoa Kỳ, Phòng tranh Chân dung) dẫn đến từng trang chi tiết riêng. Nav order: Bảo tàng ▾ | Tham quan | Đặt vé | Cửa hàng
+- **Làm như thế nào:** Phát hiện `site-header.tsx` render nav bằng plain `<Link>` không dùng `NavLinks` với dropdown. Thêm component `MuseumDropdown` riêng vào header dùng `useState` + `onMouseEnter/Leave` để toggle, render danh sách bảo tàng từ `NAV[0].dropdown`. Chuyển header thành `"use client"` vì cần state.
+
+---
+
+## Phiên 2026-11-22 03:45 +07
+
+- **Thời gian:** Chủ nhật, 22/11/2026, 03:45 ICT
+- **Làm việc gì:** Thêm hiệu ứng Apple Tahoe transparent glass (hoàn tất) + tạo hệ thống cá Koi bơi trên nền trang
+- **Ứng dụng/module:** `web/src/components/koi-canvas.tsx` (mới), `web/src/app/layout.tsx`, `web/src/app/page.tsx`, `web/src/components/home/museum-map-gl.tsx`, `web/src/components/home/video-section.tsx`
+- **Tác dụng:** Nền trang có 11 con cá Koi Canvas 2D (trắng/đỏ/vàng, 5 màu type) bơi ngẫu nhiên, đuôi vẫy, khi chuột lại gần cá hoảng sợ bơi chạy + tạo sóng ripple; sections đều trong suốt glass-panel (10% opacity) để thấy cá + blob glows xuyên qua
+- **Làm như thế nào:** Tạo `KoiCanvas` React component dùng Canvas 2D requestAnimationFrame loop: mỗi cá là struct Fish (x/y/angle/speed/scared/spots), vẽ bằng bezierCurveTo (body teardrop + clip + spot ellipses + 2 tail lobes + pectoral fins + dorsal fin + eye), logic flee khi dist < 160px, smooth turn via shortest-arc delta, ripple ring array; thêm `<KoiCanvas />` vào layout sau `<LiquidCanvas />`; đổi tất cả sections sang `.glass-panel` (rgba 10%) + xoá các per-section LiquidBg redundant
+
+---
+
 ## Phiên 2026-11-21 08:16 +07
 
 - **Thời gian:** Thứ Bảy 21/11/2026, 08:16 +07
@@ -609,3 +659,13 @@ _(Lúc dựng khung, dự án tạm đặt tên "MuseConnect" — đổi thành 
 - **Module/ứng dụng:** `web/src/components/home/video-section.tsx`, `web/src/components/home/ornament-assets.ts`, `web/src/app/page.tsx`, `web/public/video-poster.jpg`
 - **Tác dụng:** Trang chủ có thêm video section với khung viền pixel-art tím giống Colosseum World's Fair; thumbnail YouTube hiển thị ngay, iframe chỉ load khi click play (lite embed pattern — không cần YouTube API key, tốt cho performance)
 - **Làm như thế nào:** Extract 4 SVG data URI ornament tiles từ `colosseum-worldsfair-clone/index.html` (--wf-asset-1..4); lưu vào `ornament-assets.ts`; CSS `background-repeat: repeat-x/y` với `background-size` khớp viewBox SVG (212×66 cho top/bottom, 67×214 cho left/right); `VideoSection` component dùng `useState(playing)` — khi false hiện `<img>` thumbnail YouTube + nút play, khi true thay bằng `<iframe src="embed URL?autoplay=1">`; fallback `onError` cho maxresdefault → hqdefault
+
+---
+
+## Phiên 2026-11-22 02:29 +07
+
+- **Thời gian:** Chủ nhật 22/11/2026, 02:29 +07
+- **Làm việc gì:** Sửa hero section cuộn lên được thêm (scroll position không ở top); sửa buildings sáng lên khi hover bằng full-map overlay images; bỏ khung vuông nút CTA; xây dựng MuseumMapSection hoàn chỉnh với 6 building zones
+- **Module/ứng dụng:** `web/src/components/home/museum-map-section.tsx`, `web/src/components/home/intro/gallery-walkthrough-hero.tsx`, `web/public/map-art-*.webp` (6 files), `web/public/colosseum-map.webp`
+- **Tác dụng:** Hero luôn hiện ở scroll=0 (100svh tĩnh thay vì 300svh gallery animation); 6 buildings sáng lên đúng khi hover bằng full-map overlay technique (1456×1080 mỗi file, fade opacity); nút CTA không có khung vuông; map section hoạt động hoàn chỉnh với info panel slide-in animation
+- **Làm như thế nào:** `gallery-walkthrough-hero.tsx`: đổi `useState(() => !!sessionStorage.getItem(KEY))` → `useState(true)` để force skipGallery=true (root cause: sessionStorage trống ở incognito → skipGallery=false → 300svh → hero ở cuối scroll path); `museum-map-section.tsx`: mỗi building có 1 `<img>` overlay toàn bộ 1456×1080 (position:absolute, inset:0, objectFit:cover) opacity fade 0→1 khi active, plus 1 `<div>` hover zone với % coordinates; CTA dùng borderBottom thay vì border để bỏ khung; Python PIL để convert sprite sheet PNG → 6 full-map WebP (quality=82)

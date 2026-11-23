@@ -110,12 +110,23 @@ export function GalleryWalkthroughHero() {
   const titleRef = useRef<HTMLHeadingElement>(null)
   const [loadProgress, setLoadProgress] = useState(0)
   const [dismissed, setDismissed] = useState(false)
-  // Skip walkthrough if already seen this session; guests see it every new session
+  const [atFinale, setAtFinale] = useState(false)
+  const atFinaleRef = useRef(false)
+  const [collapsed, setCollapsed] = useState(false)
+  const collapseRef = useRef(false)
+  // Show walkthrough once per session; skip if already completed
   const [skipGallery] = useState(() => {
-    try { return !!sessionStorage.getItem(SESSION_KEY) } catch { return false }
+    try { return sessionStorage.getItem(SESSION_KEY) === "1" } catch { return false }
   })
 
   const finaleArt = ARTWORKS[ARTWORKS.length - 1]
+
+  function handleSkip() {
+    try { sessionStorage.setItem(SESSION_KEY, "1") } catch { /* ignore */ }
+    const section = sectionRef.current
+    if (!section) return
+    window.scrollTo({ top: section.offsetTop + section.offsetHeight - window.innerHeight, behavior: "instant" })
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -722,7 +733,7 @@ export function GalleryWalkthroughHero() {
       let locking = false
       const root = document.documentElement
       const onScroll = () => {
-        if (locking) return
+        if (collapseRef.current || locking) return
         const rect = section.getBoundingClientRect()
         const scrollable = Math.max(rect.height - window.innerHeight, 1)
         const rawP = Math.min(1, Math.max(0, -rect.top / scrollable))
@@ -785,7 +796,16 @@ export function GalleryWalkthroughHero() {
         }
 
         // mark session once fully at finale
-        if (p >= 0.99) { try { sessionStorage.setItem(SESSION_KEY, "1") } catch { /* ignore */ } }
+        if (p >= 0.99 && !atFinaleRef.current) {
+          atFinaleRef.current = true
+          setAtFinale(true)
+          try { sessionStorage.setItem(SESSION_KEY, "1") } catch { /* ignore */ }
+          setTimeout(() => {
+            collapseRef.current = true
+            setCollapsed(true)
+            window.scrollTo({ top: 0, behavior: "instant" })
+          }, 150)
+        }
 
         // hero projection
         const artObj = scene.getObjectByName(`artwork-${finaleArt.id}`)
@@ -850,13 +870,30 @@ export function GalleryWalkthroughHero() {
 
   return (
     <>
-      <section ref={sectionRef} className="gallery-journey" style={{ height: skipGallery ? "100svh" : "300svh" }} aria-labelledby="gallery-title">
+      <section ref={sectionRef} className="gallery-journey" style={{ height: (skipGallery || collapsed) ? "100svh" : "300svh" }} aria-labelledby="gallery-title">
         <div className="gallery-stage" ref={stageRef}>
           <div className="gallery-canvas-shell" aria-hidden="true">
             <canvas ref={canvasRef} />
           </div>
 
           <div className="gallery-exposure" aria-hidden="true" />
+
+          {!skipGallery && !atFinale && (
+            <button
+              onClick={handleSkip}
+              style={{
+                position: "absolute", top: 20, right: 24, zIndex: 50,
+                background: "rgba(0,0,0,0.38)", backdropFilter: "blur(8px)", WebkitBackdropFilter: "blur(8px)",
+                color: "rgba(255,255,255,0.82)", border: "1px solid rgba(255,255,255,0.18)",
+                borderRadius: 20, padding: "7px 18px", fontSize: "0.72rem",
+                fontFamily: "var(--font-mono, monospace)", letterSpacing: "0.12em",
+                cursor: "pointer", pointerEvents: "auto",
+              }}
+              aria-label="Bỏ qua giới thiệu"
+            >
+              SKIP ›
+            </button>
+          )}
 
           <div className="gallery-intro">
             <p className="gallery-intro__eyebrow">Smithsonian Institution · Washington, D.C.</p>

@@ -1,6 +1,9 @@
-import { Suspense } from "react"
+"use client"
+
+import { useState } from "react"
 import Link from "next/link"
-import { Menu } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Menu, ChevronDown } from "lucide-react"
 import { NAV } from "./nav"
 import { CartIcon } from "./cart-icon"
 import { AuthActions } from "./auth-actions"
@@ -37,35 +40,73 @@ function SmithsonianSeal({ size = 44 }: { size?: number }) {
   )
 }
 
-const LEFT_NAV = NAV.slice(0, 2)
-const RIGHT_NAV = NAV.slice(2)
+function NavDropdown({ navIndex }: { navIndex: number }) {
+  const [open, setOpen] = useState(false)
+  const path = usePathname()
+  const item = NAV[navIndex]
+
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button className="flex items-center gap-1 text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
+        {item.label}
+        <ChevronDown className={`size-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 pt-3">
+          <div className="rounded-xl border border-white/10 bg-[#08162b]/95 p-2 shadow-2xl backdrop-blur-xl">
+            {item.dropdown?.map((sub) => {
+              const active = path === sub.href || path.startsWith(sub.href + "/")
+              return (
+                <Link
+                  key={sub.href}
+                  href={sub.href}
+                  className={`flex flex-col gap-0.5 rounded-lg px-3 py-2.5 transition-colors duration-150 ${
+                    active ? "bg-[#d4af37]/15 text-[#d4af37]" : "text-stone-200 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 text-xs font-medium">
+                    {active && <span className="size-1.5 rounded-full bg-[#d4af37] shadow-[0_0_6px_#d4af37]" />}
+                    {sub.label}
+                  </span>
+                  {sub.desc && <span className="text-[0.68rem] text-stone-400">{sub.desc}</span>}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const RIGHT_NAV = NAV.slice(2) // Đặt vé, Cửa hàng
 
 export function SiteHeader() {
   return (
     <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
-      {/* 3-col grid: 1fr | seal | 1fr — both sides equal so seal stays dead-center */}
       <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-8"
         style={{ gridTemplateColumns: "1fr auto 1fr" }}>
 
-        {/* Left nav — right-aligned in col 1 */}
+        {/* Left nav: Bảo tàng ▾  Tham quan ▾ */}
         <nav className="hidden md:flex items-center justify-end gap-8 pr-8" aria-label="Chính">
-          {LEFT_NAV.map(n => (
-            <Link key={n.href} href={n.href}
-              className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
-              {n.label}
-            </Link>
-          ))}
+          <NavDropdown navIndex={0} />
+          <NavDropdown navIndex={1} />
         </nav>
 
-        {/* Seal — col 2 (auto width, truly centered) */}
+        {/* Seal */}
         <Link href="/" className="text-stone-300 hover:text-white transition-colors" aria-label="Sota — Trang chủ">
           <SmithsonianSeal size={38} />
         </Link>
 
-        {/* Right nav + utilities — col 3, left-aligned */}
+        {/* Right nav + utilities */}
         <div className="hidden md:flex items-center gap-8 pl-8">
           {RIGHT_NAV.map(n => (
-            <Link key={n.href} href={n.href}
+            <Link key={n.href + n.label} href={n.href}
               className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
               {n.label}
             </Link>
@@ -86,21 +127,28 @@ export function SiteHeader() {
           </summary>
           <div className="absolute right-0 top-12 w-64 rounded-xl border border-white/10 bg-[#08162b]/95 p-5 shadow-2xl backdrop-blur-xl">
             <nav className="flex flex-col gap-3">
-              {NAV.map(n => (
-                <Link
-                  key={n.href}
-                  href={n.href}
-                  className="text-sm text-stone-200 hover:text-white transition-colors"
-                >
-                  {n.label}
-                </Link>
-              ))}
+              {NAV.flatMap(n =>
+                n.dropdown
+                  ? [
+                      <span key={n.label} className="text-[0.65rem] uppercase tracking-widest text-stone-500 mt-2">{n.label}</span>,
+                      ...n.dropdown.map(sub => (
+                        <Link key={sub.href} href={sub.href}
+                          className="text-sm text-stone-300 hover:text-white transition-colors pl-3 border-l border-white/10">
+                          {sub.label}
+                        </Link>
+                      )),
+                    ]
+                  : [
+                      <Link key={n.href + n.label} href={n.href}
+                        className="text-sm text-stone-200 hover:text-white transition-colors">
+                        {n.label}
+                      </Link>,
+                    ]
+              )}
             </nav>
             <div className="mt-4 border-t border-white/10 pt-4">
-              <Link
-                href="/dat-ve"
-                className="flex items-center justify-center rounded-full bg-[#d4af37] py-2 text-xs font-semibold uppercase tracking-wider text-[#08162b] shadow-md hover:bg-[#e0be47]"
-              >
+              <Link href="/dat-ve"
+                className="flex items-center justify-center rounded-full bg-[#d4af37] py-2 text-xs font-semibold uppercase tracking-wider text-[#08162b] shadow-md hover:bg-[#e0be47]">
                 Đặt vé ngay
               </Link>
             </div>
