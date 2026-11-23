@@ -259,6 +259,11 @@ export function MuseumMapGL() {
       if (!disposed) { setLoaded(true); startLoop() }
     }
 
+    // Cache uniform locations once (getUniformLocation is an IPC call to GPU driver)
+    const uBaseTex  = gl.getUniformLocation(progBase,  "uTex")
+    const uLayerTex = gl.getUniformLocation(progLayer, "uTex")
+    const uGlow     = gl.getUniformLocation(progLayer, "uGlow")
+
     let lastT = 0
     function startLoop() {
       function frame(t: number) {
@@ -282,21 +287,21 @@ export function MuseumMapGL() {
         bindBuffer(gl, progBase, baseQuad)
         gl.activeTexture(gl.TEXTURE0)
         gl.bindTexture(gl.TEXTURE_2D, baseTex)
-        gl.uniform1i(gl.getUniformLocation(progBase, "uTex"), 0)
+        gl.uniform1i(uBaseTex, 0)
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
         // 2. Building layers with alpha blend
         gl.enable(gl.BLEND)
         gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
         gl.useProgram(progLayer)
-        gl.uniform1i(gl.getUniformLocation(progLayer, "uTex"), 0)
+        gl.uniform1i(uLayerTex, 0)
 
         BUILDINGS.forEach((b, i) => {
           const ld = layerData[i]
           if (!ld) return
           bindBuffer(gl, progLayer, ld.buf)
           gl.bindTexture(gl.TEXTURE_2D, ld.tex)
-          gl.uniform1f(gl.getUniformLocation(progLayer, "uGlow"), glowRef.current[b.slug] ?? 0)
+          gl.uniform1f(uGlow, glowRef.current[b.slug] ?? 0)
           gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
         })
 
@@ -305,8 +310,17 @@ export function MuseumMapGL() {
       rafId = requestAnimationFrame(frame)
     }
 
-    init()
-    return () => { disposed = true; cancelAnimationFrame(rafId) }
+    init().catch(() => { /* images failed to load — stay in loading state */ })
+    return () => {
+      disposed = true
+      cancelAnimationFrame(rafId)
+      // Free GPU resources explicitly to avoid leaking WebGL memory on remount
+      if (baseTex) gl.deleteTexture(baseTex)
+      gl.deleteBuffer(baseQuad)
+      gl.deleteProgram(progBase)
+      gl.deleteProgram(progLayer)
+      layerData.forEach(ld => { if (ld) { gl.deleteTexture(ld.tex); gl.deleteBuffer(ld.buf) } })
+    }
   }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {

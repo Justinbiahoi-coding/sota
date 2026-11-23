@@ -483,7 +483,9 @@ export function GalleryWalkthroughHero() {
 
       // ── marble floor (procedural, identical to DW) ────────
       const TILE = 4.6
+      const textures: T.Texture[] = []
       const marbleTex = new THREE.TextureLoader(manager).load("/gallery/marble-black-white.png")
+      textures.push(marbleTex)
       marbleTex.wrapS = THREE.RepeatWrapping
       marbleTex.wrapT = THREE.RepeatWrapping
       marbleTex.colorSpace = THREE.SRGBColorSpace
@@ -590,6 +592,7 @@ export function GalleryWalkthroughHero() {
 
       ARTWORKS.forEach((art) => {
         const tex = artLoader.load(art.image)
+        textures.push(tex)
         tex.colorSpace = THREE.SRGBColorSpace
         tex.anisotropy = 8
 
@@ -850,6 +853,7 @@ export function GalleryWalkthroughHero() {
         obs.disconnect()
         root.classList.remove("gallery-active")
         renderer.dispose()
+        textures.forEach(t => t.dispose())
         scene.traverse((obj) => {
           const mesh = obj as T.Mesh
           if (mesh.geometry) mesh.geometry.dispose()
