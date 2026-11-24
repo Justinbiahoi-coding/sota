@@ -120,8 +120,8 @@ export default function SearchPage() {
             className={cn(
               "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
               category === tab.key
-                ? "border-foreground bg-foreground text-background shadow-sm"
-                : "border-border bg-card text-muted-foreground hover:border-foreground/50 hover:text-foreground",
+                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
             )}
           >
             {tab.label}

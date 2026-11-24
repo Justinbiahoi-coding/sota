@@ -134,8 +134,8 @@ export default function ShopPage() {
             className={cn(
               "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
               view === "grid"
-                ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
-                : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60",
+                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
             )}
           >
             <LayoutGrid className="size-3.5" />
@@ -146,8 +146,8 @@ export default function ShopPage() {
             className={cn(
               "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
               view === "gallery"
-                ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
-                : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60",
+                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
             )}
           >
             <Boxes className="size-3.5" />
@@ -170,10 +170,10 @@ export default function ShopPage() {
                 key={cat.value}
                 onClick={() => setCategory(cat.value)}
                 className={cn(
-                  "placard rounded-full border px-4 py-2 text-xs transition-all duration-300",
+                  "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
                   category === cat.value
-                    ? "border-[#d4af37] bg-[#08162b] text-[#fbe396] font-semibold shadow-md"
-                    : "border-stone-300/80 bg-white/80 text-stone-600 hover:border-[#d4af37]/60 hover:text-stone-900",
+                    ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                    : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
                 )}
               >
                 {cat.label}

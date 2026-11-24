@@ -4,12 +4,12 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Check, ChevronRight, QrCode } from "lucide-react"
 import { api } from "@/lib/api/client"
-import type { TimeSlot } from "@/lib/api/types"
+import type { TimeSlot, TicketType, Museum as ApiMuseum } from "@/lib/api/types"
 import {
   formatPrice,
-  museums,
+  museums as initialMockMuseums,
   museumBySlug,
-  ticketSlotsByMuseum,
+  type Museum,
   type TicketSlot,
 } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
@@ -55,16 +55,65 @@ function QrPlaceholder({ value }: { value: string }) {
   )
 }
 
+const CANONICAL_SLOTS: Array<{ id: string; time: TimeSlot; remainingSpots: number }> = [
+  { id: "slot-09-11", time: "09:00-11:00", remainingSpots: 48 },
+  { id: "slot-11-13", time: "11:00-13:00", remainingSpots: 32 },
+  { id: "slot-14-16", time: "14:00-16:00", remainingSpots: 50 },
+  { id: "slot-16-18", time: "16:00-18:00", remainingSpots: 45 },
+]
+
+function formatVndOrCents(amount: number) {
+  if (amount === 0) return "Miễn phí"
+  if (amount >= 1000) {
+    return `${amount.toLocaleString("vi-VN")}₫`
+  }
+  return formatPrice(amount)
+}
+
 export default function DatVePage() {
   const [step, setStep] = useState<Step>(1)
+  const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
   const [selectedMuseum, setSelectedMuseum] = useState("")
+  const [liveTicketTypes, setLiveTicketTypes] = useState<TicketType[]>([])
   const [selectedDate, setSelectedDate] = useState("")
-  const [selectedSlot, setSelectedSlot] = useState<TicketSlot | null>(null)
+  const [selectedSlot, setSelectedSlot] = useState<{ id: string; time: TimeSlot; remainingSpots: number; price: number } | null>(null)
   const [adultQty, setAdultQty] = useState(1)
   const [childQty, setChildQty] = useState(0)
   const [bookingCode, setBookingCode] = useState("")
   const [invoiceNumber, setInvoiceNumber] = useState("")
   const [submitting, setSubmitting] = useState(false)
+
+  // 1. Fetch live museums from backend API with fallback to initialMockMuseums
+  useEffect(() => {
+    let active = true
+    async function loadMuseums() {
+      try {
+        const res = await api.museums.list({ limit: 20 })
+        if (active && res?.data && res.data.length > 0) {
+          const merged: Museum[] = res.data.map((dbM) => {
+            const fallback = museumBySlug(dbM.slug)
+            return {
+              id: dbM.id,
+              slug: dbM.slug,
+              name: dbM.name,
+              nameEn: fallback?.nameEn ?? dbM.name,
+              accent: fallback?.accent ?? "#d4af37",
+              opens: fallback?.opens ?? "10:00",
+              closes: fallback?.closes ?? "17:30",
+              image: fallback?.image ?? dbM.cover_image_path ?? "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=1200&q=80",
+              address: dbM.address ?? fallback?.address ?? "Washington, D.C.",
+              description: dbM.description ?? fallback?.description ?? "",
+            }
+          })
+          setLiveMuseums(merged)
+        }
+      } catch {
+        // Keep fallback museums
+      }
+    }
+    loadMuseums()
+    return () => { active = false }
+  }, [])
 
   // Pre-select museum from query param
   useEffect(() => {
@@ -75,12 +124,58 @@ export default function DatVePage() {
     }
   }, [])
 
-  const slots = selectedMuseum ? ticketSlotsByMuseum(selectedMuseum) : []
+  const currentMuseum = liveMuseums.find((m) => m.slug === selectedMuseum) ?? museumBySlug(selectedMuseum)
 
-  const museum = museumBySlug(selectedMuseum)
-  const totalAdult = selectedSlot ? selectedSlot.price * adultQty : 0
-  const totalChild = selectedSlot ? Math.round(selectedSlot.price * 0.5) * childQty : 0
+  // 2. Fetch live ticket types when a museum is selected
+  useEffect(() => {
+    const museumId = currentMuseum?.id
+    if (typeof museumId !== "string" || !museumId) {
+      setLiveTicketTypes([])
+      return
+    }
+    const targetId: string = museumId
+    let active = true
+    async function loadTicketTypes() {
+      try {
+        const res = await api.museums.ticketTypes(targetId)
+        if (active && res?.data && res.data.length > 0) {
+          setLiveTicketTypes(res.data)
+        } else if (active) {
+          setLiveTicketTypes([])
+        }
+      } catch {
+        if (active) setLiveTicketTypes([])
+      }
+    }
+    loadTicketTypes()
+    return () => { active = false }
+  }, [currentMuseum?.id])
+
+  // Resolve adult and child tiers from backend database records
+  const adultTier = liveTicketTypes.find(
+    (t) => t.is_available && (t.name.toLowerCase().includes("người lớn") || t.name.toLowerCase().includes("tiêu chuẩn") || t.name.toLowerCase().includes("standard") || t.name.toLowerCase().includes("adult"))
+  ) ?? liveTicketTypes.find((t) => t.is_available) ?? liveTicketTypes[0]
+
+  const childTier = liveTicketTypes.find(
+    (t) => t.is_available && (t.name.toLowerCase().includes("trẻ em") || t.name.toLowerCase().includes("child") || t.name.toLowerCase().includes("sinh viên") || t.name.toLowerCase().includes("student"))
+  ) ?? (liveTicketTypes.length > 1 ? liveTicketTypes[1] : adultTier)
+
+  // Compute live unit prices
+  const adultUnitPrice = adultTier ? Math.round(parseFloat(adultTier.price)) : (selectedSlot?.price ?? 0)
+  const childUnitPrice = childTier
+    ? Math.round(parseFloat(childTier.price))
+    : Math.round(adultUnitPrice * 0.5)
+
+  const totalAdult = adultUnitPrice * adultQty
+  const totalChild = childUnitPrice * childQty
   const grandTotal = totalAdult + totalChild
+
+  const slots = CANONICAL_SLOTS.map((s) => ({
+    id: s.id,
+    time: s.time,
+    price: adultUnitPrice,
+    remainingSpots: s.remainingSpots,
+  }))
 
   const minDate = "2026-11-19"
 
@@ -89,25 +184,45 @@ export default function DatVePage() {
     let code = ""
     let invoiceNo = ""
 
-    // Thử gọi Backend API nếu người dùng đã đăng nhập và backend hoạt động
+    const targetTimeSlot = (selectedSlot?.time as TimeSlot) || "09:00-11:00"
+
+    // Construct valid ticket order items referencing real database ticket_type_id
+    const orderItems: Array<{ ticket_type_id: string; quantity: number }> = []
+    const primaryTypeId = adultTier?.id || liveTicketTypes[0]?.id
+    const secondaryTypeId = childTier?.id || primaryTypeId
+
+    if (primaryTypeId && adultQty > 0) {
+      orderItems.push({ ticket_type_id: primaryTypeId, quantity: adultQty })
+    }
+    if (secondaryTypeId && childQty > 0) {
+      if (secondaryTypeId !== primaryTypeId) {
+        orderItems.push({ ticket_type_id: secondaryTypeId, quantity: childQty })
+      } else if (orderItems.length > 0) {
+        orderItems[0].quantity += childQty
+      } else {
+        orderItems.push({ ticket_type_id: secondaryTypeId, quantity: childQty })
+      }
+    }
+
+    // Try calling backend API if authenticated & backend online
     try {
-      const targetTimeSlot = (selectedSlot?.time as TimeSlot) || "09:00-11:00"
-      const res = await api.ticketOrders.create({
-        museum_id: museum?.id || "e58ed763-928c-4155-bee9-fdbaaadc15f3",
-        visit_date: selectedDate || "2026-11-25",
-        time_slot: targetTimeSlot,
-        items: [
-          { ticket_type_id: selectedSlot?.id || "mock-ticket-id", quantity: adultQty + childQty }
-        ]
-      })
-      if (res?.data?.entry_code) {
-        code = res.data.entry_code
+      const validMuseumId = currentMuseum?.id
+      if (validMuseumId && orderItems.length > 0) {
+        const res = await api.ticketOrders.create({
+          museum_id: validMuseumId,
+          visit_date: selectedDate || "2026-11-25",
+          time_slot: targetTimeSlot,
+          items: orderItems,
+        })
+        if (res?.data?.entry_code) {
+          code = res.data.entry_code
+        }
+        if (res?.data?.invoice?.invoice_number) {
+          invoiceNo = res.data.invoice.invoice_number
+        }
       }
-      if (res?.data?.invoice?.invoice_number) {
-        invoiceNo = res.data.invoice.invoice_number
-      }
-    } catch {
-      // Fallback tự động khi chạy offline/chưa đăng nhập
+    } catch (err) {
+      console.warn("Backend ticket order API error, using resilient client fallback:", err)
       code = randomCode()
       invoiceNo = `TKT-${Math.floor(100000 + Math.random() * 900000)}`
     }
@@ -118,12 +233,12 @@ export default function DatVePage() {
     setBookingCode(code)
     setInvoiceNumber(invoiceNo)
 
-    // Lưu vào localStorage cho /tai-khoan
+    // Save to localStorage for /tai-khoan portal
     const existing = JSON.parse(localStorage.getItem("sota_tickets") ?? "[]")
     existing.push({
       code,
       invoice: invoiceNo,
-      museum: museum?.name,
+      museum: currentMuseum?.name,
       date: selectedDate,
       time: selectedSlot?.time,
       adults: adultQty,
@@ -187,15 +302,15 @@ export default function DatVePage() {
         <div>
           <p className="mb-5 text-sm text-stone-300">Chọn một bảo tàng bạn muốn ghé thăm</p>
           <div className="grid gap-3 sm:grid-cols-2">
-            {museums.map((m) => (
+            {liveMuseums.map((m) => (
               <SpotlightCard
                 key={m.slug}
                 onClick={() => setSelectedMuseum(m.slug)}
                 className={cn(
                   "cursor-pointer flex flex-col items-start p-5 text-left transition-all duration-300 bg-card",
                   selectedMuseum === m.slug
-                    ? "border-foreground ring-2 ring-foreground/20 shadow-md"
-                    : "border-border hover:border-foreground/40",
+                    ? "border-[#d4af37] ring-2 ring-[#d4af37]/40 bg-[#08162b] shadow-[0_0_16px_rgba(212,175,55,0.25)]"
+                    : "border-border hover:border-[#d4af37]/50",
                 )}
               >
                 <div className="flex w-full items-center justify-between">
@@ -226,11 +341,11 @@ export default function DatVePage() {
       )}
 
       {/* Step 2: Date & Slot */}
-      {step === 2 && museum && (
+      {step === 2 && currentMuseum && (
         <div>
           <p className="mb-1 text-sm text-stone-400">Bảo tàng đã chọn</p>
           <p className="mb-6 font-heading text-2xl text-foreground font-light">
-            {museum.name}
+            {currentMuseum.name}
           </p>
 
           <label className="mb-6 block">
@@ -263,7 +378,7 @@ export default function DatVePage() {
                     )}
                   >
                     <p className="font-heading text-lg font-light">{slot.time}</p>
-                    <p className="placard mt-1 text-xs text-[#fbe396] font-semibold">{formatPrice(slot.price)}</p>
+                    <p className="placard mt-1 text-xs text-[#fbe396] font-semibold">{formatVndOrCents(slot.price)}</p>
                     <p className="mt-1 text-[0.65rem] opacity-75">
                       Còn {slot.remainingSpots} chỗ
                     </p>
@@ -291,23 +406,23 @@ export default function DatVePage() {
       )}
 
       {/* Step 3: Quantity */}
-      {step === 3 && museum && selectedSlot && (
+      {step === 3 && currentMuseum && selectedSlot && (
         <div>
-          <p className="mb-6 text-sm text-muted-foreground">
-            {museum.name} · {selectedDate} · {selectedSlot.time}
+          <p className="mb-6 text-sm text-stone-300">
+            {currentMuseum.name} · {selectedDate} · {selectedSlot.time}
           </p>
 
           <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
             <QtyRow
-              label="Vé người lớn"
-              sub={formatPrice(selectedSlot.price)}
+              label={adultTier?.name ? `${adultTier.name} (Người lớn)` : "Vé người lớn"}
+              sub={formatVndOrCents(adultUnitPrice)}
               qty={adultQty}
               min={1}
               onChange={setAdultQty}
             />
             <QtyRow
-              label="Vé trẻ em (dưới 12 tuổi)"
-              sub={formatPrice(Math.round(selectedSlot.price * 0.5))}
+              label={childTier?.name ? `${childTier.name} (Trẻ em)` : "Vé trẻ em (dưới 12 tuổi)"}
+              sub={formatVndOrCents(childUnitPrice)}
               qty={childQty}
               min={0}
               onChange={setChildQty}
@@ -315,8 +430,8 @@ export default function DatVePage() {
 
             <div className="mt-6 border-t border-border pt-5">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm text-muted-foreground font-medium">Tổng thanh toán dự kiến</span>
-                <span className="font-heading text-3xl font-light text-museum">{formatPrice(grandTotal)}</span>
+                <span className="text-sm text-stone-300 font-medium">Tổng thanh toán dự kiến</span>
+                <span className="font-heading text-3xl font-light text-museum">{formatVndOrCents(grandTotal)}</span>
               </div>
             </div>
           </div>
@@ -343,7 +458,7 @@ export default function DatVePage() {
       )}
 
       {/* Step 4: Confirmation + QR */}
-      {step === 4 && museum && selectedSlot && (
+      {step === 4 && currentMuseum && selectedSlot && (
         <div className="text-center">
           <span className="inline-flex size-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-50 text-emerald-800 shadow-sm">
             <Check className="size-8" />
@@ -364,13 +479,13 @@ export default function DatVePage() {
           </SpotlightCard>
 
           <div className="mt-6 space-y-1 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">{museum.name}</p>
+            <p className="font-medium text-foreground">{currentMuseum.name}</p>
             <p>
               {selectedDate} · {selectedSlot.time}
             </p>
             <p>
-              {adultQty} người lớn{childQty > 0 ? ` · ${childQty} trẻ em` : ""} · Tổng{" "}
-              {formatPrice(grandTotal)}
+              {adultQty} {adultTier?.name ?? "người lớn"}{childQty > 0 ? ` · ${childQty} ${childTier?.name ?? "trẻ em"}` : ""} · Tổng{" "}
+              {formatVndOrCents(grandTotal)}
             </p>
           </div>
 
@@ -405,19 +520,19 @@ function QtyRow({
     <div className="flex items-center justify-between border-b border-border py-4 last:border-b-0">
       <div>
         <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="placard text-muted-foreground">{sub}</p>
+        <p className="placard text-[#fbe396] font-semibold">{sub}</p>
       </div>
       <div className="flex items-center gap-3">
         <button
           onClick={() => onChange(Math.max(min, qty - 1))}
-          className="flex size-8 items-center justify-center rounded-full border border-border bg-card text-lg text-foreground hover:bg-muted transition-colors active:scale-90"
+          className="flex size-8 items-center justify-center rounded-full border border-[#d4af37]/35 bg-[#08162b] text-lg text-foreground hover:border-[#d4af37] hover:bg-[#0c2242] transition-colors active:scale-90"
         >
           −
         </button>
         <span className="w-5 text-center tabular-nums font-mono text-sm font-semibold">{qty}</span>
         <button
           onClick={() => onChange(qty + 1)}
-          className="flex size-8 items-center justify-center rounded-full border border-border bg-card text-lg text-foreground hover:bg-muted transition-colors active:scale-90"
+          className="flex size-8 items-center justify-center rounded-full border border-[#d4af37]/35 bg-[#08162b] text-lg text-foreground hover:border-[#d4af37] hover:bg-[#0c2242] transition-colors active:scale-90"
         >
           +
         </button>
