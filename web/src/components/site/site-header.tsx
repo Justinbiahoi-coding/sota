@@ -87,14 +87,13 @@ function NavDropdown({ navIndex }: { navIndex: number }) {
 const RIGHT_NAV = NAV.slice(2) // Đặt vé, Cửa hàng
 
 export function SiteHeader() {
-  const pathname = usePathname()
-  if (pathname?.startsWith("/admin")) return null
-
   return (
-    <header className="sticky top-0 z-40 border-b border-[#d4af37]/20 bg-[#08162b]/95 backdrop-blur-md text-[#f8f6f0] shadow-md transition-colors duration-300">
-      <div className="mx-auto flex h-16 max-w-[1560px] items-center justify-between gap-6 px-6 md:px-12">
-        {/* Left nav links */}
-        <nav className="hidden md:flex items-center gap-8 pr-8">
+    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
+      <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-8"
+        style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+
+        {/* Left nav: Bảo tàng ▾  Tham quan ▾ */}
+        <nav className="hidden md:flex items-center justify-end gap-8 pr-8" aria-label="Chính">
           <NavDropdown navIndex={0} />
           <NavDropdown navIndex={1} />
         </nav>
