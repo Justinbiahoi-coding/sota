@@ -1,18 +1,15 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useMemo, useCallback, useSyncExternalStore } from "react"
 import Link from "next/link"
 import {
-  adminStore,
   formatVND,
   getAdminDay,
   ADMIN_STATUS_LABELS,
-  type AdminRole,
   type AdminKind,
-  type AdminItem,
-  type AdminOrder,
-  type AdminAsset,
 } from "@/lib/mock-data"
+import { AdminBackendStore, type ConnectedOrder } from "./admin-api"
+import { AdminAccess } from "./admin-access"
 import { cn } from "@/lib/utils"
 
 type PageId =
@@ -42,8 +39,10 @@ const NAV_ITEMS: { id: PageId; label: string }[] = [
 
 export default function AdminPortalPage() {
   // Session states matching the original museum-admin logic
-  const [role, setRole] = useState<AdminRole>(() => adminStore.role)
-  const [museumId, setMuseumId] = useState<string>("m1")
+  const [adminStore] = useState(() => new AdminBackendStore())
+  useSyncExternalStore(adminStore.subscribe, adminStore.snapshot, adminStore.snapshot)
+  const role = adminStore.role
+  const museumId = adminStore.selectedMuseum
   const [page, setPage] = useState<PageId>("home")
   const [version, setVersion] = useState(0)
 
@@ -57,16 +56,21 @@ export default function AdminPortalPage() {
   // Toast notice and Modals
   const [notice, setNotice] = useState<string | null>(null)
   const [modalType, setModalType] = useState<
-    "edit-item" | "import-sample" | "order-detail" | "redeem-ticket" | "upload-media" | "asset-detail" | "create-museum" | null
+    "edit-item" | "order-detail" | "redeem-ticket" | "upload-media" | "asset-detail" | "create-museum" | null
   >(null)
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null)
   const [modalError, setModalError] = useState<string | null>(null)
 
-  // Sync role to global store
   useEffect(() => {
-    adminStore.role = role
-    setVersion((v) => v + 1)
-  }, [role])
+    void adminStore.initialize()
+    const unsubscribe = adminStore.watchAuth()
+    const unsubscribeStore = adminStore.subscribe(() => {
+      if (!adminStore.profile) { setModalType(null); setSelectedItemId(null) }
+    })
+    const refresh = () => { void adminStore.revalidateAccess() }
+    window.addEventListener("focus", refresh)
+    return () => { unsubscribe(); unsubscribeStore(); window.removeEventListener("focus", refresh) }
+  }, [adminStore])
 
   const showNotice = useCallback((msg: string) => {
     setNotice(msg)
@@ -78,41 +82,17 @@ export default function AdminPortalPage() {
   const accessibleMuseums = useMemo(() => {
     return adminStore.museums()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [role, version])
-
-  useEffect(() => {
-    if (accessibleMuseums.length > 0 && !accessibleMuseums.some((m) => m.id === museumId)) {
-      setMuseumId(accessibleMuseums[0].id)
-    }
-  }, [accessibleMuseums, museumId])
+  }, [role, version, adminStore, adminStore.items])
 
   const activeMuseum = useMemo(() => {
     return accessibleMuseums.find((m) => m.id === museumId) || null
   }, [accessibleMuseums, museumId])
 
-  const handleLogout = () => {
-    setRole("anon")
-    setMuseumId("")
-    setPage("home")
-    setModalType(null)
-    setVersion((v) => v + 1)
-    showNotice("Đã đăng xuất khỏi phiên làm việc.")
+  const handleLogout = async () => {
+    try { await adminStore.signOut(); setPage("home"); setModalType(null) }
+    catch (error) { showNotice(error instanceof Error ? error.message : "Không đăng xuất được.") }
   }
-
-  const handleResetFixtures = () => {
-    adminStore.reset()
-    setRole("admin_user")
-    setMuseumId("m1")
-    setPage("home")
-    setFilter("")
-    setVisitFilter("")
-    setReportFrom(getAdminDay(-29))
-    setReportTo(getAdminDay())
-    setReportExhibit("")
-    setModalType(null)
-    setVersion((v) => v + 1)
-    showNotice("Đã khôi phục dữ liệu mẫu ban đầu.")
-  }
+  const handleRefresh = () => { setModalType(null); void adminStore.initialize() }
 
   // Pill badge helper matching museum-admin/style.css
   const renderPill = (status: string) => {
@@ -132,105 +112,17 @@ export default function AdminPortalPage() {
     )
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // SCENARIO A: LOGIN / ACCESS GATEWAY (matching login() in app.js)
-  // ───────────────────────────────────────────────────────────────────────────
-  if (role === "anon" || !accessibleMuseums.length) {
-    const isDenied = role !== "anon" && !accessibleMuseums.length
-
-    return (
-      <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] font-sans flex flex-col justify-between p-4">
-        {/* Notice toast */}
-        {notice && (
-          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded text-sm max-w-[92vw]">
-            {notice}
-          </div>
-        )}
-
-        <div className="w-full max-w-[610px] mx-auto my-[9vh] bg-white border border-[#d6ddd3] border-t-[6px] border-t-[#184c40] rounded-md p-6 sm:p-12">
-          {/* Brand */}
-          <div className="font-serif text-[#184c40] text-[43px] leading-[0.95] tracking-tight mb-2">
-            SOTA
-            <small className="block font-sans font-semibold text-[10px] tracking-[1.6px] mt-2 text-[#53685f] uppercase">
-              QUẢN TRỊ BẢO TÀNG
-            </small>
-          </div>
-
-          <h1 className="font-serif text-[clamp(2.3rem,4vw,3.5rem)] leading-[1.12] tracking-tight mt-8 mb-2.5">
-            Vào trang quản trị
-          </h1>
-          <p className="text-[#53685f] text-sm leading-relaxed mb-6">
-            Chọn tài khoản mẫu để thử quyền truy cập. Dữ liệu chỉ tồn tại trong lần mở trang này.
-          </p>
-
-          {isDenied && (
-            <div className="p-3 mb-5 bg-[#fee2e2] text-[#991b1b] border border-[#fecaca] rounded text-sm font-medium">
-              Tài khoản này không có quyền quản lý bảo tàng.
-            </div>
-          )}
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              const fd = new FormData(e.currentTarget)
-              const selectedRole = fd.get("role") as AdminRole
-              setRole(selectedRole)
-              if (selectedRole === "normal_user") {
-                showNotice("Khách tham quan: Không có quyền truy cập.")
-              } else {
-                setMuseumId("m1")
-                showNotice("Đã đăng nhập không gian quản trị.")
-              }
-            }}
-            className="grid gap-4"
-          >
-            <label className="grid gap-1.5 font-semibold text-[0.91rem]">
-              Tài khoản mô phỏng
-              <select
-                name="role"
-                defaultValue={role === "anon" ? "admin_user" : role}
-                className="border border-[#a8b6aa] rounded px-3 py-2 text-sm bg-white text-[#202d2a] focus:outline-[#bb763c]"
-              >
-                <option value="admin_user">Quản trị bảo tàng (admin_user)</option>
-                <option value="super_admin">Quản trị hệ thống (super_admin)</option>
-                <option value="normal_user">Khách tham quan (normal_user - từ chối)</option>
-              </select>
-            </label>
-
-            <button
-              type="submit"
-              className="mt-2 bg-[#184c40] hover:bg-[#143e34] text-white font-semibold py-2.5 px-4 rounded text-sm cursor-pointer"
-            >
-              Tiếp tục
-            </button>
-          </form>
-
-          <div className="mt-8 pt-6 border-t border-[#d6ddd3] flex items-center justify-between text-xs text-[#53685f]">
-            <Link href="/" className="hover:text-[#184c40] font-medium">
-              ← Về trang khách tham quan
-            </Link>
-            <button
-              type="button"
-              onClick={handleResetFixtures}
-              className="text-[#53685f] hover:text-[#184c40] cursor-pointer"
-            >
-              Khôi phục mẫu
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center text-xs text-[#53685f]">
-          Sota Museum Administration · Phong cách White Cube Gallery & Green Figma Prototype
-        </div>
-      </div>
-    )
+  if (!adminStore.ready || adminStore.loading) {
+    return <div className="p-10 bg-[#f7f6ef]" role="status">Đang tải quyền và dữ liệu quản trị…</div>
+  }
+  if (!adminStore.profile || !accessibleMuseums.length) {
+    return <AdminAccess store={adminStore} />
   }
 
-  // ───────────────────────────────────────────────────────────────────────────
-  // SCENARIO B: MAIN ADMIN SHELL (matching original .shell layout in style.css)
-  // ───────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] font-sans">
+      {adminStore.saving && <div className="fixed inset-0 z-[100] bg-white/60 flex items-center justify-center" role="status">Đang xử lý…</div>}
+      {adminStore.error && <p role="alert" className="p-4 bg-red-50 text-red-800">{adminStore.error} <button onClick={handleRefresh}>Thử lại</button></p>}
       {/* Notice Toast */}
       {notice && (
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-[#203e33] text-white px-5 py-2.5 rounded text-sm max-w-[92vw]">
@@ -259,7 +151,7 @@ export default function AdminPortalPage() {
                   <button
                     key={item.id}
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setPage(item.id)
                       setFilter("")
                       setVisitFilter("")
@@ -312,7 +204,8 @@ export default function AdminPortalPage() {
                   id="museum-switch"
                   value={museumId}
                   onChange={(e) => {
-                    setMuseumId(e.target.value)
+                    setModalType(null)
+                    void adminStore.selectMuseum(e.target.value)
                     setPage("home")
                     setFilter("")
                     setVisitFilter("")
@@ -330,14 +223,14 @@ export default function AdminPortalPage() {
               <div className="flex items-center gap-4 text-xs font-semibold">
                 <span className="inline-flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#587e54]" />
-                  Phiên mô phỏng
+                  Đã kết nối Express
                 </span>
                 <button
                   type="button"
-                  onClick={handleResetFixtures}
+                  onClick={handleRefresh}
                   className="bg-white hover:bg-[#edf2eb] text-[#184c40] border border-[#d6ddd3] px-2.5 py-1 rounded text-xs cursor-pointer font-semibold"
                 >
-                  Khôi phục mẫu
+                  Tải lại dữ liệu
                 </button>
               </div>
             </div>
@@ -355,7 +248,7 @@ export default function AdminPortalPage() {
                     {role === "super_admin" && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedItemId(null)
                           setModalType("create-museum")
                         }}
@@ -366,7 +259,7 @@ export default function AdminPortalPage() {
                     )}
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedItemId(museumId)
                         setModalType("edit-item")
                       }}
@@ -379,16 +272,16 @@ export default function AdminPortalPage() {
 
                 {page === "artifact" && (
                   <>
-                    <button
+                    <button disabled title="Backend chưa có API nhập Smithsonian"
                       type="button"
-                      onClick={() => setModalType("import-sample")}
+
                       className="bg-white hover:bg-[#edf2eb] text-[#184c40] border border-[#d6ddd3] px-3.5 py-1.5 rounded text-xs font-semibold cursor-pointer"
                     >
                       Nhập mẫu Smithsonian
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setSelectedItemId(null)
                         setModalType("edit-item")
                       }}
@@ -400,9 +293,9 @@ export default function AdminPortalPage() {
                 )}
 
                 {page === "exhibit" && (
-                  <button
+                  <button disabled title="Backend chưa có API triển lãm"
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedItemId(null)
                       setModalType("edit-item")
                     }}
@@ -415,7 +308,7 @@ export default function AdminPortalPage() {
                 {page === "ticket" && (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedItemId(null)
                       setModalType("edit-item")
                     }}
@@ -438,7 +331,7 @@ export default function AdminPortalPage() {
                 {page === "product" && (
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setSelectedItemId(null)
                       setModalType("edit-item")
                     }}
@@ -464,6 +357,10 @@ export default function AdminPortalPage() {
                 PAGE BODIES (matching app.js home, catalog, orders, media, report)
             ────────────────────────────────────────────────────────────────── */}
 
+            {page === "exhibit" && <p className="p-4 border">Backend chưa có API quản lý triển lãm.</p>}
+            {page === "artifact" && <p className="mb-4 text-sm">Nhập Smithsonian đang chờ API backend.</p>}
+            {page === "media" && <p className="mb-4 text-sm">Backend chưa có API liệt kê media quản trị. Danh sách này hiển thị các tệp được tải lên trong phiên hiện tại.</p>}
+            {(page === "home" || page === "report") && <p className="mb-4 text-sm">Tổng hợp vé từ đơn hàng Express theo ngày tạo đơn (Asia/Ho_Chi_Minh). Thanh toán được backend mô phỏng.</p>}
             {/* 1. TỔNG QUAN (HOME) */}
             {page === "home" && activeMuseum && (
               <div className="space-y-6">
@@ -587,7 +484,7 @@ export default function AdminPortalPage() {
                         {page !== "museum" && (
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedItemId(item.id)
                               setModalType("edit-item")
                             }}
@@ -675,7 +572,7 @@ export default function AdminPortalPage() {
                       <div className="flex-1 min-w-[140px] space-y-1">
                         <h3 className="text-[1.06rem] font-bold text-[#202d2a]">{o.code || o.id}</h3>
                         <p className="text-xs text-[#53685f]">
-                          {page === "gate" ? `${o.visit} · ${o.slot}` : o.label} · {formatVND(o.qty * o.price + o.fee)}
+                          {page === "gate" ? `${o.visit} · ${o.slot}` : o.label} · {formatVND(Number(o.total))}
                         </p>
                       </div>
 
@@ -683,9 +580,14 @@ export default function AdminPortalPage() {
                         {renderPill(o.status)}
                         <button
                           type="button"
-                          onClick={() => {
-                            setSelectedItemId(o.id)
-                            setModalType("order-detail")
+                          onClick={async () => {
+                            try {
+                              await adminStore.details(museumId, o.id)
+                              setSelectedItemId(o.id)
+                              setModalType("order-detail")
+                            } catch (error) {
+                              showNotice(error instanceof Error ? error.message : "Cannot load order details.")
+                            }
                           }}
                           className="bg-white hover:bg-[#edf2eb] text-[#184c40] border border-[#d6ddd3] py-1.5 px-3 rounded text-xs font-semibold cursor-pointer"
                         >
@@ -731,7 +633,7 @@ export default function AdminPortalPage() {
 
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setSelectedItemId(a.id)
                           setModalType("asset-detail")
                         }}
@@ -756,7 +658,7 @@ export default function AdminPortalPage() {
               <div className="space-y-5">
                 {/* Tools form */}
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
                     // Triggers re-render
                     setVersion((v) => v + 1)
@@ -789,6 +691,7 @@ export default function AdminPortalPage() {
                     <span>Triển lãm</span>
                     <select
                       value={reportExhibit}
+                      disabled title="Backend chưa hỗ trợ thống kê triển lãm"
                       onChange={(e) => setReportExhibit(e.target.value)}
                       className="border border-[#a8b6aa] rounded px-2.5 py-1.5 bg-white text-xs text-[#202d2a]"
                     >
@@ -814,7 +717,7 @@ export default function AdminPortalPage() {
                 </p>
 
                 {(() => {
-                  let r = { rows: [] as AdminOrder[], qty: 0, total: 0 }
+                  let r = { rows: [] as ConnectedOrder[], qty: 0, total: 0 }
                   try {
                     r = adminStore.report(museumId, reportFrom, reportTo, reportExhibit)
                   } catch (err: unknown) {
@@ -829,7 +732,7 @@ export default function AdminPortalPage() {
                   for (const o of r.rows) {
                     const v = daily.get(o.date) || [0, 0]
                     v[0] += o.qty
-                    v[1] += o.qty * o.price
+                    v[1] += Number(o.total)
                     daily.set(o.date, v)
                   }
                   const maxVal = Math.max(1, ...Array.from(daily.values()).map((v) => v[0]))
@@ -932,7 +835,7 @@ export default function AdminPortalPage() {
                 </h2>
 
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
                     setModalError(null)
                     const f = new FormData(e.currentTarget)
@@ -963,21 +866,18 @@ export default function AdminPortalPage() {
                       fields.description = String(f.get("description") || "").trim()
                     }
 
-                    const links = f.getAll("links").map(String)
+
 
                     try {
-                      const updated = adminStore.save(
+                      await adminStore.save(
                         museumId,
                         kind,
                         item ? item.id : "",
                         name,
                         status,
-                        fields,
-                        links
+                        fields
                       )
-                      if (kind === "museum" && !item) {
-                        setMuseumId(updated.id)
-                      }
+
                       setVersion((v) => v + 1)
                       setModalType(null)
                       showNotice(`Đã lưu ${name}.`)
@@ -1113,7 +1013,7 @@ export default function AdminPortalPage() {
                         name="price"
                         type="number"
                         min="0"
-                        step="1000"
+                        step="0.01"
                         required
                         defaultValue={item?.fields.price || "60000"}
                         className="border border-[#a8b6aa] rounded px-2.5 py-1.5 bg-white text-sm font-mono"
@@ -1140,7 +1040,7 @@ export default function AdminPortalPage() {
                             name="price"
                             type="number"
                             min="0"
-                            step="1000"
+                            step="0.01"
                             required
                             defaultValue={item?.fields.price || "45000"}
                             className="border border-[#a8b6aa] rounded px-2.5 py-1.5 bg-white text-sm font-mono"
@@ -1211,7 +1111,7 @@ export default function AdminPortalPage() {
                   <footer className="flex items-center justify-end gap-2 pt-3 border-t border-[#d6ddd3]">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         setModalType(null)
                         setModalError(null)
                       }}
@@ -1233,69 +1133,6 @@ export default function AdminPortalPage() {
         </div>
       )}
 
-      {/* MODAL: NHẬP MẪU SMITHSONIAN */}
-      {modalType === "import-sample" && (
-        <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
-          <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
-            <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Nhập mẫu Smithsonian</h2>
-            <p className="text-[#53685f] text-xs leading-relaxed mb-4">
-              Dữ liệu giả lập, dùng để kiểm tra mã nguồn trùng và quyền sử dụng.
-            </p>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                const fd = new FormData(e.currentTarget)
-                const count = Number(fd.get("count") || 2)
-                try {
-                  const r = adminStore.importSample(museumId, count)
-                  setVersion((v) => v + 1)
-                  setModalType(null)
-                  showNotice(`Đã nhập ${r.added} · Bỏ qua ${r.skipped} · Lỗi 0`)
-                } catch (err: unknown) {
-                  setModalError(err instanceof Error ? err.message : String(err))
-                }
-              }}
-              className="grid gap-3.5"
-            >
-              <label className="grid gap-1 font-semibold text-[0.91rem]">
-                Số hiện vật
-                <select
-                  name="count"
-                  className="border border-[#a8b6aa] rounded px-2.5 py-1.5 bg-white text-sm"
-                >
-                  <option value="2">2</option>
-                  <option value="1">1</option>
-                </select>
-              </label>
-
-              {modalError && (
-                <div className="text-[#9c3026] text-xs font-semibold">{modalError}</div>
-              )}
-
-              <footer className="flex items-center justify-end gap-2 pt-3 border-t border-[#d6ddd3]">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalType(null)
-                    setModalError(null)
-                  }}
-                  className="bg-white hover:bg-[#edf2eb] text-[#184c40] border border-[#d6ddd3] px-3.5 py-1.5 rounded text-xs font-semibold cursor-pointer"
-                >
-                  Đóng
-                </button>
-                <button
-                  type="submit"
-                  className="bg-[#184c40] hover:bg-[#143e34] text-white px-4 py-1.5 rounded text-xs font-semibold cursor-pointer"
-                >
-                  Nhập mẫu
-                </button>
-              </footer>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* MODAL: SOÁT VÉ VÀO CỬA */}
       {modalType === "redeem-ticket" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
@@ -1303,12 +1140,12 @@ export default function AdminPortalPage() {
             <h2 className="font-serif text-[1.85rem] leading-tight mb-3 font-normal">Soát vé vào cửa</h2>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
                 const fd = new FormData(e.currentTarget)
                 const code = String(fd.get("code") || "").trim()
                 try {
-                  adminStore.redeem(museumId, code)
+                  await adminStore.redeem(museumId, code)
                   setVersion((v) => v + 1)
                   setModalType(null)
                   showNotice("Đã ghi nhận vào cửa.")
@@ -1336,7 +1173,7 @@ export default function AdminPortalPage() {
               <footer className="flex items-center justify-end gap-2 pt-3 border-t border-[#d6ddd3]">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     setModalType(null)
                     setModalError(null)
                   }}
@@ -1377,7 +1214,9 @@ export default function AdminPortalPage() {
 
                 <div className="text-sm space-y-1 text-[#202d2a]">
                   <p>
-                    {o.label} × {o.qty} · {formatVND(o.price)}
+                    {o.lines.map((line, index) => (
+                      <span className="block" key={index}>{line.name} × {line.quantity} · {formatVND(Number(line.price))} = {formatVND(Number(line.total))}</span>
+                    ))}
                   </p>
                   {o.kind === "ticket" ? (
                     <p className="text-[#53685f]">Ngày tham quan · {o.visit} {o.slot}</p>
@@ -1385,9 +1224,10 @@ export default function AdminPortalPage() {
                     <p className="text-[#53685f]">Phí giao hàng · {formatVND(o.fee)}</p>
                   )}
                   <p className="font-semibold">
-                    {o.paid ? "Đã thanh toán mô phỏng" : "Chưa thanh toán"} · {formatVND(o.qty * o.price + o.fee)}
+                    {o.paid ? "Đã thanh toán mô phỏng" : "Chưa thanh toán"} · {formatVND(Number(o.total))}
                   </p>
-                  {o.paid && <p className="text-xs text-[#53685f]">Hóa đơn chỉ đọc · {o.id}</p>}
+                  {o.invoiceNumber && <p className="text-xs text-[#53685f]">Hóa đơn chỉ đọc · {o.invoiceNumber}</p>}
+                  {o.shipping && <p>{o.shipping}</p>}
                   {o.usedAt && (
                     <p className="text-xs text-[#184c40] font-medium">
                       Đã soát · {new Date(o.usedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })}
@@ -1402,7 +1242,7 @@ export default function AdminPortalPage() {
                 <div className="flex items-center justify-between gap-2 pt-4 border-t border-[#d6ddd3] flex-wrap">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       setModalType(null)
                       setModalError(null)
                     }}
@@ -1415,9 +1255,9 @@ export default function AdminPortalPage() {
                     {canCancel && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           try {
-                            adminStore.advance(museumId, o.id, "cancelled")
+                            await adminStore.advance(museumId, o.id, "cancelled")
                             setVersion((v) => v + 1)
                             setModalType(null)
                             showNotice("Đã cập nhật đơn.")
@@ -1434,9 +1274,9 @@ export default function AdminPortalPage() {
                     {next && (
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           try {
-                            adminStore.advance(museumId, o.id, next)
+                            await adminStore.advance(museumId, o.id, next)
                             setVersion((v) => v + 1)
                             setModalType(null)
                             showNotice("Đã cập nhật đơn.")
@@ -1461,16 +1301,16 @@ export default function AdminPortalPage() {
       {modalType === "upload-media" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
           <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
-            <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Thêm tệp mô phỏng</h2>
+            <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Thêm tệp</h2>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault()
                 const fd = new FormData(e.currentTarget)
                 const target = String(fd.get("target") || "")
                 const file = fd.get("file") as File
                 try {
-                  adminStore.upload(museumId, target, file)
+                  await adminStore.upload(museumId, target, file)
                   setVersion((v) => v + 1)
                   setModalType(null)
                   showNotice("Đã thêm tệp.")
@@ -1510,7 +1350,7 @@ export default function AdminPortalPage() {
               </label>
 
               <p className="text-[#53685f] text-xs">
-                Ảnh tối đa 10 MB, video tối đa 50 MB. Tệp chỉ được xem trong phiên này.
+                Ảnh tối đa 10 MB, video tối đa 10 MB. Tệp được tải lên qua Express.
               </p>
 
               {modalError && (
@@ -1520,7 +1360,7 @@ export default function AdminPortalPage() {
               <footer className="flex items-center justify-end gap-2 pt-3 border-t border-[#d6ddd3]">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     setModalType(null)
                     setModalError(null)
                   }}
@@ -1561,13 +1401,13 @@ export default function AdminPortalPage() {
                 </div>
 
                 <form
-                  onSubmit={(e) => {
+                  onSubmit={async (e) => {
                     e.preventDefault()
                     const fd = new FormData(e.currentTarget)
                     const seq = Number(fd.get("sequence"))
                     const isPrimary = fd.has("primary")
                     try {
-                      adminStore.updateMedia(museumId, a.id, seq, isPrimary)
+                      await adminStore.updateMedia(museumId, a.id, seq, isPrimary)
                       setVersion((v) => v + 1)
                       setModalType(null)
                       showNotice("Đã lưu tệp.")
@@ -1607,9 +1447,9 @@ export default function AdminPortalPage() {
                   <footer className="flex items-center justify-between gap-2 pt-3 border-t border-[#d6ddd3]">
                     <button
                       type="button"
-                      onClick={() => {
+                      onClick={async () => {
                         try {
-                          adminStore.removeMedia(museumId, a.id)
+                          await adminStore.removeMedia(museumId, a.id)
                           setVersion((v) => v + 1)
                           setModalType(null)
                           showNotice("Đã xóa tệp.")
@@ -1625,7 +1465,7 @@ export default function AdminPortalPage() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                           setModalType(null)
                           setModalError(null)
                         }}
