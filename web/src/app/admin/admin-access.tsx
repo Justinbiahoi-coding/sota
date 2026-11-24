@@ -12,12 +12,31 @@ export function AdminAccess({ store }: { store: AdminBackendStore }) {
   return (
     <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] p-6">
       <div className="max-w-lg mx-auto my-16 bg-white border border-[#d6ddd3] p-8 space-y-5">
-        <h1 className="font-serif text-4xl">Quản trị SOTA</h1>
+        <h1 className="font-heading text-4xl">Quản trị SOTA</h1>
+        <p className="text-sm text-[#53685f]">
+          Đăng nhập bằng tài khoản đã được cấp quyền quản trị. Hệ thống xác định vai trò và phạm vi quản lý sau khi đăng nhập.
+        </p>
+        <dl className="space-y-3 text-sm">
+          <div>
+            <dt className="font-semibold">Quản trị bảo tàng (admin user)</dt>
+            <dd className="text-[#53685f]">
+              Quản lý nội dung, vé, sản phẩm, đơn hàng và media tại các bảo tàng được phân công có quyền đang hoạt động.
+            </dd>
+          </div>
+          <div>
+            <dt className="font-semibold">Quản trị hệ thống (super admin)</dt>
+            <dd className="text-[#53685f]">
+              Quản lý dữ liệu của tất cả bảo tàng và tạo bảo tàng mới.
+            </dd>
+          </div>
+        </dl>
         {!configured && <p role="alert">Cần cấu hình địa chỉ Express và Supabase để đăng nhập quản trị.</p>}
         {(store.error || error) && <p role="alert" className="text-red-800">{error || store.error}</p>}
         {store.profile ? (
           <>
-            <p>Chưa có bảo tàng được phân quyền cho tài khoản này.</p>
+            <p>{store.role === "super_admin"
+              ? "Hệ thống chưa có bảo tàng. Bạn có thể tạo bảo tàng đầu tiên."
+              : "Tài khoản chưa được phân công bảo tàng với quyền đang hoạt động. Liên hệ quản trị hệ thống để được cấp quyền."}</p>
             {store.role === "super_admin" && (
               <form className="grid gap-3" onSubmit={async event => {
                 event.preventDefault()

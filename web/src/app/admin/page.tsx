@@ -138,7 +138,7 @@ export default function AdminPortalPage() {
         <aside className="bg-[#184c40] text-white p-6 flex flex-col gap-6 justify-between shrink-0">
           <div className="space-y-6">
             {/* Brand */}
-            <div className="font-serif text-[40px] leading-[0.95] tracking-tight">
+            <div className="font-heading text-[40px] leading-[0.95] tracking-tight">
               SOTA
               <small className="block font-sans font-semibold text-[10px] tracking-[1.6px] mt-2 text-[#d4e2d7] uppercase">
                 QUẢN TRỊ BẢO TÀNG
@@ -176,6 +176,11 @@ export default function AdminPortalPage() {
           <div className="mt-8 pt-4 border-t border-[#749187]/40 text-[#d8e6dc] text-xs space-y-2">
             <p className="font-medium text-[0.85rem]">
               {role === "super_admin" ? "Quản trị hệ thống" : "Quản trị bảo tàng"}
+            </p>
+            <p className="leading-relaxed">
+              {role === "super_admin"
+                ? "Phạm vi quản lý: tất cả bảo tàng. Có quyền tạo bảo tàng mới."
+                : "Phạm vi quản lý: các bảo tàng được phân công có quyền đang hoạt động."}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -239,7 +244,7 @@ export default function AdminPortalPage() {
 
             {/* Page Heading & Actions (.heading) */}
             <div className="flex items-end justify-between gap-3 flex-wrap my-6 pb-2 border-b border-[#d6ddd3]">
-              <h1 className="font-serif text-[clamp(2rem,3.2vw,2.8rem)] leading-[1.1] tracking-tight">
+              <h1 className="font-heading text-[clamp(2rem,3.2vw,2.8rem)] leading-[1.1] tracking-tight">
                 {NAV_ITEMS.find((n) => n.id === page)?.label}
               </h1>
 
@@ -371,7 +376,7 @@ export default function AdminPortalPage() {
                   <small className="text-[0.72rem] font-bold tracking-[0.13em] uppercase block">
                     {activeMuseum.fields.city || "Bảo tàng"}
                   </small>
-                  <h2 className="font-serif text-[2.3rem] leading-tight my-2 font-normal">
+                  <h2 className="font-heading text-[2.3rem] leading-tight my-2 font-normal">
                     {activeMuseum.name}
                   </h2>
                   <p className="text-[#53685f] text-sm">{activeMuseum.fields.address}</p>
@@ -391,21 +396,21 @@ export default function AdminPortalPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <article className="bg-white border border-[#d6ddd3] rounded-[6px] p-4 sm:p-5">
                         <span className="text-[#53685f] text-xs font-semibold block">Số vé đã bán · 30 ngày</span>
-                        <strong className="block font-serif text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
+                        <strong className="block font-sans lining-nums tabular-nums text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
                           {summary.qty}
                         </strong>
                       </article>
 
                       <article className="bg-white border border-[#d6ddd3] rounded-[6px] p-4 sm:p-5">
                         <span className="text-[#53685f] text-xs font-semibold block">Doanh thu vé · 30 ngày</span>
-                        <strong className="block font-serif text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
+                        <strong className="block font-sans lining-nums tabular-nums text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
                           {formatVND(summary.total)}
                         </strong>
                       </article>
 
                       <article className="bg-white border border-[#d6ddd3] rounded-[6px] p-4 sm:p-5">
                         <span className="text-[#53685f] text-xs font-semibold block">Đơn chờ giao</span>
-                        <strong className="block font-serif text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
+                        <strong className="block font-sans lining-nums tabular-nums text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
                           {pendingCount}
                         </strong>
                       </article>
@@ -745,13 +750,13 @@ export default function AdminPortalPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
                         <article className="bg-white border border-[#d6ddd3] rounded-[6px] p-4 sm:p-5">
                           <span className="text-[#53685f] text-xs font-semibold block">Vé đã bán</span>
-                          <strong className="block font-serif text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
+                          <strong className="block font-sans lining-nums tabular-nums text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
                             {r.qty}
                           </strong>
                         </article>
                         <article className="bg-white border border-[#d6ddd3] rounded-[6px] p-4 sm:p-5">
                           <span className="text-[#53685f] text-xs font-semibold block">Doanh thu vé</span>
-                          <strong className="block font-serif text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
+                          <strong className="block font-sans lining-nums tabular-nums text-[clamp(1.45rem,2.4vw,2.35rem)] text-[#202d2a] font-normal mt-2">
                             {formatVND(r.total)}
                           </strong>
                         </article>
@@ -803,7 +808,7 @@ export default function AdminPortalPage() {
 
           {/* Footer note */}
           <div className="mt-12 pt-4 border-t border-[#d6ddd3] text-xs text-[#53685f] flex items-center justify-between">
-            <span>SOTA Admin MVP · Tương thích đặc tả API & CSDL đồ án</span>
+            <span>SOTA Admin </span>
             <span>Múi giờ Asia/Ho_Chi_Minh (UTC+7)</span>
           </div>
         </main>
@@ -823,7 +828,7 @@ export default function AdminPortalPage() {
 
             return (
               <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] max-h-[90vh] overflow-y-auto">
-                <h2 className="font-serif text-[1.85rem] leading-tight mb-4 font-normal">
+                <h2 className="font-heading text-[1.85rem] leading-tight mb-4 font-normal">
                   {isEditing ? "Chỉnh sửa " : "Thêm "}
                   {kind === "museum"
                     ? "bảo tàng"
@@ -1139,7 +1144,7 @@ export default function AdminPortalPage() {
       {modalType === "redeem-ticket" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
           <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
-            <h2 className="font-serif text-[1.85rem] leading-tight mb-3 font-normal">Soát vé vào cửa</h2>
+            <h2 className="font-heading text-[1.85rem] leading-tight mb-3 font-normal">Soát vé vào cửa</h2>
 
             <form
               onSubmit={async (e) => {
@@ -1210,7 +1215,7 @@ export default function AdminPortalPage() {
 
             return (
               <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] space-y-3">
-                <h2 className="font-serif text-[1.85rem] leading-tight font-normal">{o.id}</h2>
+                <h2 className="font-heading text-[1.85rem] leading-tight font-normal">{o.id}</h2>
 
                 <div>{renderPill(o.status)}</div>
 
@@ -1303,7 +1308,7 @@ export default function AdminPortalPage() {
       {modalType === "upload-media" && (
         <div className="fixed inset-0 z-50 bg-[#162b25]/50 flex items-center justify-center p-4">
           <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw]">
-            <h2 className="font-serif text-[1.85rem] leading-tight mb-2 font-normal">Thêm tệp</h2>
+            <h2 className="font-heading text-[1.85rem] leading-tight mb-2 font-normal">Thêm tệp</h2>
 
             <form
               onSubmit={async (e) => {
@@ -1391,7 +1396,7 @@ export default function AdminPortalPage() {
 
             return (
               <div className="bg-white border border-[#d6ddd3] rounded-[8px] p-6 sm:p-7 max-w-[520px] w-[94vw] space-y-3">
-                <h2 className="font-serif text-[1.85rem] leading-tight font-normal">{a.name}</h2>
+                <h2 className="font-heading text-[1.85rem] leading-tight font-normal">{a.name}</h2>
 
                 <div className="max-h-[45vh] overflow-hidden flex items-center justify-center bg-[#edf2eb] rounded border border-[#d6ddd3]">
                   {a.mime.startsWith("image/") ? (
