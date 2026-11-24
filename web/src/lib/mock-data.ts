@@ -1294,12 +1294,12 @@ function makeSlots(museumSlug: string, prices: [number, number, number, number])
 }
 
 export const ticketSlots: TicketSlot[] = [
-  ...makeSlots("lich-su-tu-nhien",      [0, 0, 0, 0]),
-  ...makeSlots("hang-khong-vu-tru",     [0, 0, 0, 0]),
-  ...makeSlots("lich-su-hoa-ky",        [0, 0, 0, 0]),
+  ...makeSlots("lich-su-tu-nhien", [0, 0, 0, 0]),
+  ...makeSlots("hang-khong-vu-tru", [0, 0, 0, 0]),
+  ...makeSlots("lich-su-hoa-ky", [0, 0, 0, 0]),
   ...makeSlots("phong-tranh-chan-dung", [500, 500, 800, 800]),
-  ...makeSlots("hirshhorn",             [0, 0, 0, 0]),
-  ...makeSlots("nghe-thuat-chau-a",     [0, 0, 0, 0]),
+  ...makeSlots("hirshhorn", [0, 0, 0, 0]),
+  ...makeSlots("nghe-thuat-chau-a", [0, 0, 0, 0]),
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────
