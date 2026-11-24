@@ -1,7 +1,11 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowUpRight, Clock, MapPin } from "lucide-react"
-import { museums } from "@/lib/mock-data"
+import { ArrowUpRight, Clock, MapPin, RefreshCw } from "lucide-react"
+import { museums as initialMockMuseums, museumBySlug, type Museum } from "@/lib/mock-data"
+import { api } from "@/lib/api/client"
 import { SplitText } from "@/components/reactbits/split-text"
 import { DecryptedText } from "@/components/reactbits/decrypted-text"
 import {
@@ -13,9 +17,62 @@ import {
   GildedMuseumFrame,
 } from "@/components/renaissance/deco-assets"
 
-export const metadata = { title: "Các bảo tàng" }
+const DB_TO_VI_SLUG: Record<string, string> = {
+  "national-museum-of-natural-history": "lich-su-tu-nhien",
+  "national-air-and-space-museum": "hang-khong-vu-tru",
+  "national-museum-of-american-history": "lich-su-hoa-ky",
+  "national-portrait-gallery": "phong-tranh-chan-dung",
+  "hirshhorn-museum-and-sculpture-garden": "hirshhorn",
+  "national-museum-of-asian-art": "nghe-thuat-chau-a",
+}
 
 export default function MuseumListPage() {
+  const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    async function loadMuseums() {
+      try {
+        setLoading(true)
+        const res = await api.museums.list({ limit: 20 })
+        if (active && res?.data && res.data.length > 0) {
+          const merged: Museum[] = res.data.map((dbM) => {
+            const viSlug = DB_TO_VI_SLUG[dbM.slug] ?? dbM.slug
+            const fallback = museumBySlug(viSlug) ?? museumBySlug(dbM.slug)
+            let coverImg = dbM.cover_image_path
+            if (coverImg && !coverImg.startsWith("http")) {
+              const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+              coverImg = `${base}/storage/v1/object/public/museum-media/${coverImg}`
+            }
+
+            return {
+              id: dbM.id,
+              slug: viSlug,
+              name: fallback?.name ?? dbM.name,
+              nameEn: fallback?.nameEn ?? dbM.name,
+              accent: fallback?.accent ?? "#d4af37",
+              opens: fallback?.opens ?? "10:00",
+              closes: fallback?.closes ?? "17:30",
+              image: coverImg || fallback?.image || "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=1200&q=80",
+              address: dbM.address ? `${dbM.address}, ${dbM.city ?? "Washington, D.C."}` : (fallback?.address ?? "Washington, D.C."),
+              description: dbM.description || fallback?.description || "",
+            }
+          })
+          setLiveMuseums(merged)
+        }
+      } catch {
+        // Fallback remains initialMockMuseums
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    loadMuseums()
+    return () => {
+      active = false
+    }
+  }, [])
+
   return (
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
       {/* Header đồng bộ chuẩn White Cube & Renaissance */}
@@ -85,7 +142,7 @@ export default function MuseumListPage() {
 
       {/* Grid Danh sách bảo tàng màn ảnh rộng, thoáng đãng, chữ to rõ */}
       <ol className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-        {museums.map((m, i) => (
+        {liveMuseums.map((m, i) => (
           <li key={m.slug}>
             <div className="group relative flex h-full flex-col justify-between rounded-xl border border-[#d4af37]/35 bg-white p-5 md:p-6 shadow-md transition-all duration-300 hover:border-[#d4af37] hover:shadow-[0_20px_45px_-12px_rgba(212,175,55,0.35)]">
               <RenaissanceCorners />
