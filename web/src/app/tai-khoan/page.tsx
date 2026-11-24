@@ -159,9 +159,9 @@ export default function TaiKhoanPage() {
       {/* Header */}
       <div className="mb-10 flex items-start justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+          <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
             <BrassPlacardPin />
-            <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+            <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
               <DecryptedText
                 text="Hồ sơ Hội viên · Sota Patron"
                 speed={28}

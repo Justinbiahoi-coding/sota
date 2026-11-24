@@ -30,9 +30,9 @@ export default function KhamPhaPage() {
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
       {/* Header chuẩn mực White Cube & Renaissance */}
       <header className="mb-10 max-w-4xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText
               text="Cẩm nang Thưởng ngoạn · National Mall, Washington, D.C."
               speed={28}
@@ -41,10 +41,10 @@ export default function KhamPhaPage() {
             />
           </span>
         </div>
-        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#171717] sm:text-5xl md:text-6xl">
+        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] sm:text-5xl md:text-6xl">
           <SplitText text="Khám phá Quần thể Bảo tàng" delay={0.04} stagger={0.04} />
         </h1>
-        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-600">
+        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-300">
           Dọc theo đại lộ National Mall dài 3 km là quần thể di sản văn hóa và khoa học quy mô bậc nhất hành tinh. Tất cả các bảo tàng trong cụm Smithsonian đều mở cửa tự do phục vụ công chúng.
         </p>
       </header>

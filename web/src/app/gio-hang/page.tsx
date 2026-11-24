@@ -146,9 +146,9 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-[1440px] px-6 py-16 md:px-12">
       <header className="mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText
               text="Túi quà lưu niệm · Sota Checkout"
               speed={28}

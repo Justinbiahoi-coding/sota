@@ -60,7 +60,7 @@ export function RenaissanceDivider({ title, className }: { title?: string; class
         </svg>
 
         {title && (
-          <span className="font-heading text-xs tracking-[0.25em] uppercase text-[#92400e] font-semibold">
+          <span className="font-heading text-xs tracking-[0.25em] uppercase text-[#fbe396] font-semibold drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
             {title}
           </span>
         )}

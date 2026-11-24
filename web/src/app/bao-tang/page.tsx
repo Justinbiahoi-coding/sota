@@ -20,9 +20,9 @@ export default function MuseumListPage() {
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
       {/* Header đồng bộ chuẩn White Cube & Renaissance */}
       <header className="mb-10 max-w-4xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText
               text="Smithsonian Institution · Washington, D.C."
               speed={28}
@@ -31,10 +31,10 @@ export default function MuseumListPage() {
             />
           </span>
         </div>
-        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#171717] sm:text-5xl md:text-6xl">
+        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] sm:text-5xl md:text-6xl">
           <SplitText text="Các bảo tàng Smithsonian" delay={0.04} stagger={0.04} />
         </h1>
-        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-600">
+        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-300">
           Sáu viện bảo tàng tiêu biểu trong cụm Smithsonian — mở cửa thường niên quanh năm tại trung tâm đại lộ National Mall, lưu giữ hơn 145 triệu hiện vật lịch sử tự nhiên, hàng không vũ trụ, mỹ thuật và văn hóa thế giới.
         </p>
       </header>

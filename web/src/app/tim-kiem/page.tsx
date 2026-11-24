@@ -70,9 +70,9 @@ export default function SearchPage() {
   return (
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
       <header className="mb-10 max-w-3xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText
               text="Bộ máy Tra cứu Tổng hợp · Smithsonian Index"
               speed={28}
@@ -84,7 +84,7 @@ export default function SearchPage() {
         <h1 className="mt-4 text-4xl font-light tracking-tight md:text-5xl text-foreground">
           <BlurText text="Tìm kiếm trong kho lưu trữ" delay={0.04} />
         </h1>
-        <p className="mt-4 text-base text-muted-foreground leading-relaxed">
+        <p className="mt-4 text-base text-stone-300 leading-relaxed">
           Tra cứu hiện vật, triển lãm, bảo tàng và quà lưu niệm trong một nơi duy nhất.
         </p>
       </header>

@@ -118,13 +118,13 @@ export default async function MuseumDetailPage({ params }: { params: Promise<{ s
           <section className="mt-16">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-2">
               <div>
-                <p className="placard text-xs text-[#92400e] font-semibold uppercase tracking-widest flex items-center gap-2">
+                <p className="placard text-xs text-[#d4af37] font-semibold uppercase tracking-widest flex items-center gap-2">
                   <BrassPlacardPin /> KHÔNG GIAN TRIỂN LÃM 3D
                 </p>
-                <h2 className="mt-1 font-heading text-3xl md:text-4xl font-light text-[#171717]">
+                <h2 className="mt-1 font-heading text-3xl md:text-4xl font-light text-[#f8f6f0]">
                   Không gian trưng bày hiện vật tiêu biểu
                 </h2>
-                <p className="mt-2 text-sm text-stone-600 max-w-2xl leading-relaxed">
+                <p className="mt-2 text-sm text-stone-300 max-w-2xl leading-relaxed">
                   Không gian phục dựng ba chiều sinh động, mang đến trải nghiệm chiêm ngưỡng cận cảnh từng hiện vật tiêu biểu trong bộ sưu tập của bảo tàng.
                 </p>
               </div>

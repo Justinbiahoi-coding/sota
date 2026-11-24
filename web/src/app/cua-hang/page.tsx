@@ -105,9 +105,9 @@ export default function ShopPage() {
   return (
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
       <header className="mb-10 max-w-4xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText
               text="Smithsonian Boutique · Ấn bản giới hạn"
               speed={28}
@@ -116,10 +116,10 @@ export default function ShopPage() {
             />
           </span>
         </div>
-        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#171717] sm:text-5xl md:text-6xl">
+        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] sm:text-5xl md:text-6xl">
           <SplitText text="Quà lưu niệm & Sách nghệ thuật" delay={0.04} stagger={0.04} />
         </h1>
-        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-600">
+        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-300">
           Bưu thiếp nghệ thuật in dập nổi, sách chuyên khảo mỹ thuật phục chế và các vật phẩm lưu niệm độc bản từ kho tàng bảo tàng Smithsonian.
         </p>
       </header>
@@ -184,7 +184,7 @@ export default function ShopPage() {
           {filtered.length === 0 ? (
             <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white py-24 text-center shadow-sm">
               <RenaissanceCorners />
-              <p className="font-heading text-2xl font-light text-[#171717]">Không có sản phẩm nào trong danh mục này</p>
+              <p className="font-heading text-2xl font-light text-stone-200">Không có sản phẩm nào trong danh mục này</p>
               <p className="mt-2 text-sm text-stone-500">Vui lòng chọn danh mục khác.</p>
             </div>
           ) : (

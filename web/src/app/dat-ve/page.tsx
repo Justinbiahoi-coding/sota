@@ -140,13 +140,13 @@ export default function DatVePage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-16 md:px-10">
       <header className="mb-10">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/35 bg-white/95 px-4 py-1.5 shadow-sm">
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#92400e]">
+          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
             <DecryptedText text="Smithsonian Pass · Soát vé điện tử" speed={28} animateOn="view" />
           </span>
         </div>
-        <h1 className="mt-4 font-heading text-4xl font-light tracking-tight text-[#171717] md:text-5xl">
+        <h1 className="mt-4 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] md:text-5xl">
           <SplitText text="Đặt vé tham quan bảo tàng" delay={0.04} stagger={0.04} />
         </h1>
       </header>
@@ -161,18 +161,23 @@ export default function DatVePage() {
               className={cn(
                 "flex size-7 items-center justify-center rounded-full border text-xs font-medium transition-all duration-300",
                 step === s
-                  ? "border-foreground bg-foreground text-background shadow-sm"
+                  ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.4)]"
                   : step > s
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-card text-muted-foreground",
+                    ? "border-[#d4af37]/80 bg-[#d4af37]/25 text-[#fbe396] font-semibold"
+                    : "border-white/20 bg-[#08162b] text-stone-400",
               )}
             >
               {step > s ? <Check className="size-3.5" /> : s}
             </span>
-            <span className="hidden text-xs text-muted-foreground sm:inline font-medium">
+            <span
+              className={cn(
+                "hidden text-xs sm:inline font-medium tracking-wide",
+                step >= s ? "text-stone-200" : "text-stone-400",
+              )}
+            >
               {["Bảo tàng", "Lịch tham quan", "Số vé", "Xác nhận"][s - 1]}
             </span>
-            {s < 4 && <ChevronRight className="size-4 text-border" />}
+            {s < 4 && <ChevronRight className="size-4 text-stone-500" />}
           </div>
         ))}
       </div>
@@ -180,7 +185,7 @@ export default function DatVePage() {
       {/* Step 1: Museum */}
       {step === 1 && (
         <div>
-          <p className="mb-5 text-sm text-muted-foreground">Chọn một bảo tàng bạn muốn ghé thăm</p>
+          <p className="mb-5 text-sm text-stone-300">Chọn một bảo tàng bạn muốn ghé thăm</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {museums.map((m) => (
               <SpotlightCard
@@ -200,7 +205,7 @@ export default function DatVePage() {
                     style={{ backgroundColor: m.accent }}
                   />
                 </div>
-                <span className="placard mt-2 text-xs text-muted-foreground">
+                <span className="placard mt-2 text-xs text-stone-400">
                   {m.opens} – {m.closes} (Mở cửa hàng ngày)
                 </span>
               </SpotlightCard>
@@ -223,25 +228,25 @@ export default function DatVePage() {
       {/* Step 2: Date & Slot */}
       {step === 2 && museum && (
         <div>
-          <p className="mb-1 text-sm text-muted-foreground">Bảo tàng đã chọn</p>
+          <p className="mb-1 text-sm text-stone-400">Bảo tàng đã chọn</p>
           <p className="mb-6 font-heading text-2xl text-foreground font-light">
             {museum.name}
           </p>
 
           <label className="mb-6 block">
-            <span className="placard text-muted-foreground font-medium">Chọn ngày tham quan</span>
+            <span className="placard text-stone-300 font-medium">Chọn ngày tham quan</span>
             <input
               type="date"
               min={minDate}
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="mt-2 block w-full rounded-full border border-border bg-card px-5 py-3 text-sm text-foreground shadow-sm outline-none transition-all focus:border-foreground"
+              className="mt-2 block w-full rounded-full border border-[#d4af37]/35 bg-[#08162b] px-5 py-3 text-sm text-foreground shadow-sm outline-none transition-all focus:border-[#d4af37] [color-scheme:dark]"
             />
           </label>
 
           {selectedDate && (
             <div className="mt-6">
-              <p className="placard mb-3 text-muted-foreground font-medium">Chọn suất tham quan còn chỗ</p>
+              <p className="placard mb-3 text-stone-300 font-medium">Chọn suất tham quan còn chỗ</p>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {slots.map((slot) => (
                   <button
@@ -251,14 +256,14 @@ export default function DatVePage() {
                     className={cn(
                       "rounded-lg border p-4 text-center transition-all duration-300",
                       selectedSlot?.id === slot.id
-                        ? "border-foreground bg-foreground text-background shadow-md"
+                        ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-semibold shadow-md"
                         : slot.remainingSpots === 0
-                          ? "cursor-not-allowed border-border opacity-40 bg-muted/40"
-                          : "border-border bg-card hover:border-foreground/50 hover:shadow-sm",
+                          ? "cursor-not-allowed border-white/10 opacity-40 bg-white/5 text-stone-500"
+                          : "border-[#d4af37]/30 bg-[#08162b] text-stone-200 hover:border-[#d4af37] hover:bg-[#0c2242]",
                     )}
                   >
                     <p className="font-heading text-lg font-light">{slot.time}</p>
-                    <p className="placard mt-1 text-xs">{formatPrice(slot.price)}</p>
+                    <p className="placard mt-1 text-xs text-[#fbe396] font-semibold">{formatPrice(slot.price)}</p>
                     <p className="mt-1 text-[0.65rem] opacity-75">
                       Còn {slot.remainingSpots} chỗ
                     </p>
