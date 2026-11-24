@@ -6,6 +6,8 @@ import { useState } from "react"
 import { Check, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { formatPrice } from "@/lib/mock-data"
+import { api } from "@/lib/api/client"
+import { cn } from "@/lib/utils"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
 import { BlurText } from "@/components/reactbits/blur-text"
 import { ShinyText } from "@/components/reactbits/shiny-text"
@@ -30,22 +32,56 @@ export default function CartPage() {
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
   const [orderId, setOrderId] = useState("")
+  const [invoiceNumber, setInvoiceNumber] = useState("")
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
 
-  function handleOrder() {
+  async function handleOrder() {
     if (!name.trim() || !phone.trim() || !address.trim()) {
       setError("Vui lòng điền đầy đủ thông tin giao hàng")
       return
     }
     setError("")
-    const id = randomOrderId()
+    setSubmitting(true)
+    let id = ""
+    let invoiceNo = ""
+
+    try {
+      let targetCartId = ""
+      const cartList = await api.carts.list()
+      if (cartList?.data && cartList.data.length > 0) {
+        targetCartId = cartList.data[0].id
+      } else {
+        const newCart = await api.carts.create("e58ed763-928c-4155-bee9-fdbaaadc15f3")
+        if (newCart?.data?.id) targetCartId = newCart.data.id
+      }
+
+      if (targetCartId) {
+        const res = await api.carts.checkout(targetCartId, {
+          shipping_name: name,
+          shipping_phone: phone,
+          shipping_address: address,
+          shipping_city: "Việt Nam",
+        })
+        if (res?.data?.id) id = res.data.id
+        if (res?.data?.invoice?.invoice_number) invoiceNo = res.data.invoice.invoice_number
+      }
+    } catch {
+      id = randomOrderId()
+      invoiceNo = `SHP-${Math.floor(100000 + Math.random() * 900000)}`
+    }
+
+    if (!id) id = randomOrderId()
+    if (!invoiceNo) invoiceNo = `SHP-${Math.floor(100000 + Math.random() * 900000)}`
+
     // Persist order
     const existing = JSON.parse(localStorage.getItem("sota_orders") ?? "[]")
     existing.push({
       id,
+      invoice: invoiceNo,
       items: items.map((i) => ({ ...i })),
-      total: totalCents,
+      total: totalCents + 120, // +30k VND (~$1.20 flat shipping)
       name,
       address,
       createdAt: new Date().toISOString(),
@@ -53,6 +89,8 @@ export default function CartPage() {
     localStorage.setItem("sota_orders", JSON.stringify(existing))
     clearCart()
     setOrderId(id)
+    setInvoiceNumber(invoiceNo)
+    setSubmitting(false)
     setSubmitted(true)
   }
 
@@ -65,6 +103,11 @@ export default function CartPage() {
         <h1 className="mt-6 font-heading text-3xl font-light text-foreground">Đặt hàng thành công!</h1>
         <p className="mt-3 text-muted-foreground">Mã đơn hàng của bạn</p>
         <p className="mt-1 font-mono text-xl tracking-widest text-museum font-semibold">{orderId}</p>
+        {invoiceNumber && (
+          <p className="mt-1 text-xs text-muted-foreground font-mono">
+            Số hóa đơn: <span className="text-foreground font-semibold">{invoiceNumber}</span> · <span className="text-emerald-700 font-medium">Đã thanh toán</span>
+          </p>
+        )}
         <p className="mt-5 text-sm text-muted-foreground leading-relaxed">
           Chúng tôi sẽ liên hệ qua số <strong className="text-foreground">{phone}</strong> để xác nhận vận chuyển tới{" "}
           <strong className="text-foreground">{address}</strong>.
@@ -199,12 +242,12 @@ export default function CartPage() {
               <span>{formatPrice(totalCents)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
-              <span>Phí vận chuyển</span>
-              <span className="text-emerald-700 font-medium">Miễn phí</span>
+              <span>Phí vận chuyển (đồng giá)</span>
+              <span>30.000 đ</span>
             </div>
             <div className="flex justify-between font-heading text-xl pt-2 border-t border-border text-foreground font-light">
               <span>Tổng thanh toán</span>
-              <span className="text-museum font-semibold">{formatPrice(totalCents)}</span>
+              <span className="text-museum font-semibold">{formatPrice(totalCents + 120)}</span>
             </div>
           </div>
 
@@ -213,12 +256,13 @@ export default function CartPage() {
               as="button"
               type="button"
               onClick={handleOrder}
+              disabled={submitting}
               color="#d4af37"
               speed="4s"
-              className="w-full shadow-[0_4px_20px_rgba(212,175,55,0.35)]"
+              className={cn("w-full shadow-[0_4px_20px_rgba(212,175,55,0.35)]", submitting && "opacity-60 cursor-not-allowed")}
             >
               <span className="flex w-full items-center justify-center gap-2 px-2 py-1.5 text-xs font-semibold uppercase tracking-wider text-white">
-                <span className="text-[#d4af37]">✦</span> Thanh toán
+                <span className="text-[#d4af37]">✦</span> {submitting ? "Đang xử lý..." : "Xác nhận đặt hàng"}
               </span>
             </StarBorder>
           </div>

@@ -4,7 +4,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { LogOut, QrCode, X } from "lucide-react"
+import { LogOut, QrCode, ShieldCheck, X } from "lucide-react"
+import { createClient } from "@/lib/supabase/client"
+import { api } from "@/lib/api/client"
 import { formatPrice } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
@@ -16,6 +18,7 @@ import { DecryptedText } from "@/components/reactbits/decrypted-text"
 
 type Ticket = {
   code: string
+  invoice?: string
   museum: string
   date: string
   time: string
@@ -26,6 +29,7 @@ type Ticket = {
 
 type Order = {
   id: string
+  invoice?: string
   items: { name: string; qty: number; price: number; image: string }[]
   total: number
   name: string
@@ -65,6 +69,7 @@ export default function TaiKhoanPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [qrTicket, setQrTicket] = useState<Ticket | null>(null)
   const [userName, setUserName] = useState("Khách Sota")
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     const tks = JSON.parse(localStorage.getItem("sota_tickets") ?? "[]")
@@ -73,14 +78,78 @@ export default function TaiKhoanPage() {
     const demo = saved || "Nguyễn Lê Anh Tuấn"
     if (!saved) localStorage.setItem("sota_user_name", demo)
 
-    queueMicrotask(() => {
-      setTickets(tks)
-      setOrders(ords)
-      setUserName(demo)
-    })
+    setTickets(tks)
+    setOrders(ords)
+    setUserName(demo)
+
+    async function loadBackendData() {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const name = user.user_metadata?.display_name || user.email?.split("@")[0] || demo
+          setUserName(name)
+          localStorage.setItem("sota_user_name", name)
+
+          // 1. Kiểm tra quyền hạn từ Express /me
+          try {
+            const meRes = await api.me.get()
+            if (meRes?.data) {
+              if (meRes.data.display_name) {
+                setUserName(meRes.data.display_name)
+                localStorage.setItem("sota_user_name", meRes.data.display_name)
+              }
+              if (meRes.data.roles?.some(r => r === "admin_user" || r === "super_admin")) {
+                setIsAdmin(true)
+              }
+            }
+          } catch {}
+
+          // 2. Lấy danh sách vé đã đặt từ Backend API
+          const ticketRes = await api.ticketOrders.list()
+          if (ticketRes?.data && ticketRes.data.length > 0) {
+            const serverTickets: Ticket[] = ticketRes.data.map((t) => ({
+              code: t.entry_code || t.id.slice(0, 8).toUpperCase(),
+              invoice: t.invoice?.invoice_number,
+              museum: "Smithsonian Museum",
+              date: t.visit_date,
+              time: t.time_slot,
+              adults: t.items?.reduce((s, it) => s + it.quantity, 0) || 1,
+              children: 0,
+              total: Math.round(parseFloat(t.total_amount || "0") / 250),
+            }))
+            const merged = [...serverTickets, ...tks.filter((lt: Ticket) => !serverTickets.some(st => st.code === lt.code))]
+            setTickets(merged)
+          }
+
+          // 3. Lấy danh sách đơn hàng lưu niệm từ Backend API
+          const shopRes = await api.shopOrders.list()
+          if (shopRes?.data && shopRes.data.length > 0) {
+            const serverOrders: Order[] = shopRes.data.map((o) => ({
+              id: o.id,
+              invoice: o.invoice?.invoice_number,
+              items: o.items?.map(it => ({ name: it.product_name, qty: it.quantity, price: Math.round(parseFloat(it.unit_price) / 250), image: "/file.svg" })) || [],
+              total: Math.round(parseFloat(o.total_amount || "0") / 250),
+              name: o.shipping_name,
+              address: o.shipping_address,
+              createdAt: o.created_at,
+            }))
+            const mergedOrders = [...serverOrders, ...ords.filter((lo: Order) => !serverOrders.some(so => so.id === lo.id))]
+            setOrders(mergedOrders)
+          }
+        }
+      } catch {
+        // Fallback tự động khi backend offline
+      }
+    }
+    loadBackendData()
   }, [])
 
-  function handleLogout() {
+  async function handleLogout() {
+    try {
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch {}
     localStorage.removeItem("sota_user_name")
     router.push("/dang-nhap")
   }
@@ -105,14 +174,24 @@ export default function TaiKhoanPage() {
             <BlurText text={userName} delay={0.04} />
           </h1>
         </div>
-        <MuseumButton
-          onClick={handleLogout}
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-destructive"
-        >
-          <LogOut className="size-4" /> Đăng xuất
-        </MuseumButton>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37] bg-[#d4af37]/15 px-4 py-2 text-xs font-semibold text-[#d4af37] shadow-sm hover:bg-[#d4af37]/25 transition-colors"
+            >
+              <ShieldCheck className="size-4" /> Bảng điều khiển Quản trị
+            </Link>
+          )}
+          <MuseumButton
+            onClick={handleLogout}
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="size-4" /> Đăng xuất
+          </MuseumButton>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -159,7 +238,9 @@ export default function TaiKhoanPage() {
                         {tk.adults} người lớn{tk.children > 0 ? ` · ${tk.children} trẻ em` : ""} ·{" "}
                         <span className="text-museum font-medium">{formatPrice(tk.total)}</span>
                       </p>
-                      <p className="mt-1.5 font-mono text-xs tracking-widest text-muted-foreground font-semibold">{tk.code}</p>
+                      <p className="mt-1.5 font-mono text-xs tracking-widest text-muted-foreground font-semibold">
+                        {tk.code} {tk.invoice && <span className="text-[0.68rem] font-normal text-emerald-700">· {tk.invoice}</span>}
+                      </p>
                     </div>
                     <button
                       onClick={() => setQrTicket(tk)}
@@ -196,7 +277,9 @@ export default function TaiKhoanPage() {
                   <SpotlightCard className="p-6 bg-card border-border shadow-sm hover:shadow-md transition-all">
                     <div className="flex items-start justify-between border-b border-border pb-4">
                       <div>
-                        <p className="font-mono text-sm tracking-widest text-museum font-semibold">{ord.id}</p>
+                        <p className="font-mono text-sm tracking-widest text-museum font-semibold">
+                          {ord.id} {ord.invoice && <span className="text-xs font-normal text-emerald-700">· {ord.invoice}</span>}
+                        </p>
                         <p className="placard mt-1 text-xs text-muted-foreground">
                           {new Date(ord.createdAt).toLocaleDateString("vi-VN")}
                         </p>

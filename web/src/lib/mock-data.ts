@@ -1282,10 +1282,10 @@ export const products: Product[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 function makeSlots(museumSlug: string, prices: [number, number, number, number]): TicketSlot[] {
-  const times = ["09:30", "11:30", "14:00", "16:00"]
+  const times = ["09:00-11:00", "11:00-13:00", "14:00-16:00", "16:00-18:00"]
   const spots = [24, 18, 30, 12]
   return times.map((time, i) => ({
-    id: `${museumSlug}-${time.replace(":", "")}`,
+    id: `${museumSlug}-${time.replace(/[: -]/g, "")}`,
     museumSlug,
     time,
     price: prices[i],
@@ -1392,8 +1392,9 @@ export interface AdminAsset {
   mime: string
 }
 
-export function getAdminDay(offset = 0, now = new Date()): string {
-  return new Date(now.getTime() + (7 * 60 + offset * 1440) * 60000).toISOString().slice(0, 10)
+export function getAdminDay(offset = 0, now?: Date): string {
+  const d = now ?? (typeof window === "undefined" ? new Date("2026-11-24T00:00:00.000Z") : new Date())
+  return new Date(d.getTime() + (7 * 60 + offset * 1440) * 60000).toISOString().slice(0, 10)
 }
 
 export const formatVND = (amount: number): string =>

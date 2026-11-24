@@ -49,8 +49,8 @@ export default function AdminPortalPage() {
   // Filters matching app.js
   const [filter, setFilter] = useState("")
   const [visitFilter, setVisitFilter] = useState("")
-  const [reportFrom, setReportFrom] = useState(() => getAdminDay(-29))
-  const [reportTo, setReportTo] = useState(() => getAdminDay())
+  const [reportFrom, setReportFrom] = useState("")
+  const [reportTo, setReportTo] = useState("")
   const [reportExhibit, setReportExhibit] = useState("")
 
   // Toast notice and Modals
@@ -62,6 +62,8 @@ export default function AdminPortalPage() {
   const [modalError, setModalError] = useState<string | null>(null)
 
   useEffect(() => {
+    setReportFrom(getAdminDay(-29))
+    setReportTo(getAdminDay())
     void adminStore.initialize()
     const unsubscribe = adminStore.watchAuth()
     const unsubscribeStore = adminStore.subscribe(() => {

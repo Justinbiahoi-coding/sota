@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useId } from "react"
 import { motion, AnimatePresence, usePresence } from "framer-motion"
 import { ArrowUpRight, Bone, Dna, Gem, Leaf, BookOpen } from "lucide-react"
 import { FloralCanvas } from "./floral-canvas"
@@ -29,7 +29,8 @@ function SandTransitionImage({ src, alt, className }: { src: string; alt: string
   const [isPresent, safeToRemove] = usePresence()
   const imgRef    = useRef<HTMLImageElement>(null)
   const svgRef    = useRef<SVGSVGElement>(null)
-  const filterRef = useRef<string>(`sand-${Math.random().toString(36).slice(2)}`)
+  const reactId   = useId().replace(/[^a-zA-Z0-9_-]/g, "")
+  const filterRef = useRef<string>(`sand-${reactId}`)
   const rafRef    = useRef<number>(0)
 
   useEffect(() => {
