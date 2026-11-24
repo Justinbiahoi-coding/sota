@@ -253,7 +253,7 @@ export default function DatVePage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-16 md:px-10">
+    <div className="mx-auto max-w-5xl px-6 pt-28 pb-16 md:px-10">
       <header className="mb-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />

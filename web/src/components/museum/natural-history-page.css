@@ -24,6 +24,8 @@
   grid-template-columns: 200px minmax(0, 1fr) clamp(300px, 27vw, 360px);
   height: 100vh;
   height: 100dvh;
+  padding-top: 72px;
+  box-sizing: border-box;
   overflow: hidden;
   background: var(--nha-bg);
   color: var(--nha-ink);

@@ -1,16 +1,57 @@
 "use client"
 
-import { useState, useTransition, useMemo } from "react"
+import { useState, useTransition, useMemo, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, ArrowUpRight } from "lucide-react"
-import { artifacts, exhibitions, museums, products, formatPrice } from "@/lib/mock-data"
+import { Search, ArrowUpRight, Loader2 } from "lucide-react"
+import {
+  artifacts as initialMockArtifacts,
+  exhibitions as initialMockExhibitions,
+  museums as initialMockMuseums,
+  products as initialMockProducts,
+  museumBySlug,
+  type Museum,
+  type Artifact,
+  type Exhibition,
+  type Product,
+  type ProductCategory,
+} from "@/lib/mock-data"
+import { api } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
 import { BlurText } from "@/components/reactbits/blur-text"
-import { ShinyText } from "@/components/reactbits/shiny-text"
 import { BrassPlacardPin } from "@/components/renaissance/deco-assets"
 import { DecryptedText } from "@/components/reactbits/decrypted-text"
+
+const DB_TO_VI_SLUG: Record<string, string> = {
+  "national-museum-of-natural-history": "lich-su-tu-nhien",
+  "national-air-and-space-museum": "hang-khong-vu-tru",
+  "national-museum-of-american-history": "lich-su-hoa-ky",
+  "national-portrait-gallery": "phong-tranh-chan-dung",
+  "hirshhorn-museum-and-sculpture-garden": "hirshhorn",
+  "national-museum-of-asian-art": "nghe-thuat-chau-a",
+}
+
+function deriveCategory(name: string, sku?: string | null): ProductCategory {
+  const text = `${name} ${sku ?? ""}`.toLowerCase()
+  if (text.includes("postcard") || text.includes("thiệp") || text.includes("bưu thiếp") || text.includes("print") || text.includes("card")) {
+    return "Postcard"
+  }
+  if (text.includes("book") || text.includes("sách") || text.includes("guide") || text.includes("chuyên khảo") || text.includes("tạp chí")) {
+    return "Sách nghệ thuật"
+  }
+  if (text.includes("hoodie") || text.includes("shirt") || text.includes("sweatshirt") || text.includes("pullover") || text.includes("silk") || text.includes("lụa") || text.includes("áo") || text.includes("t-shirt") || text.includes("apparel") || text.includes("tote")) {
+    return "Thời trang"
+  }
+  return "Lưu niệm"
+}
+
+function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") {
+  const num = typeof centsOrAmount === "string" ? parseFloat(centsOrAmount) : centsOrAmount
+  if (isNaN(num) || num === 0) return free
+  if (num >= 1000) return `${Math.round(num).toLocaleString("vi-VN")}₫`
+  return `${(num / 100).toFixed(2)}$`
+}
 
 type Category = "all" | "artifacts" | "exhibitions" | "museums" | "products"
 
@@ -19,47 +60,211 @@ export default function SearchPage() {
   const [category, setCategory] = useState<Category>("all")
   const [, startTransition] = useTransition()
 
+  const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
+  const [liveArtifacts, setLiveArtifacts] = useState<Artifact[]>(initialMockArtifacts)
+  const [liveProducts, setLiveProducts] = useState<Product[]>(initialMockProducts)
+  const [liveExhibitions] = useState<Exhibition[]>(initialMockExhibitions)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    async function loadData() {
+      setIsLoading(true)
+      try {
+        const museumsRes = await api.museums.list({ limit: 20 })
+        const dbMuseums = museumsRes?.data ?? []
+        if (!active || dbMuseums.length === 0) {
+          if (active) setIsLoading(false)
+          return
+        }
+
+        // Map live museums
+        const mappedMuseums: Museum[] = dbMuseums.map((dbM) => {
+          const viSlug = DB_TO_VI_SLUG[dbM.slug] ?? dbM.slug
+          const fallback = museumBySlug(viSlug) ?? museumBySlug(dbM.slug)
+          let coverImg = dbM.cover_image_path
+          if (coverImg && !coverImg.startsWith("http")) {
+            const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+            coverImg = `${base}/storage/v1/object/public/museum-media/${coverImg}`
+          }
+
+          return {
+            id: dbM.id,
+            slug: viSlug,
+            name: fallback?.name ?? dbM.name,
+            nameEn: fallback?.nameEn ?? dbM.name,
+            accent: fallback?.accent ?? "#d4af37",
+            opens: fallback?.opens ?? "10:00",
+            closes: fallback?.closes ?? "17:30",
+            image: coverImg || fallback?.image || "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=1200&q=80",
+            address: dbM.address ? `${dbM.address}, ${dbM.city ?? "Washington, D.C."}` : (fallback?.address ?? "Washington, D.C."),
+            description: dbM.description || fallback?.description || "",
+          }
+        })
+
+        if (active) setLiveMuseums(mappedMuseums)
+
+        // Query artifacts and products across live museums
+        const results = await Promise.all(
+          dbMuseums.map(async (dbM) => {
+            const viSlug = DB_TO_VI_SLUG[dbM.slug] ?? dbM.slug
+
+            let arts: Artifact[] = []
+            try {
+              const artRes = await api.museums.artifacts(dbM.id, { limit: 20 })
+              if (artRes?.data && artRes.data.length > 0) {
+                arts = await Promise.all(
+                  artRes.data.map(async (a, idx) => {
+                    let artImg = ""
+                    try {
+                      const mediaRes = await api.media("artifact", a.id)
+                      if (mediaRes?.data && mediaRes.data.length > 0) {
+                        const m = mediaRes.data[0]
+                        if (m.storage_path.startsWith("http")) {
+                          artImg = m.storage_path
+                        } else {
+                          const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+                          artImg = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
+                        }
+                      }
+                    } catch {}
+
+                    if (!artImg) {
+                      const fallbackMatch = initialMockArtifacts[idx % initialMockArtifacts.length]
+                      artImg = fallbackMatch?.image ?? "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&q=80"
+                    }
+
+                    return {
+                      id: a.id,
+                      slug: a.id,
+                      title: a.name,
+                      artist: a.period ?? "Bộ sưu tập Smithsonian",
+                      year: a.period ?? "Hiện vật lịch sử",
+                      medium: a.inventory_code ?? "Hiện vật bảo tàng",
+                      dimensions: "Trưng bày thường xuyên",
+                      image: artImg,
+                      description: a.description ?? "",
+                      museumSlug: viSlug,
+                      exhibitionSlugs: [],
+                      rights: "CC0 – Public Domain" as const,
+                      isHighlight: true,
+                    }
+                  })
+                )
+              }
+            } catch {}
+
+            let prods: Product[] = []
+            try {
+              const prodRes = await api.museums.products(dbM.id)
+              if (prodRes?.data && prodRes.data.length > 0) {
+                prods = await Promise.all(
+                  prodRes.data.map(async (p, idx) => {
+                    let prodImg = ""
+                    try {
+                      const mediaRes = await api.media("souvenir", p.id)
+                      if (mediaRes?.data && mediaRes.data.length > 0) {
+                        const m = mediaRes.data[0]
+                        if (m.storage_path.startsWith("http")) {
+                          prodImg = m.storage_path
+                        } else {
+                          const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+                          prodImg = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
+                        }
+                      }
+                    } catch {}
+
+                    if (!prodImg) {
+                      const fallbackMatch = initialMockProducts[idx % initialMockProducts.length]
+                      prodImg = fallbackMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80"
+                    }
+
+                    return {
+                      id: p.id,
+                      slug: p.id,
+                      name: p.name,
+                      price: Number(p.price) || 0,
+                      image: prodImg,
+                      inventory: p.stock_quantity ?? 0,
+                      museumSlug: viSlug,
+                      inspiredByArtifactId: null,
+                      category: deriveCategory(p.name, p.sku),
+                      description: p.description ?? "",
+                    }
+                  })
+                )
+              }
+            } catch {}
+
+            return { arts, prods }
+          })
+        )
+
+        if (active) {
+          const allArts = results.flatMap((r) => r.arts)
+          const allProds = results.flatMap((r) => r.prods)
+
+          if (allArts.length > 0) {
+            setLiveArtifacts(allArts)
+          }
+          if (allProds.length > 0) {
+            setLiveProducts(allProds)
+          }
+        }
+      } catch {
+        // Fallback remains initial mock data
+      } finally {
+        if (active) setIsLoading(false)
+      }
+    }
+
+    loadData()
+    return () => {
+      active = false
+    }
+  }, [])
+
   const trimmed = query.trim().toLowerCase()
 
   const matchedArtifacts = useMemo(() => {
-    if (!trimmed) return artifacts.slice(0, 6)
-    return artifacts.filter(
+    if (!trimmed) return liveArtifacts.slice(0, 8)
+    return liveArtifacts.filter(
       (a) =>
         a.title.toLowerCase().includes(trimmed) ||
         a.artist.toLowerCase().includes(trimmed) ||
         a.description.toLowerCase().includes(trimmed),
     )
-  }, [trimmed])
+  }, [trimmed, liveArtifacts])
 
   const matchedExhibitions = useMemo(() => {
-    if (!trimmed) return exhibitions.slice(0, 3)
-    return exhibitions.filter(
+    if (!trimmed) return liveExhibitions.slice(0, 4)
+    return liveExhibitions.filter(
       (e) =>
         e.title.toLowerCase().includes(trimmed) ||
         e.curator.toLowerCase().includes(trimmed) ||
         e.description.toLowerCase().includes(trimmed),
     )
-  }, [trimmed])
+  }, [trimmed, liveExhibitions])
 
   const matchedMuseums = useMemo(() => {
-    if (!trimmed) return museums
-    return museums.filter(
+    if (!trimmed) return liveMuseums
+    return liveMuseums.filter(
       (m) =>
         m.name.toLowerCase().includes(trimmed) ||
         m.nameEn.toLowerCase().includes(trimmed) ||
         m.description.toLowerCase().includes(trimmed),
     )
-  }, [trimmed])
+  }, [trimmed, liveMuseums])
 
   const matchedProducts = useMemo(() => {
-    if (!trimmed) return products.slice(0, 4)
-    return products.filter(
+    if (!trimmed) return liveProducts.slice(0, 8)
+    return liveProducts.filter(
       (p) =>
         p.name.toLowerCase().includes(trimmed) ||
         p.description.toLowerCase().includes(trimmed) ||
         p.category.toLowerCase().includes(trimmed),
     )
-  }, [trimmed])
+  }, [trimmed, liveProducts])
 
   const totalResults =
     (category === "all" || category === "artifacts" ? matchedArtifacts.length : 0) +
@@ -68,7 +273,7 @@ export default function SearchPage() {
     (category === "all" || category === "products" ? matchedProducts.length : 0)
 
   return (
-    <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
+    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
       <header className="mb-10 max-w-3xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
@@ -80,12 +285,13 @@ export default function SearchPage() {
               animateOn="view"
             />
           </span>
+          {isLoading && <Loader2 className="ml-2 size-3 animate-spin text-[#d4af37]" />}
         </div>
         <h1 className="mt-4 text-4xl font-light tracking-tight md:text-5xl text-foreground">
           <BlurText text="Tìm kiếm trong kho lưu trữ" delay={0.04} />
         </h1>
         <p className="mt-4 text-base text-stone-300 leading-relaxed">
-          Tra cứu hiện vật, triển lãm, bảo tàng và quà lưu niệm trong một nơi duy nhất.
+          Tra cứu hiện vật, triển lãm, bảo tàng và quà lưu niệm trong một nơi duy nhất với dữ liệu đồng bộ trực tiếp từ hệ thống.
         </p>
       </header>
 
@@ -100,8 +306,8 @@ export default function SearchPage() {
             const v = e.target.value
             startTransition(() => setQuery(v))
           }}
-          placeholder="Tìm Monet, Apollo 11, hóa thạch, chân dung..."
-          className="h-14 w-full rounded-full border border-border bg-card pl-12 pr-5 text-base text-foreground shadow-sm outline-none transition-all focus:border-foreground focus:ring-1 focus:ring-foreground"
+          placeholder="Tìm Monet, Apollo 11, hóa thạch, chân dung, áo khoác..."
+          className="h-14 w-full rounded-full border border-border bg-card pl-12 pr-5 text-base text-foreground shadow-sm outline-none transition-all focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
         />
       </div>
 
@@ -133,7 +339,7 @@ export default function SearchPage() {
         <div className="rounded-lg border border-border bg-card/60 py-24 text-center shadow-sm">
           <p className="text-xl text-foreground font-light">Không tìm thấy kết quả nào cho &ldquo;{query}&rdquo;</p>
           <p className="mt-2 text-sm text-muted-foreground">
-            Thử tìm kiếm với từ khóa khác như &ldquo;Monet&rdquo;, &ldquo;Apollo&rdquo;, hoặc &ldquo;Kim cương&rdquo;.
+            Thử tìm kiếm với từ khóa khác như &ldquo;Monet&rdquo;, &ldquo;Apollo&rdquo;, &ldquo;Khủng long&rdquo; hoặc &ldquo;Kim cương&rdquo;.
           </p>
         </div>
       ) : (
@@ -172,7 +378,7 @@ export default function SearchPage() {
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {matchedArtifacts.map((art) => (
                   <SpotlightCard key={art.id} className="p-3 bg-card border-border shadow-sm">
-                    <Link href={`/hien-vat/${art.slug}`} className="group flex flex-col">
+                    <Link href={`/bao-tang/${art.museumSlug}`} className="group flex flex-col">
                       <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
                         <Image
                           src={art.image}
@@ -205,7 +411,7 @@ export default function SearchPage() {
                       className="group flex flex-col justify-between h-full"
                     >
                       <div>
-                        <p className="placard text-xs text-muted-foreground">Curator: {e.curator}</p>
+                        <p className="placard text-xs text-muted-foreground">Giám tuyển: {e.curator}</p>
                         <h3 className="mt-2 text-xl font-heading font-light group-hover:text-museum transition-colors">{e.title}</h3>
                         <p className="mt-2 line-clamp-2 text-xs text-muted-foreground leading-relaxed">{e.description}</p>
                       </div>
@@ -235,7 +441,7 @@ export default function SearchPage() {
                       </div>
                       <p className="placard mt-3 text-xs text-muted-foreground">{p.category}</p>
                       <p className="mt-1 text-sm font-medium leading-tight group-hover:text-museum transition-colors line-clamp-1">{p.name}</p>
-                      <p className="mt-auto pt-3 font-heading text-base font-semibold text-museum">{formatPrice(p.price)}</p>
+                      <p className="mt-auto pt-3 font-heading text-base font-semibold text-museum">{formatVndOrPrice(p.price)}</p>
                     </Link>
                   </SpotlightCard>
                 ))}

@@ -97,7 +97,7 @@ export function ProductDetailView({
   const inspiredBy = product.inspiredByArtifactId ? artifactById(product.inspiredByArtifactId) : null
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12 md:px-8">
+    <div className="mx-auto max-w-6xl px-5 pt-28 pb-16 md:px-8">
       <Link
         href="/cua-hang"
         className="placard inline-flex items-center gap-1.5 text-stone-300 hover:text-[#fbe396] transition-colors"

@@ -74,7 +74,7 @@ export default function MuseumListPage() {
   }, [])
 
   return (
-    <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
+    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
       {/* Header đồng bộ chuẩn White Cube & Renaissance */}
       <header className="mb-10 max-w-4xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">

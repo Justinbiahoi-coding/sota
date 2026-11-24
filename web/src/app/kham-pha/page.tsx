@@ -1,7 +1,11 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { ArrowUpRight, Clock, Compass, Footprints, Info, MapPin, TrainTrack } from "lucide-react"
-import { museums } from "@/lib/mock-data"
+import { museums as initialMockMuseums, museumBySlug, type Museum } from "@/lib/mock-data"
+import { api } from "@/lib/api/client"
 import { SplitText } from "@/components/reactbits/split-text"
 import { DecryptedText } from "@/components/reactbits/decrypted-text"
 import { StarBorder } from "@/components/reactbits/star-border"
@@ -14,9 +18,13 @@ import {
   GildedMuseumFrame,
 } from "@/components/renaissance/deco-assets"
 
-export const metadata = {
-  title: "Khám phá · National Mall & Bản đồ bảo tàng",
-  description: "Cẩm nang tham quan cụm bảo tàng Smithsonian tại Washington, D.C. — lộ trình đi bộ, thông tin vào cửa và vị trí các tòa nhà.",
+const DB_TO_VI_SLUG: Record<string, string> = {
+  "national-museum-of-natural-history": "lich-su-tu-nhien",
+  "national-air-and-space-museum": "hang-khong-vu-tru",
+  "national-museum-of-american-history": "lich-su-hoa-ky",
+  "national-portrait-gallery": "phong-tranh-chan-dung",
+  "hirshhorn-museum-and-sculpture-garden": "hirshhorn",
+  "national-museum-of-asian-art": "nghe-thuat-chau-a",
 }
 
 const MALL_STATIONS = [
@@ -26,8 +34,50 @@ const MALL_STATIONS = [
 ]
 
 export default function KhamPhaPage() {
+  const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
+
+  useEffect(() => {
+    let active = true
+    async function loadMuseums() {
+      try {
+        const res = await api.museums.list({ limit: 20 })
+        if (active && res?.data && res.data.length > 0) {
+          const merged: Museum[] = res.data.map((dbM) => {
+            const viSlug = DB_TO_VI_SLUG[dbM.slug] ?? dbM.slug
+            const fallback = museumBySlug(viSlug) ?? museumBySlug(dbM.slug)
+            let coverImg = dbM.cover_image_path
+            if (coverImg && !coverImg.startsWith("http")) {
+              const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+              coverImg = `${base}/storage/v1/object/public/museum-media/${coverImg}`
+            }
+
+            return {
+              id: dbM.id,
+              slug: viSlug,
+              name: fallback?.name ?? dbM.name,
+              nameEn: fallback?.nameEn ?? dbM.name,
+              accent: fallback?.accent ?? "#d4af37",
+              opens: fallback?.opens ?? "10:00",
+              closes: fallback?.closes ?? "17:30",
+              image: coverImg || fallback?.image || "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=1200&q=80",
+              address: dbM.address ? `${dbM.address}, ${dbM.city ?? "Washington, D.C."}` : (fallback?.address ?? "Washington, D.C."),
+              description: dbM.description || fallback?.description || "",
+            }
+          })
+          setLiveMuseums(merged)
+        }
+      } catch {
+        // Fallback remains initialMockMuseums
+      }
+    }
+    loadMuseums()
+    return () => {
+      active = false
+    }
+  }, [])
+
   return (
-    <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
+    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
       {/* Header chuẩn mực White Cube & Renaissance */}
       <header className="mb-10 max-w-4xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
@@ -136,7 +186,7 @@ export default function KhamPhaPage() {
 
         {/* 6 Museum Vitrine Cards in wide grid */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {museums.map((m, idx) => (
+          {liveMuseums.map((m, idx) => (
             <div
               key={m.slug}
               className="group relative flex flex-col justify-between rounded-xl border border-[#d4af37]/35 bg-white p-4 shadow-md transition-all duration-300 hover:border-[#d4af37] hover:shadow-[0_16px_36px_-12px_rgba(212,175,55,0.35)]"

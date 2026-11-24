@@ -2,8 +2,8 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect } from "react"
-import { ShoppingBag, Check, LayoutGrid, Boxes } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { ShoppingBag, Check, LayoutGrid, Boxes, Search, X, Loader2, ArrowUpDown } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { formatPrice, products as initialMockProducts, type Product, type ProductCategory } from "@/lib/mock-data"
 import { api } from "@/lib/api/client"
@@ -19,12 +19,15 @@ import {
 import { Shop3DGallery } from "@/components/shop/shop-gallery-3d"
 
 const CATEGORIES: { label: string; value: ProductCategory | "all" }[] = [
-  { label: "Tất cả vật phẩm", value: "all" },
+  { label: "Tất cả", value: "all" },
   { label: "Bưu thiếp nghệ thuật", value: "Postcard" },
   { label: "Sách mỹ thuật & Nghiên cứu", value: "Sách nghệ thuật" },
-  { label: "Mô hình & Cổ vật phục chế", value: "Lưu niệm" },
-  { label: "Thời trang & Lụa cao cấp", value: "Thời trang" },
+  { label: "Mô hình & Cổ vật", value: "Lưu niệm" },
+  { label: "Thời trang cao cấp", value: "Thời trang" },
 ]
+
+// In-memory module cache so switching tabs or revisiting /cua-hang is immediate
+let cachedShopProducts: Product[] | null = null
 
 export function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") {
   const num = typeof centsOrAmount === "string" ? parseFloat(centsOrAmount) : centsOrAmount
@@ -117,18 +120,48 @@ function ProductCard({ product }: { product: Product }) {
   )
 }
 
+function ProductSkeleton() {
+  return (
+    <div className="relative flex flex-col justify-between rounded-xl border border-[#d4af37]/20 bg-white/70 p-3.5 shadow-sm animate-pulse">
+      <RenaissanceCorners />
+      <div>
+        <div className="relative aspect-square w-full rounded-md bg-stone-200/80" />
+        <div className="pt-3 space-y-2">
+          <div className="h-3 w-1/3 rounded bg-stone-200" />
+          <div className="h-4 w-3/4 rounded bg-stone-200" />
+          <div className="h-5 w-1/2 rounded bg-stone-200" />
+        </div>
+      </div>
+      <div className="pt-3">
+        <div className="h-8 w-full rounded-full bg-stone-200" />
+      </div>
+    </div>
+  )
+}
+
 export default function ShopPage() {
   const [category, setCategory] = useState<ProductCategory | "all">("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "name-asc">("default")
   const [view, setView] = useState<"grid" | "gallery">("grid")
-  const [liveProducts, setLiveProducts] = useState<Product[]>(initialMockProducts)
+  const [liveProducts, setLiveProducts] = useState<Product[]>(cachedShopProducts ?? initialMockProducts)
+  const [isLoading, setIsLoading] = useState(!cachedShopProducts)
 
   useEffect(() => {
     let active = true
+
     async function loadLiveProducts() {
+      if (!cachedShopProducts) {
+        setIsLoading(true)
+      }
+
       try {
         const museumsRes = await api.museums.list({ limit: 20 })
         const museumList = museumsRes?.data ?? []
-        if (museumList.length === 0) return
+        if (museumList.length === 0) {
+          if (active) setIsLoading(false)
+          return
+        }
 
         const productResponses = await Promise.all(
           museumList.map(async (m) => {
@@ -178,26 +211,67 @@ export default function ShopPage() {
               }
             })
           )
+
           if (active && mapped.length > 0) {
+            cachedShopProducts = mapped
             setLiveProducts(mapped)
           }
         }
       } catch {
-        // Graceful fallback to initialMockProducts
+        // Fallback remains initialMockProducts
+      } finally {
+        if (active) {
+          setIsLoading(false)
+        }
       }
     }
+
     loadLiveProducts()
     return () => {
       active = false
     }
   }, [])
 
-  const filtered =
-    category === "all" ? liveProducts : liveProducts.filter((p) => p.category === category)
+  const filtered = useMemo(() => {
+    let list = liveProducts
+
+    if (category !== "all") {
+      list = list.filter((p) => p.category === category)
+    }
+
+    const q = searchQuery.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q) ||
+          p.category.toLowerCase().includes(q)
+      )
+    }
+
+    if (sortBy === "price-asc") {
+      list = [...list].sort((a, b) => a.price - b.price)
+    } else if (sortBy === "price-desc") {
+      list = [...list].sort((a, b) => b.price - a.price)
+    } else if (sortBy === "name-asc") {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name, "vi"))
+    }
+
+    return list
+  }, [liveProducts, category, searchQuery, sortBy])
+
+  // Count items per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: liveProducts.length }
+    for (const p of liveProducts) {
+      counts[p.category] = (counts[p.category] ?? 0) + 1
+    }
+    return counts
+  }, [liveProducts])
 
   return (
-    <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
-      <header className="mb-10 max-w-4xl">
+    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
+      <header className="mb-8 max-w-4xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
           <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
@@ -208,6 +282,7 @@ export default function ShopPage() {
               animateOn="view"
             />
           </span>
+          {isLoading && <Loader2 className="ml-2 size-3 animate-spin text-[#d4af37]" />}
         </div>
         <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] sm:text-5xl md:text-6xl">
           <SplitText text="Quà lưu niệm & Sách nghệ thuật" delay={0.04} stagger={0.04} />
@@ -219,66 +294,149 @@ export default function ShopPage() {
 
       <RenaissanceDivider title="Bộ sưu tập lưu niệm" />
 
-      {/* View toggle */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex gap-2">
-          <button
-            onClick={() => setView("grid")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
-              view === "grid"
-                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
-            )}
-          >
-            <LayoutGrid className="size-3.5" />
-            Danh sách
-          </button>
-          <button
-            onClick={() => setView("gallery")}
-            className={cn(
-              "flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300",
-              view === "gallery"
-                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
-            )}
-          >
-            <Boxes className="size-3.5" />
-            Phòng trưng bày 3D
-          </button>
+      {/* Controls: Search Bar & View Switch */}
+      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* Search Bar */}
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm bưu thiếp, sách, áo, quà lưu niệm..."
+            className="h-11 w-full rounded-full border border-white/20 bg-[#08162b]/80 pl-11 pr-10 text-sm text-[#f8f6f0] placeholder:text-stone-400 shadow-sm backdrop-blur-md outline-none transition-all focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white"
+            >
+              <X className="size-4" />
+            </button>
+          )}
+        </div>
+
+        {/* View toggle & Sort */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Sort Selector */}
+          <div className="flex items-center gap-1.5 rounded-full border border-white/15 bg-[#08162b]/80 px-3 py-1.5 text-xs text-stone-300 shadow-sm">
+            <ArrowUpDown className="size-3 text-[#d4af37]" />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-xs text-stone-200 outline-none cursor-pointer"
+            >
+              <option value="default" className="bg-[#08162b] text-white">Mặc định</option>
+              <option value="price-asc" className="bg-[#08162b] text-white">Giá: Thấp đến Cao</option>
+              <option value="price-desc" className="bg-[#08162b] text-white">Giá: Cao đến Thấp</option>
+              <option value="name-asc" className="bg-[#08162b] text-white">Tên: A-Z</option>
+            </select>
+          </div>
+
+          {/* View toggle */}
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => setView("grid")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-300",
+                view === "grid"
+                  ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                  : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
+              )}
+            >
+              <LayoutGrid className="size-3.5" />
+              Danh sách
+            </button>
+            <button
+              onClick={() => setView("gallery")}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-300",
+                view === "gallery"
+                  ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                  : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
+              )}
+            >
+              <Boxes className="size-3.5" />
+              Phòng trưng bày 3D
+            </button>
+          </div>
         </div>
       </div>
 
       {/* 3D gallery view */}
       {view === "gallery" && (
-        <Shop3DGallery products={liveProducts} />
+        <Shop3DGallery products={filtered} />
       )}
 
-      {/* Category filter + grid — only in grid view */}
+      {/* Grid view */}
       {view === "grid" && (
         <>
-          <div className="mb-10 flex flex-wrap gap-2.5">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.value}
-                onClick={() => setCategory(cat.value)}
-                className={cn(
-                  "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
-                  category === cat.value
-                    ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                    : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
-                )}
-              >
-                {cat.label}
-              </button>
-            ))}
+          {/* Category filter pills */}
+          <div className="mb-8 flex flex-wrap gap-2.5">
+            {CATEGORIES.map((cat) => {
+              const count = categoryCounts[cat.value] ?? 0
+              return (
+                <button
+                  key={cat.value}
+                  onClick={() => setCategory(cat.value)}
+                  className={cn(
+                    "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
+                    category === cat.value
+                      ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
+                      : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
+                  )}
+                >
+                  {cat.label} {count > 0 && `(${count})`}
+                </button>
+              )
+            })}
           </div>
 
-          {filtered.length === 0 ? (
+          {/* Results stats */}
+          <div className="mb-6 flex items-center justify-between text-xs text-stone-400">
+            <span>
+              Hiển thị <strong className="text-[#fbe396] font-mono">{filtered.length}</strong> vật phẩm
+              {searchQuery && <span> cho &ldquo;{searchQuery}&rdquo;</span>}
+            </span>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="text-[#d4af37] hover:underline"
+              >
+                Xóa từ khóa
+              </button>
+            )}
+          </div>
+
+          {/* Skeletons while initial loading */}
+          {isLoading && !cachedShopProducts ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <ProductSkeleton key={i} />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white py-24 text-center shadow-sm">
               <RenaissanceCorners />
-              <p className="font-heading text-2xl font-light text-stone-800">Không có sản phẩm nào trong danh mục này</p>
-              <p className="mt-2 text-sm text-stone-500">Vui lòng chọn danh mục khác.</p>
+              <p className="font-heading text-2xl font-light text-stone-800">
+                Không tìm thấy vật phẩm nào phù hợp
+              </p>
+              <p className="mt-2 text-sm text-stone-500">
+                {searchQuery
+                  ? `Không có kết quả cho từ khóa "${searchQuery}". Vui lòng thử từ khóa khác.`
+                  : "Vui lòng chọn danh mục khác."}
+              </p>
+              {(searchQuery || category !== "all") && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("")
+                    setCategory("all")
+                  }}
+                  className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#d4af37] bg-[#d4af37] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-[#08162b] shadow-sm hover:bg-[#e0be47]"
+                >
+                  Xem tất cả vật phẩm
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">

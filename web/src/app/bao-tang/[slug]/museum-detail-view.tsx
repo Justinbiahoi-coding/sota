@@ -163,7 +163,7 @@ export function MuseumDetailView({
   return (
     <div style={{ "--museum-accent": museum.accent } as React.CSSProperties}>
       {/* Back button */}
-      <div className="mx-auto max-w-[1560px] px-6 pt-8 md:px-12">
+      <div className="mx-auto max-w-[1560px] px-6 pt-24 md:px-12">
         <Link
           href="/bao-tang"
           className="placard inline-flex items-center gap-2 text-xs text-stone-400 hover:text-[#fbe396] transition-colors"
