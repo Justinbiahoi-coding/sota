@@ -3,13 +3,16 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, ArrowUpRight, Clock, MapPin } from "lucide-react"
+import { ArrowLeft, ArrowUpRight, Clock, MapPin, ShoppingBag, Check } from "lucide-react"
 import {
   type Museum,
   type Artifact,
   type Exhibition,
+  type Product,
   exhibitionStatus,
+  productsByMuseum,
 } from "@/lib/mock-data"
+import { useCart } from "@/lib/cart-context"
 import { api } from "@/lib/api/client"
 import { StarBorder } from "@/components/reactbits/star-border"
 import { MuseumButton } from "@/components/reactbits/museum-button"
@@ -20,6 +23,8 @@ import {
   RenaissanceDivider,
   GildedMuseumFrame,
 } from "@/components/renaissance/deco-assets"
+import { formatVndOrPrice } from "@/app/cua-hang/page"
+import { cn } from "@/lib/utils"
 
 const VI_TO_DB_SLUG: Record<string, string> = {
   "lich-su-tu-nhien": "national-museum-of-natural-history",
@@ -36,11 +41,83 @@ const statusLabel: Record<string, string> = {
   ended: "Đã kết thúc",
 }
 
+function MuseumProductCard({ product }: { product: Product }) {
+  const { addItem } = useCart()
+  const [added, setAdded] = useState(false)
+
+  function handleAdd(e: React.MouseEvent) {
+    e.preventDefault()
+    e.stopPropagation()
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+    })
+    setAdded(true)
+    setTimeout(() => setAdded(false), 1500)
+  }
+
+  return (
+    <div className="group relative flex flex-col justify-between rounded-xl border border-[#d4af37]/35 bg-white p-3.5 shadow-md transition-all duration-300 hover:border-[#d4af37] hover:shadow-[0_12px_32px_-8px_rgba(212,175,55,0.3)]">
+      <RenaissanceCorners />
+      <div>
+        <Link href={`/cua-hang/${product.slug}`}>
+          <GildedMuseumFrame className="w-full">
+            <div className="relative aspect-square w-full bg-stone-900">
+              <Image
+                src={product.image}
+                alt={product.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,25vw"
+              />
+            </div>
+          </GildedMuseumFrame>
+        </Link>
+
+        <div className="pt-3">
+          <div className="flex items-center gap-1.5">
+            <BrassPlacardPin />
+            <p className="placard text-[0.65rem] text-stone-500 font-mono">{product.category}</p>
+          </div>
+          <Link href={`/cua-hang/${product.slug}`}>
+            <h3 className="mt-1 font-heading text-base font-light italic leading-snug text-[#171717] hover:text-[#92400e] transition-colors line-clamp-1">
+              {product.name}
+            </h3>
+          </Link>
+          <p className="mt-2 font-heading text-lg font-semibold text-[#92400e]">{formatVndOrPrice(product.price)}</p>
+        </div>
+      </div>
+
+      <div className="pt-3">
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={product.inventory === 0}
+          className={cn(
+            "flex w-full items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-300 active:scale-95",
+            added
+              ? "border border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm"
+              : product.inventory === 0
+                ? "cursor-not-allowed border border-stone-200 opacity-40 text-stone-400"
+                : "border border-stone-300 bg-stone-50 text-stone-800 shadow-sm hover:border-[#d4af37] hover:bg-[#d4af37] hover:text-[#08162b]",
+          )}
+        >
+          {added ? <Check className="size-3.5 text-emerald-600" /> : <ShoppingBag className="size-3.5" />}
+          {added ? "Đã vào giỏ!" : product.inventory === 0 ? "Hết hàng" : "Thêm vào giỏ"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 interface MuseumDetailViewProps {
   slug: string
   initialMuseum: Museum | null
   initialArtifacts: Artifact[]
   initialExhibitions: Exhibition[]
+  initialProducts?: Product[]
 }
 
 export function MuseumDetailView({
@@ -48,10 +125,14 @@ export function MuseumDetailView({
   initialMuseum,
   initialArtifacts,
   initialExhibitions,
+  initialProducts,
 }: MuseumDetailViewProps) {
   const [museum, setMuseum] = useState<Museum | null>(initialMuseum)
   const [artifacts, setArtifacts] = useState<Artifact[]>(initialArtifacts)
   const [exhibitions] = useState<Exhibition[]>(initialExhibitions)
+  const [products, setProducts] = useState<Product[]>(
+    initialProducts && initialProducts.length > 0 ? initialProducts : productsByMuseum(slug)
+  )
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
@@ -129,6 +210,32 @@ export function MuseumDetailView({
             }
           } catch {
             // Keep initial artifacts
+          }
+
+          // Fetch live products for this specific museum
+          try {
+            const prodRes = await api.museums.products(dbM.id)
+            if (active && prodRes?.data && prodRes.data.length > 0) {
+              const baseProds = productsByMuseum(slug)
+              const liveProds: Product[] = prodRes.data.map((p, i) => {
+                const initialMatch = baseProds[i % Math.max(1, baseProds.length)]
+                return {
+                  id: p.id,
+                  slug: p.id,
+                  name: p.name,
+                  price: Number(p.price) || 0,
+                  image: initialMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
+                  inventory: p.stock_quantity ?? 0,
+                  museumSlug: slug,
+                  inspiredByArtifactId: null,
+                  category: initialMatch?.category ?? "Lưu niệm",
+                  description: p.description ?? "",
+                }
+              })
+              setProducts(liveProds)
+            }
+          } catch {
+            // Keep initial products
           }
         }
       } catch {
@@ -211,7 +318,14 @@ export function MuseumDetailView({
             </span>
           </div>
 
-          <div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href={`/cua-hang?museum=${museum.slug}`}
+              className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/60 bg-stone-50 px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-stone-800 shadow-sm transition-all hover:border-[#d4af37] hover:bg-[#d4af37] hover:text-[#08162b]"
+            >
+              <ShoppingBag className="size-3.5 text-[#92400e]" /> Cửa hàng lưu niệm
+            </Link>
+
             <Link href={`/dat-ve?museum=${museum.slug}`}>
               <StarBorder
                 as="span"
@@ -256,7 +370,40 @@ export function MuseumDetailView({
           </section>
         )}
 
-        <RenaissanceDivider title="Các triển lãm đang diễn ra" />
+        {/* Museum Souvenir Boutique Section (Use flow: Bảo tàng -> Cửa hàng) */}
+        <div className="mt-16">
+          <RenaissanceDivider title={`Cửa hàng lưu niệm — ${museum.name}`} />
+
+          <section className="mt-12">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+              <div>
+                <p className="placard text-xs text-[#d4af37] font-semibold uppercase tracking-widest flex items-center gap-2">
+                  <BrassPlacardPin /> SMITHSONIAN BOUTIQUE ĐỘC QUYỀN
+                </p>
+                <h2 className="mt-1 font-heading text-3xl md:text-4xl font-light text-[#f8f6f0]">
+                  Vật phẩm lưu niệm & Ấn phẩm mỹ thuật
+                </h2>
+                <p className="mt-2 text-sm text-stone-300 max-w-2xl leading-relaxed">
+                  Bưu thiếp dập nổi, ấn bản chuyên khảo và kỷ vật độc bản phát hành riêng biệt gắn liền với các hiện vật của {museum.name}.
+                </p>
+              </div>
+
+              <MuseumButton href={`/cua-hang?museum=${museum.slug}`} variant="primary" size="sm" icon>
+                Ghé thăm cửa hàng ({products.length} vật phẩm)
+              </MuseumButton>
+            </div>
+
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {(products.length > 0 ? products : productsByMuseum(slug)).slice(0, 4).map((p) => (
+                <MuseumProductCard key={p.id} product={p} />
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-16">
+          <RenaissanceDivider title="Các triển lãm đang diễn ra" />
+        </div>
 
         {/* Exhibitions */}
         {exhibitions.length > 0 && (

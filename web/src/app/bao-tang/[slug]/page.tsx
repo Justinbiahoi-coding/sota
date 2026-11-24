@@ -3,6 +3,7 @@ import {
   artifactsByMuseum,
   exhibitionsByMuseum,
   museumBySlug,
+  productsByMuseum,
 } from "@/lib/mock-data"
 import { MuseumDetailView } from "./museum-detail-view"
 
@@ -22,6 +23,7 @@ export default async function MuseumDetailPage({ params }: { params: Promise<{ s
   const initialMuseum = museumBySlug(slug) || null
   const initialExhibitions = exhibitionsByMuseum(slug) || []
   const initialArtifacts = artifactsByMuseum(slug) || []
+  const initialProducts = productsByMuseum(slug) || []
 
   return (
     <Suspense
@@ -36,6 +38,7 @@ export default async function MuseumDetailPage({ params }: { params: Promise<{ s
         initialMuseum={initialMuseum}
         initialArtifacts={initialArtifacts}
         initialExhibitions={initialExhibitions}
+        initialProducts={initialProducts}
       />
     </Suspense>
   )
