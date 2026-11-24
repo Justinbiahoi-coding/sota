@@ -48,3 +48,12 @@ web/src/generated/prisma
 
 # permission notes from third parties (kept local; the team writes the licence notes itself)
 docs/Cho_phep_*.md
+
+# local env files and folders
+env
+frontend env/
+
+# backend specs (tracked in sota-backend repository)
+api-contract.md
+auth-guide.md
+database-design.md
