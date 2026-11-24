@@ -10,15 +10,6 @@ import { MuseumButton } from "@/components/reactbits/museum-button"
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
 const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} — ${dateFmt.format(new Date(b))}`
 
-
-const TEAM = [
-  { name: "Thành viên 1", role: "Backend & API" },
-  { name: "Thành viên 2", role: "Database & Auth" },
-  { name: "Thành viên 3", role: "Frontend UX" },
-  { name: "Tuấn", role: "Layout, Store & UI" },
-  { name: "Thành viên 5", role: "DevOps & Testing" },
-]
-
 export default function Home() {
   return (
     <>

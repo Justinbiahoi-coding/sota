@@ -2,6 +2,26 @@
 
 ---
 
+## Phiên 2026-11-23 20:39 +07
+
+- **Thời gian:** Thứ Hai, 23/11/2026, 20:39 ICT
+- **Làm việc gì:** Fix lỗi visual glitch khi navigate back từ trang bảo tàng về homepage (3D gallery scene + SMITHSONIAN title hiện đồng thời)
+- **Ứng dụng/module:** `web/src/components/home/intro/gallery-walkthrough-hero.tsx`
+- **Tác dụng:** Khi điều hướng client-side trở về homepage (Next.js App Router remount), không còn flash frame sai — nếu `skipGallery=true` thì finale screen hiện ngay từ first render, không còn thấy Three.js canvas lẫn SMITHSONIAN overlay cùng lúc
+- **Làm như thế nào:** Root cause: `useEffect` chạy sau first paint nên CSS variables (`--cwf-late`, `--canvas-opacity`) và class `cwf-letters-active` chưa được set ở frame đầu tiên. Fix: (1) chuyển `skipGallery` lên khai báo đầu tiên; (2) `useState(() => skipGallery ? 1 : 0)` cho `loadProgress`; `useState(() => skipGallery)` cho `dismissed`; (3) set inline `style` trực tiếp trên stage div với CSS variables đúng ngay từ render; (4) add `cwf-letters-active` class qua JSX conditional; (5) heroOverlay nhận initial `style` đúng state từ first render
+
+---
+
+## Phiên 2026-11-23 20:37 +07
+
+- **Thời gian:** Thứ Hai, 23/11/2026, 20:37 ICT
+- **Làm việc gì:** Rà soát toàn bộ codebase tìm bug và lỗ hổng bảo mật; vá 5 vấn đề
+- **Ứng dụng/module:** `web/src/app/auth/callback/route.ts`, `web/src/components/home/intro/gallery-walkthrough-hero.tsx`, `web/src/components/home/museum-map-gl.tsx`
+- **Tác dụng:** Bịt lỗ hổng open redirect trong auth callback; giải phóng GPU VRAM khi unmount (Three.js textures + WebGL resources); tăng hiệu năng render loop museum map; tăng độ ổn định khi load ảnh thất bại
+- **Làm như thế nào:** (1) `auth/callback`: validate `next` phải khớp `/^\/[^/]/` — ngăn `next=".evil.com"` tạo ra URL ngoài origin; (2) `gallery-walkthrough`: thu thập tất cả `THREE.Texture` vào mảng `textures[]`, gọi `texture.dispose()` trong hàm cleanup (Three.js không tự dispose texture khi dispose material); (3) `museum-map-gl`: cache `gl.getUniformLocation()` ra ngoài render loop, thêm `.catch()` cho `init()`, gọi `gl.deleteTexture/deleteBuffer/deleteProgram` trong cleanup để tránh leak GPU memory khi remount
+
+---
+
 ## Phiên 2026-11-23 09:07 +07
 
 - **Thời gian:** Thứ Hai, 23/11/2026, 09:07 ICT
