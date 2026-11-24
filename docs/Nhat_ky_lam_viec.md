@@ -2,6 +2,16 @@
 
 ---
 
+## Phiên 2026-11-24 13:48 +07
+
+- **Thời gian:** Thứ Ba, 24/11/2026, 13:48 ICT
+- **Làm việc gì:** Clean codebase — xóa components không dùng, dead code, và assets thừa
+- **Ứng dụng/module:** `web/src/components/`, `web/public/`, `web/src/app/page.tsx`
+- **Tác dụng:** Giảm ~52MB assets (xóa toàn bộ `public/intro/` 50MB + 6 wf-*.webp layers + các file lẻ); xóa 15 component files không có import nào (koi-canvas, castle-intro/enter, evolution-intro, iso-cluster, museum-map-section, v.v.); xóa const TEAM dead code trong page.tsx
+- **Làm như thế nào:** Dùng fork agent + bash script grep import để tìm component files không được import ở bất kỳ đâu trong src/; grep tên file trong src/ để xác nhận asset thực sự không có reference; build lại để verify không có lỗi sau khi xóa; commit 57 files
+
+---
+
 ## Phiên 2026-11-23 20:39 +07
 
 - **Thời gian:** Thứ Hai, 23/11/2026, 20:39 ICT
