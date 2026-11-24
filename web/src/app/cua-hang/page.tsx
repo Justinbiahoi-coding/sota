@@ -2,10 +2,11 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { ShoppingBag, Check, LayoutGrid, Boxes } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
-import { formatPrice, products, type Product, type ProductCategory } from "@/lib/mock-data"
+import { formatPrice, products as initialMockProducts, type Product, type ProductCategory } from "@/lib/mock-data"
+import { api } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 import { SplitText } from "@/components/reactbits/split-text"
 import { DecryptedText } from "@/components/reactbits/decrypted-text"
@@ -24,6 +25,27 @@ const CATEGORIES: { label: string; value: ProductCategory | "all" }[] = [
   { label: "Mô hình & Cổ vật phục chế", value: "Lưu niệm" },
   { label: "Thời trang & Lụa cao cấp", value: "Thời trang" },
 ]
+
+export function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") {
+  const num = typeof centsOrAmount === "string" ? parseFloat(centsOrAmount) : centsOrAmount
+  if (isNaN(num) || num === 0) return free
+  if (num >= 1000) return `${Math.round(num).toLocaleString("vi-VN")}₫`
+  return formatPrice(num, free)
+}
+
+function deriveCategory(name: string, sku?: string | null): ProductCategory {
+  const text = `${name} ${sku ?? ""}`.toLowerCase()
+  if (text.includes("postcard") || text.includes("thiệp") || text.includes("bưu thiếp") || text.includes("print") || text.includes("card")) {
+    return "Postcard"
+  }
+  if (text.includes("book") || text.includes("sách") || text.includes("guide") || text.includes("chuyên khảo") || text.includes("tạp chí")) {
+    return "Sách nghệ thuật"
+  }
+  if (text.includes("hoodie") || text.includes("shirt") || text.includes("sweatshirt") || text.includes("pullover") || text.includes("silk") || text.includes("lụa") || text.includes("áo") || text.includes("t-shirt") || text.includes("apparel") || text.includes("tote")) {
+    return "Thời trang"
+  }
+  return "Lưu niệm"
+}
 
 function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
@@ -69,7 +91,7 @@ function ProductCard({ product }: { product: Product }) {
               {product.name}
             </h3>
           </Link>
-          <p className="mt-2 font-heading text-lg font-semibold text-[#92400e]">{formatPrice(product.price)}</p>
+          <p className="mt-2 font-heading text-lg font-semibold text-[#92400e]">{formatVndOrPrice(product.price)}</p>
         </div>
       </div>
 
@@ -98,9 +120,80 @@ function ProductCard({ product }: { product: Product }) {
 export default function ShopPage() {
   const [category, setCategory] = useState<ProductCategory | "all">("all")
   const [view, setView] = useState<"grid" | "gallery">("grid")
+  const [liveProducts, setLiveProducts] = useState<Product[]>(initialMockProducts)
+
+  useEffect(() => {
+    let active = true
+    async function loadLiveProducts() {
+      try {
+        const museumsRes = await api.museums.list({ limit: 20 })
+        const museumList = museumsRes?.data ?? []
+        if (museumList.length === 0) return
+
+        const productResponses = await Promise.all(
+          museumList.map(async (m) => {
+            try {
+              const res = await api.museums.products(m.id)
+              return (res?.data ?? []).map((p) => ({ ...p, museumSlug: m.slug }))
+            } catch {
+              return []
+            }
+          })
+        )
+
+        const flatProducts = productResponses.flat()
+        if (active && flatProducts.length > 0) {
+          const mapped: Product[] = await Promise.all(
+            flatProducts.map(async (p, idx) => {
+              let imageUrl = ""
+              try {
+                const mediaRes = await api.media("souvenir", p.id)
+                if (mediaRes?.data && mediaRes.data.length > 0) {
+                  const item = mediaRes.data[0]
+                  if (item.storage_path.startsWith("http://") || item.storage_path.startsWith("https://")) {
+                    imageUrl = item.storage_path
+                  } else {
+                    const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+                    imageUrl = `${base}/storage/v1/object/public/${item.storage_bucket}/${item.storage_path}`
+                  }
+                }
+              } catch {}
+
+              if (!imageUrl) {
+                const mockMatch = initialMockProducts[idx % initialMockProducts.length]
+                imageUrl = mockMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80"
+              }
+
+              return {
+                id: p.id,
+                slug: p.id,
+                name: p.name,
+                price: Number(p.price) || 0,
+                image: imageUrl,
+                inventory: p.stock_quantity ?? 0,
+                museumSlug: p.museumSlug,
+                inspiredByArtifactId: null,
+                category: deriveCategory(p.name, p.sku),
+                description: p.description ?? "",
+              }
+            })
+          )
+          if (active && mapped.length > 0) {
+            setLiveProducts(mapped)
+          }
+        }
+      } catch {
+        // Graceful fallback to initialMockProducts
+      }
+    }
+    loadLiveProducts()
+    return () => {
+      active = false
+    }
+  }, [])
 
   const filtered =
-    category === "all" ? products : products.filter((p) => p.category === category)
+    category === "all" ? liveProducts : liveProducts.filter((p) => p.category === category)
 
   return (
     <div className="mx-auto max-w-[1560px] px-6 py-16 md:px-12 xl:px-16">
@@ -158,7 +251,7 @@ export default function ShopPage() {
 
       {/* 3D gallery view */}
       {view === "gallery" && (
-        <Shop3DGallery products={products} />
+        <Shop3DGallery products={liveProducts} />
       )}
 
       {/* Category filter + grid — only in grid view */}
@@ -184,7 +277,7 @@ export default function ShopPage() {
           {filtered.length === 0 ? (
             <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-white py-24 text-center shadow-sm">
               <RenaissanceCorners />
-              <p className="font-heading text-2xl font-light text-stone-200">Không có sản phẩm nào trong danh mục này</p>
+              <p className="font-heading text-2xl font-light text-stone-800">Không có sản phẩm nào trong danh mục này</p>
               <p className="mt-2 text-sm text-stone-500">Vui lòng chọn danh mục khác.</p>
             </div>
           ) : (

@@ -6,6 +6,7 @@ import { useState } from "react"
 import { Check, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import { formatPrice } from "@/lib/mock-data"
+import { formatVndOrPrice } from "@/app/cua-hang/page"
 import { api } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
@@ -53,11 +54,22 @@ export default function CartPage() {
       if (cartList?.data && cartList.data.length > 0) {
         targetCartId = cartList.data[0].id
       } else {
-        const newCart = await api.carts.create("e58ed763-928c-4155-bee9-fdbaaadc15f3")
+        let museumId = "84ce04fb-df92-48d9-b23d-28b5636fcfe5"
+        try {
+          const mRes = await api.museums.list({ limit: 1 })
+          if (mRes?.data?.[0]?.id) museumId = mRes.data[0].id
+        } catch {}
+        const newCart = await api.carts.create(museumId)
         if (newCart?.data?.id) targetCartId = newCart.data.id
       }
 
       if (targetCartId) {
+        for (const it of items) {
+          try {
+            await api.carts.addItem(targetCartId, it.productId, it.qty)
+          } catch {}
+        }
+
         const res = await api.carts.checkout(targetCartId, {
           shipping_name: name,
           shipping_phone: phone,
@@ -76,12 +88,13 @@ export default function CartPage() {
     if (!invoiceNo) invoiceNo = `SHP-${Math.floor(100000 + Math.random() * 900000)}`
 
     // Persist order
+    const shippingFee = totalCents >= 1000 ? 30000 : 120
     const existing = JSON.parse(localStorage.getItem("sota_orders") ?? "[]")
     existing.push({
       id,
       invoice: invoiceNo,
       items: items.map((i) => ({ ...i })),
-      total: totalCents + 120, // +30k VND (~$1.20 flat shipping)
+      total: totalCents + shippingFee,
       name,
       address,
       createdAt: new Date().toISOString(),
@@ -199,7 +212,7 @@ export default function CartPage() {
                 </div>
               </div>
               <p className="shrink-0 font-heading text-lg font-light text-foreground">
-                {formatPrice(item.price * item.qty)}
+                {formatVndOrPrice(item.price * item.qty)}
               </p>
             </li>
           ))}
@@ -239,15 +252,15 @@ export default function CartPage() {
           <div className="mt-6 space-y-2 border-t border-border pt-5 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Tạm tính</span>
-              <span>{formatPrice(totalCents)}</span>
+              <span>{formatVndOrPrice(totalCents)}</span>
             </div>
             <div className="flex justify-between text-muted-foreground">
               <span>Phí vận chuyển (đồng giá)</span>
-              <span>30.000 đ</span>
+              <span>{totalCents >= 1000 ? "30.000 ₫" : "$1.20"}</span>
             </div>
             <div className="flex justify-between font-heading text-xl pt-2 border-t border-border text-foreground font-light">
               <span>Tổng thanh toán</span>
-              <span className="text-museum font-semibold">{formatPrice(totalCents + 120)}</span>
+              <span className="text-museum font-semibold">{formatVndOrPrice(totalCents + (totalCents >= 1000 ? 30000 : 120))}</span>
             </div>
           </div>
 
