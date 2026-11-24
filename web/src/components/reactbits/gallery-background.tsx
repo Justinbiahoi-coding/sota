@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { usePathname } from "next/navigation"
 
 interface Particle {
   x: number
@@ -15,9 +16,11 @@ interface Particle {
 }
 
 export function GalleryBackground() {
+  const pathname = usePathname()
   const bgCanvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
+    if (pathname?.startsWith("/admin")) return
     const bgCanvas = bgCanvasRef.current
     if (!bgCanvas) return
 
@@ -184,7 +187,11 @@ export function GalleryBackground() {
       document.removeEventListener("mouseleave", handleMouseLeave)
       cancelAnimationFrame(animationFrameId)
     }
-  }, [])
+  }, [pathname])
+
+  if (pathname?.startsWith("/admin")) {
+    return null
+  }
 
   return (
     <canvas

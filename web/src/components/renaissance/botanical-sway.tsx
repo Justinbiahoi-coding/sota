@@ -2,12 +2,16 @@
 
 import React from "react"
 import Image from "next/image"
+import { usePathname } from "next/navigation"
 
 /**
  * Tán lá ô liu / nguyệt quế hoàng kim Phục Hưng nhẹ nhàng phất phơ trong gió (Botanical Branch Sway)
  * Kèm theo mây khắc cổ điển từ bộ tư liệu Intro (/intro/cloud.png)
  */
 export function BotanicalSwayDecor() {
+  const pathname = usePathname()
+  if (pathname?.startsWith("/admin")) return null
+
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden select-none" aria-hidden="true">
       {/* 1. Mây khắc cổ điển Renaissance (drifting clouds from /intro/cloud.png) */}

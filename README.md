@@ -69,3 +69,12 @@ sota/
 Backend Express sẽ nằm ở `api/` cạnh `web/`.
 
 Quy ước cấu trúc thư mục & tài liệu chi tiết hơn (mỗi thư mục con cần README riêng khi thêm module): xem `CONTRIBUTING.md`.
+
+
+## Chạy admin 
+
+```
+npm --prefix web run dev
+```
+
+và mở `http://localhost:3000/admin`
