@@ -37,10 +37,18 @@ export default function Home() {
               nơi hội tụ lịch sử tự nhiên, hàng không vũ trụ, nghệ thuật và văn hoá
               Hoa Kỳ trong một trải nghiệm số hoá thống nhất.
             </p>
-            <p className="text-stone-400 leading-relaxed text-sm">
+            <p className="text-stone-400 leading-relaxed text-sm mb-6">
               Với hơn 37 tiêu bản 3D độc quyền và bộ sưu tập triển lãm phong phú,
               Sota mang di sản nhân loại đến gần hơn với mọi người trên toàn thế giới.
             </p>
+            <div className="flex flex-wrap gap-3">
+              <MuseumButton href="/tim-kiem" variant="outline" size="sm" icon>
+                Tìm kiếm kho lưu trữ
+              </MuseumButton>
+              <MuseumButton href="/bao-tang" variant="primary" size="sm" icon>
+                Khám phá 6 bảo tàng
+              </MuseumButton>
+            </div>
           </div>
 
           {/* painting */}
@@ -75,13 +83,13 @@ export default function Home() {
             <h2 className="font-heading text-4xl md:text-5xl font-light text-white leading-tight">
               Cơ hội<br /><em>khám phá</em>
             </h2>
-            <MuseumButton href="/trien-lam" variant="outline" size="sm" icon>Lịch triển lãm</MuseumButton>
+            <MuseumButton href="/tim-kiem?category=exhibitions" variant="outline" size="sm" icon>Lịch triển lãm</MuseumButton>
           </div>
 
           {/* grand prize — featured exhibition */}
           {exhibitions[0] && (
             <Link
-              href={`/trien-lam/${exhibitions[0].slug}`}
+              href={`/bao-tang/${exhibitions[0].museumSlug}`}
               className="group relative block overflow-hidden rounded-2xl mb-5 aspect-[21/8] bg-stone-900 shadow-xl"
             >
               <Image
@@ -113,7 +121,7 @@ export default function Home() {
             {exhibitions.slice(1, 4).map((e) => (
               <Link
                 key={e.slug}
-                href={`/trien-lam/${e.slug}`}
+                href={`/bao-tang/${e.museumSlug}`}
                 className="group relative overflow-hidden rounded-xl aspect-[4/3] bg-stone-900 shadow-lg"
               >
                 <Image

@@ -217,22 +217,39 @@ export function MuseumDetailView({
             const prodRes = await api.museums.products(dbM.id)
             if (active && prodRes?.data && prodRes.data.length > 0) {
               const baseProds = productsByMuseum(slug)
-              const liveProds: Product[] = prodRes.data.map((p, i) => {
-                const initialMatch = baseProds[i % Math.max(1, baseProds.length)]
-                return {
-                  id: p.id,
-                  slug: p.id,
-                  name: p.name,
-                  price: Number(p.price) || 0,
-                  image: initialMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
-                  inventory: p.stock_quantity ?? 0,
-                  museumSlug: slug,
-                  inspiredByArtifactId: null,
-                  category: initialMatch?.category ?? "Lưu niệm",
-                  description: p.description ?? "",
-                }
-              })
-              setProducts(liveProds)
+              const liveProds: Product[] = await Promise.all(
+                prodRes.data.map(async (p, i) => {
+                  let prodImg = ""
+                  if (i < 4) {
+                    try {
+                      const mediaRes = await api.media("souvenir", p.id)
+                      if (mediaRes?.data && mediaRes.data.length > 0) {
+                        const m = mediaRes.data[0]
+                        if (m.storage_path.startsWith("http")) {
+                          prodImg = m.storage_path
+                        } else {
+                          const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+                          prodImg = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
+                        }
+                      }
+                    } catch {}
+                  }
+                  const initialMatch = baseProds[i % Math.max(1, baseProds.length)]
+                  return {
+                    id: p.id,
+                    slug: p.id,
+                    name: p.name,
+                    price: Number(p.price) || 0,
+                    image: prodImg || initialMatch?.image || "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
+                    inventory: p.stock_quantity ?? 0,
+                    museumSlug: slug,
+                    inspiredByArtifactId: null,
+                    category: initialMatch?.category ?? "Lưu niệm",
+                    description: p.description ?? "",
+                  }
+                })
+              )
+              if (active) setProducts(liveProds)
             }
           } catch {
             // Keep initial products
@@ -357,7 +374,7 @@ export function MuseumDetailView({
                 </p>
               </div>
 
-              <MuseumButton href={`/hien-vat?museum=${slug}`} variant="outline" size="sm" icon>
+              <MuseumButton href={`/tim-kiem?category=artifacts`} variant="outline" size="sm" icon>
                 Toàn bộ hiện vật ({artifacts.length})
               </MuseumButton>
             </div>
@@ -418,7 +435,7 @@ export function MuseumDetailView({
                   >
                     <RenaissanceCorners />
 
-                    <Link href={`/trien-lam/${ex.slug}`} className="flex flex-1 flex-col">
+                    <Link href={`/tim-kiem?category=exhibitions&q=${encodeURIComponent(ex.title)}`} className="flex flex-1 flex-col">
                       <GildedMuseumFrame className="w-full">
                         <div className="relative aspect-[16/10] w-full overflow-hidden bg-stone-900">
                           <Image

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { NAV } from "./nav"
 
 const HELP = [
+  { href: "/tim-kiem", label: "Tìm kiếm trong kho lưu trữ" },
   { href: "/dat-ve", label: "Đặt vé tham quan" },
   { href: "/tai-khoan", label: "Vé và đơn hàng của tôi" },
   { href: "/kham-pha", label: "Bản đồ cụm bảo tàng National Mall" },

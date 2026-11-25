@@ -206,7 +206,7 @@ export function MuseumHall3D({ artifacts, museumName, museumSlug }: MuseumHall3D
                 {/* CTAs */}
                 <div className="mt-5 flex items-center gap-3 pt-3 border-t border-white/10">
                   <Link
-                    href={`/hien-vat/${activeArt.slug}`}
+                    href={`/tim-kiem?category=artifacts&q=${encodeURIComponent(activeArt.title)}`}
                     className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-[#d4af37] py-2 text-xs font-bold uppercase tracking-wider text-[#08162b] shadow-md transition-all hover:bg-[#e2c14d]"
                   >
                     Xem chi tiết <ArrowUpRight className="size-3.5" />

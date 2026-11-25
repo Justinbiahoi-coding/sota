@@ -214,11 +214,13 @@ export default function DatVePage() {
           time_slot: targetTimeSlot,
           items: orderItems,
         })
-        if (res?.data?.entry_code) {
-          code = res.data.entry_code
+        const createdOrder = (res?.data as unknown as { order?: { entry_code?: string } })?.order
+        const createdInvoice = (res?.data as unknown as { invoice?: { invoice_number?: string } })?.invoice
+        if (createdOrder?.entry_code || res?.data?.entry_code) {
+          code = createdOrder?.entry_code || res?.data?.entry_code || ""
         }
-        if (res?.data?.invoice?.invoice_number) {
-          invoiceNo = res.data.invoice.invoice_number
+        if (createdInvoice?.invoice_number || res?.data?.invoice?.invoice_number) {
+          invoiceNo = createdInvoice?.invoice_number || res?.data?.invoice?.invoice_number || ""
         }
       }
     } catch (err) {

@@ -49,16 +49,26 @@ export default function CartPage() {
     let invoiceNo = ""
 
     try {
-      let targetCartId = ""
-      const cartList = await api.carts.list()
-      if (cartList?.data && cartList.data.length > 0) {
-        targetCartId = cartList.data[0].id
-      } else {
-        let museumId = "84ce04fb-df92-48d9-b23d-28b5636fcfe5"
+      let museumId = ""
+      if (items[0]?.productId) {
+        try {
+          const pRes = await api.products.get(items[0].productId)
+          if (pRes?.data?.museum_id) museumId = pRes.data.museum_id
+        } catch {}
+      }
+      if (!museumId) {
         try {
           const mRes = await api.museums.list({ limit: 1 })
           if (mRes?.data?.[0]?.id) museumId = mRes.data[0].id
         } catch {}
+      }
+
+      let targetCartId = ""
+      const cartList = await api.carts.list()
+      const matchingCart = cartList?.data?.find((c) => !museumId || c.museum_id === museumId)
+      if (matchingCart) {
+        targetCartId = matchingCart.id
+      } else if (museumId) {
         const newCart = await api.carts.create(museumId)
         if (newCart?.data?.id) targetCartId = newCart.data.id
       }
@@ -76,8 +86,12 @@ export default function CartPage() {
           shipping_address: address,
           shipping_city: "Việt Nam",
         })
-        if (res?.data?.id) id = res.data.id
-        if (res?.data?.invoice?.invoice_number) invoiceNo = res.data.invoice.invoice_number
+        const createdOrder = (res?.data as unknown as { order?: { id?: string } })?.order
+        const createdInvoice = (res?.data as unknown as { invoice?: { invoice_number?: string } })?.invoice
+        if (createdOrder?.id || res?.data?.id) id = createdOrder?.id || res?.data?.id || ""
+        if (createdInvoice?.invoice_number || res?.data?.invoice?.invoice_number) {
+          invoiceNo = createdInvoice?.invoice_number || res?.data?.invoice?.invoice_number || ""
+        }
       }
     } catch {
       id = randomOrderId()
@@ -109,7 +123,7 @@ export default function CartPage() {
 
   if (submitted) {
     return (
-      <div className="mx-auto max-w-xl px-5 py-24 text-center md:px-8">
+      <div className="mx-auto max-w-xl px-5 pt-28 pb-16 text-center md:px-8">
         <span className="inline-flex size-16 items-center justify-center rounded-full border border-emerald-500/30 bg-emerald-50 text-emerald-800 shadow-sm">
           <Check className="size-8" />
         </span>
@@ -139,7 +153,7 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="mx-auto max-w-xl px-5 py-24 text-center md:px-8">
+      <div className="mx-auto max-w-xl px-5 pt-28 pb-16 text-center md:px-8">
         <div className="mx-auto flex size-20 items-center justify-center rounded-full border border-border bg-card shadow-sm">
           <ShoppingBag className="size-8 text-muted-foreground" />
         </div>
@@ -157,7 +171,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[1440px] px-6 py-16 md:px-12">
+    <div className="mx-auto max-w-[1440px] px-6 pt-28 pb-16 md:px-12">
       <header className="mb-10">
         <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
           <BrassPlacardPin />
@@ -185,7 +199,7 @@ export default function CartPage() {
               </div>
               <div className="flex flex-1 flex-col gap-1.5">
                 <p className="text-sm font-medium leading-snug text-foreground">{item.name}</p>
-                <p className="font-heading text-base text-museum">{formatPrice(item.price)}</p>
+                <p className="font-heading text-base text-museum">{formatVndOrPrice(item.price)}</p>
                 <div className="flex items-center gap-2 mt-1">
                   <button
                     onClick={() => updateQty(item.productId, item.qty - 1)}

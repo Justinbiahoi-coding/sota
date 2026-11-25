@@ -149,13 +149,11 @@ export function AuthScene({ mode }: { mode: Mode }) {
       </div>
       <div aria-hidden className="film-grain pointer-events-none fixed inset-0" style={{ background: grain }} />
 
-      {/* the chrome, as on the intro */}
-      <div className="pointer-events-none fixed inset-y-0 left-14 w-px bg-white/22 md:left-[72px]" />
-      <div className="pointer-events-none fixed inset-x-0 top-14 h-px bg-white/22 md:top-[72px]" />
-      <Link href="/" aria-label="Sota" className="absolute left-0 top-0 grid size-14 place-items-center font-heading text-3xl italic md:size-[72px]">S</Link>
+      {/* the subtle left guide line starting cleanly below the fixed header */}
+      <div className="pointer-events-none fixed bottom-0 left-14 top-[72px] w-px bg-white/18 md:left-[72px]" />
 
       {/* (on a phone the words and the form run down the page, which scrolls; wider, they float apart) */}
-      <div className="relative flex min-h-full flex-col justify-between gap-10 pb-14 pl-[calc(3.5rem+1.25rem)] pr-5 pt-[calc(3.5rem+1.5rem)] md:block md:p-0">
+      <div className="relative flex min-h-full flex-col justify-between gap-10 pb-14 pl-[calc(3.5rem+1.25rem)] pr-5 pt-24 md:block md:p-0">
       {/* the words, top left */}
       <div className="md:absolute md:left-[calc(72px+2rem)] md:top-[calc(72px+3rem)] md:w-[min(34vw,30rem)]">
         <span className="placard rounded-[3px] bg-white/12 px-2.5 py-1.5">Tài khoản · {copy.label}</span>

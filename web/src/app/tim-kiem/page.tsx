@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useTransition, useMemo, useEffect } from "react"
+import { useState, useTransition, useMemo, useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, ArrowUpRight, Loader2 } from "lucide-react"
@@ -55,9 +56,32 @@ function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") 
 
 type Category = "all" | "artifacts" | "exhibitions" | "museums" | "products"
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("")
-  const [category, setCategory] = useState<Category>("all")
+const VALID_CATEGORIES = new Set<Category>(["all", "artifacts", "exhibitions", "museums", "products"])
+
+function SearchContent() {
+  const searchParams = useSearchParams()
+  const rawCategory = searchParams.get("category") as Category | null
+  const initialCategory = rawCategory && VALID_CATEGORIES.has(rawCategory) ? rawCategory : "all"
+  const initialQuery = searchParams.get("q") ?? ""
+
+  return (
+    <SearchContentInner
+      key={`${initialCategory}:${initialQuery}`}
+      initialCategory={initialCategory}
+      initialQuery={initialQuery}
+    />
+  )
+}
+
+function SearchContentInner({
+  initialCategory,
+  initialQuery,
+}: {
+  initialCategory: Category
+  initialQuery: string
+}) {
+  const [query, setQuery] = useState(initialQuery)
+  const [category, setCategory] = useState<Category>(initialCategory)
   const [, startTransition] = useTransition()
 
   const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
@@ -104,7 +128,7 @@ export default function SearchPage() {
 
         if (active) setLiveMuseums(mappedMuseums)
 
-        // Query artifacts and products across live museums
+        // Query artifacts and products across live museums immediately (non-blocking)
         const results = await Promise.all(
           dbMuseums.map(async (dbM) => {
             const viSlug = DB_TO_VI_SLUG[dbM.slug] ?? dbM.slug
@@ -113,44 +137,24 @@ export default function SearchPage() {
             try {
               const artRes = await api.museums.artifacts(dbM.id, { limit: 20 })
               if (artRes?.data && artRes.data.length > 0) {
-                arts = await Promise.all(
-                  artRes.data.map(async (a, idx) => {
-                    let artImg = ""
-                    try {
-                      const mediaRes = await api.media("artifact", a.id)
-                      if (mediaRes?.data && mediaRes.data.length > 0) {
-                        const m = mediaRes.data[0]
-                        if (m.storage_path.startsWith("http")) {
-                          artImg = m.storage_path
-                        } else {
-                          const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
-                          artImg = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
-                        }
-                      }
-                    } catch {}
-
-                    if (!artImg) {
-                      const fallbackMatch = initialMockArtifacts[idx % initialMockArtifacts.length]
-                      artImg = fallbackMatch?.image ?? "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&q=80"
-                    }
-
-                    return {
-                      id: a.id,
-                      slug: a.id,
-                      title: a.name,
-                      artist: a.period ?? "Bộ sưu tập Smithsonian",
-                      year: a.period ?? "Hiện vật lịch sử",
-                      medium: a.inventory_code ?? "Hiện vật bảo tàng",
-                      dimensions: "Trưng bày thường xuyên",
-                      image: artImg,
-                      description: a.description ?? "",
-                      museumSlug: viSlug,
-                      exhibitionSlugs: [],
-                      rights: "CC0 – Public Domain" as const,
-                      isHighlight: true,
-                    }
-                  })
-                )
+                arts = artRes.data.map((a, idx) => {
+                  const fallbackMatch = initialMockArtifacts[idx % initialMockArtifacts.length]
+                  return {
+                    id: a.id,
+                    slug: a.id,
+                    title: a.name,
+                    artist: a.period ?? "Bộ sưu tập Smithsonian",
+                    year: a.period ?? "Hiện vật lịch sử",
+                    medium: a.inventory_code ?? "Hiện vật bảo tàng",
+                    dimensions: "Trưng bày thường xuyên",
+                    image: fallbackMatch?.image ?? "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&q=80",
+                    description: a.description ?? "",
+                    museumSlug: viSlug,
+                    exhibitionSlugs: [],
+                    rights: "CC0 – Public Domain" as const,
+                    isHighlight: true,
+                  }
+                })
               }
             } catch {}
 
@@ -158,41 +162,21 @@ export default function SearchPage() {
             try {
               const prodRes = await api.museums.products(dbM.id)
               if (prodRes?.data && prodRes.data.length > 0) {
-                prods = await Promise.all(
-                  prodRes.data.map(async (p, idx) => {
-                    let prodImg = ""
-                    try {
-                      const mediaRes = await api.media("souvenir", p.id)
-                      if (mediaRes?.data && mediaRes.data.length > 0) {
-                        const m = mediaRes.data[0]
-                        if (m.storage_path.startsWith("http")) {
-                          prodImg = m.storage_path
-                        } else {
-                          const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
-                          prodImg = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
-                        }
-                      }
-                    } catch {}
-
-                    if (!prodImg) {
-                      const fallbackMatch = initialMockProducts[idx % initialMockProducts.length]
-                      prodImg = fallbackMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80"
-                    }
-
-                    return {
-                      id: p.id,
-                      slug: p.id,
-                      name: p.name,
-                      price: Number(p.price) || 0,
-                      image: prodImg,
-                      inventory: p.stock_quantity ?? 0,
-                      museumSlug: viSlug,
-                      inspiredByArtifactId: null,
-                      category: deriveCategory(p.name, p.sku),
-                      description: p.description ?? "",
-                    }
-                  })
-                )
+                prods = prodRes.data.map((p, idx) => {
+                  const fallbackMatch = initialMockProducts[idx % initialMockProducts.length]
+                  return {
+                    id: p.id,
+                    slug: p.id,
+                    name: p.name,
+                    price: Number(p.price) || 0,
+                    image: fallbackMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
+                    inventory: p.stock_quantity ?? 0,
+                    museumSlug: viSlug,
+                    inspiredByArtifactId: null,
+                    category: deriveCategory(p.name, p.sku),
+                    description: p.description ?? "",
+                  }
+                })
               }
             } catch {}
 
@@ -210,6 +194,47 @@ export default function SearchPage() {
           if (allProds.length > 0) {
             setLiveProducts(allProds)
           }
+          setIsLoading(false)
+
+          // Background enrich top 8 artifacts & top 8 products without blocking UI
+          const resolveMediaUrl = async (type: "artifact" | "souvenir", id: string) => {
+            try {
+              const mediaRes = await api.media(type, id)
+              if (mediaRes?.data && mediaRes.data.length > 0) {
+                const m = mediaRes.data[0]
+                if (m.storage_path.startsWith("http")) return m.storage_path
+                const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+                return `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
+              }
+            } catch {}
+            return null
+          }
+
+          Promise.all(
+            allArts.slice(0, 8).map(async (art) => {
+              const url = await resolveMediaUrl("artifact", art.id)
+              return url ? { id: art.id, url } : null
+            })
+          ).then((updates) => {
+            if (!active) return
+            const map = new Map(updates.filter((u): u is { id: string; url: string } => !!u).map((u) => [u.id, u.url]))
+            if (map.size > 0) {
+              setLiveArtifacts((prev) => prev.map((a) => (map.has(a.id) ? { ...a, image: map.get(a.id)! } : a)))
+            }
+          })
+
+          Promise.all(
+            allProds.slice(0, 8).map(async (prod) => {
+              const url = await resolveMediaUrl("souvenir", prod.id)
+              return url ? { id: prod.id, url } : null
+            })
+          ).then((updates) => {
+            if (!active) return
+            const map = new Map(updates.filter((u): u is { id: string; url: string } => !!u).map((u) => [u.id, u.url]))
+            if (map.size > 0) {
+              setLiveProducts((prev) => prev.map((p) => (map.has(p.id) ? { ...p, image: map.get(p.id)! } : p)))
+            }
+          })
         }
       } catch {
         // Fallback remains initial mock data
@@ -407,7 +432,7 @@ export default function SearchPage() {
                 {matchedExhibitions.map((e) => (
                   <SpotlightCard key={e.slug} className="p-5 bg-card border-border shadow-sm">
                     <Link
-                      href={`/trien-lam/${e.slug}`}
+                      href={`/bao-tang/${e.museumSlug}`}
                       className="group flex flex-col justify-between h-full"
                     >
                       <div>
@@ -451,5 +476,19 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 text-center">
+          <p className="font-heading text-2xl text-stone-400">Đang tải kho lưu trữ Smithsonian...</p>
+        </div>
+      }
+    >
+      <SearchContent />
+    </Suspense>
   )
 }

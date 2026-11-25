@@ -71,14 +71,33 @@ export function AdminAccess({ store }: { store: AdminBackendStore }) {
             <button disabled={busy || !configured} className="bg-[#184c40] text-white p-3" type="submit">{busy ? "Đang đăng nhập…" : "Đăng nhập quản trị"}</button>
           </form>
         )}
-        <button disabled={busy} onClick={() => { void store.initialize() }}>Tải lại quyền truy cập</button>
-        <button disabled={busy} onClick={async () => {
-          setBusy(true)
-          try { await store.signOut(); setError("") }
-          catch (error) { setError(error instanceof Error ? error.message : "Không đăng xuất được.") }
-          finally { setBusy(false) }
-        }}>Đăng xuất</button>
-        <Link className="block" href="/">Về trang khách tham quan</Link>
+        <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-[#e5ebe3] text-xs font-semibold">
+          <button
+            disabled={busy}
+            onClick={() => { void store.initialize() }}
+            className="rounded border border-[#d6ddd3] bg-[#f7f6ef] px-3 py-1.5 text-[#184c40] hover:bg-[#edf2eb] cursor-pointer"
+          >
+            Tải lại quyền truy cập
+          </button>
+          <button
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true)
+              try { await store.signOut(); setError("") }
+              catch (error) { setError(error instanceof Error ? error.message : "Không đăng xuất được.") }
+              finally { setBusy(false) }
+            }}
+            className="rounded border border-[#d6ddd3] bg-white px-3 py-1.5 text-[#53685f] hover:bg-[#f7f6ef] cursor-pointer"
+          >
+            Đăng xuất
+          </button>
+          <Link
+            className="ml-auto text-[#184c40] hover:underline"
+            href="/"
+          >
+            ← Về trang khách tham quan
+          </Link>
+        </div>
       </div>
     </div>
   )

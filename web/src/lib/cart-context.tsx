@@ -5,7 +5,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 export type CartItem = {
   productId: string
   name: string
-  price: number // cents
+  price: number // cents or VND
   image: string
   qty: number
 }
@@ -26,6 +26,7 @@ const STORAGE_KEY = "sota_cart"
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [hydrated, setHydrated] = useState(false)
 
   // Hydrate from localStorage once on client
   useEffect(() => {
@@ -33,15 +34,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const parsed = JSON.parse(raw)
-        queueMicrotask(() => setItems(parsed))
+        if (Array.isArray(parsed)) {
+          setItems(parsed)
+        }
       }
     } catch {}
+    setHydrated(true)
   }, [])
 
-  // Persist on every change
+  // Persist on every change only after initial hydration completes
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  }, [items])
+    if (!hydrated) return
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+    } catch {}
+  }, [items, hydrated])
 
   const addItem = useCallback((item: Omit<CartItem, "qty">) => {
     setItems((prev) => {
@@ -82,4 +89,3 @@ export function useCart() {
   if (!ctx) throw new Error("useCart must be used within CartProvider")
   return ctx
 }
-

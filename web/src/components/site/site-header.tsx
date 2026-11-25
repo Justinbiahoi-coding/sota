@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, ChevronDown } from "lucide-react"
+import { Menu, ChevronDown, Search } from "lucide-react"
 import { NAV } from "./nav"
 import { CartIcon } from "./cart-icon"
 import { AuthActions } from "./auth-actions"
@@ -87,9 +87,14 @@ function NavDropdown({ navIndex }: { navIndex: number }) {
 const RIGHT_NAV = NAV.slice(2) // Đặt vé, Cửa hàng
 
 export function SiteHeader() {
+  const pathname = usePathname()
+  if (pathname?.startsWith("/admin")) return null
+
+  const isSearchActive = pathname === "/tim-kiem"
+
   return (
     <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
-      <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-8"
+      <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-6 md:px-8"
         style={{ gridTemplateColumns: "1fr auto 1fr" }}>
 
         {/* Left nav: Bảo tàng ▾  Tham quan ▾ */}
@@ -104,14 +109,27 @@ export function SiteHeader() {
         </Link>
 
         {/* Right nav + utilities */}
-        <div className="hidden md:flex items-center gap-8 pl-8">
+        <div className="hidden md:flex items-center gap-6 lg:gap-8 pl-8">
           {RIGHT_NAV.map(n => (
             <Link key={n.href + n.label} href={n.href}
               className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
               {n.label}
             </Link>
           ))}
-          <div className="flex items-center gap-3 ml-auto">
+          <div className="flex items-center gap-2.5 ml-auto">
+            <Link
+              href="/tim-kiem"
+              aria-label="Tìm kiếm trong kho lưu trữ"
+              title="Tìm kiếm trong kho lưu trữ"
+              className={`inline-flex h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all duration-300 whitespace-nowrap ${
+                isSearchActive
+                  ? "border-[#d4af37] bg-[#d4af37]/20 text-[#fbe396]"
+                  : "border-white/15 bg-white/5 text-stone-200 hover:border-[#d4af37]/60 hover:bg-white/10 hover:text-[#fbe396]"
+              }`}
+            >
+              <Search className="size-3.5 text-[#d4af37]" />
+              <span className="hidden lg:inline">Tìm kiếm</span>
+            </Link>
             <CartIcon />
             <AuthActions />
           </div>
@@ -127,6 +145,10 @@ export function SiteHeader() {
           </summary>
           <div className="absolute right-0 top-12 w-64 rounded-xl border border-white/10 bg-[#08162b]/95 p-5 shadow-2xl backdrop-blur-xl">
             <nav className="flex flex-col gap-3">
+              <Link href="/tim-kiem"
+                className="flex items-center gap-2 rounded-lg border border-[#d4af37]/30 bg-white/5 px-3 py-2 text-xs font-medium text-[#fbe396] hover:bg-[#d4af37]/15">
+                <Search className="size-3.5" /> Tìm kiếm trong kho lưu trữ
+              </Link>
               {NAV.flatMap(n =>
                 n.dropdown
                   ? [
@@ -145,6 +167,14 @@ export function SiteHeader() {
                       </Link>,
                     ]
               )}
+              <Link href="/tai-khoan"
+                className="text-sm text-stone-200 hover:text-white transition-colors pt-2 border-t border-white/10">
+                Hồ sơ cá nhân
+              </Link>
+              <Link href="/dang-nhap"
+                className="text-sm text-stone-200 hover:text-white transition-colors">
+                Đăng nhập / Đăng ký
+              </Link>
             </nav>
             <div className="mt-4 border-t border-white/10 pt-4">
               <Link href="/dat-ve"

@@ -67,7 +67,7 @@ const PINS = [
   },
   {
     slug: "trien-lam",
-    href: "/trien-lam",
+    href: "/tim-kiem?category=exhibitions",
     label: "Triển lãm",
     accent: "#fb923c",
     title: "Triển lãm",
@@ -77,13 +77,13 @@ const PINS = [
   },
   {
     slug: "lien-he",
-    href: "/lien-he",
+    href: "/kham-pha",
     label: "Liên hệ",
     accent: "#a78bfa",
-    title: "Liên hệ",
-    desc: "Hỗ trợ tham quan, hợp tác giáo dục và truyền thông — đội ngũ Sota luôn sẵn sàng lắng nghe.",
+    title: "Hướng dẫn & Liên hệ",
+    desc: "Hỗ trợ tham quan, hợp tác giáo dục và sơ đồ di chuyển quanh đại lộ National Mall.",
     hours: null,
-    cta: "Gửi tin nhắn",
+    cta: "Xem chỉ dẫn",
   },
 ]
 

@@ -85,6 +85,12 @@ const CATEGORIES: { label: string; value: ProductCategory | "all" }[] = [
 
 // In-memory cache for instant switching between tabs
 let cachedShopProducts: Product[] | null = null
+const fetchedMediaIds = new Set<string>()
+const cachedMediaUrls = new Map<string, string>()
+
+function isUuid(str: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str)
+}
 
 export function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") {
   const num = typeof centsOrAmount === "string" ? parseFloat(centsOrAmount) : centsOrAmount
@@ -296,7 +302,10 @@ function ShopContent() {
               slug: p.id,
               name: p.name,
               price: Number(p.price) || 0,
-              image: initialMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
+              image:
+                cachedMediaUrls.get(p.id) ??
+                initialMatch?.image ??
+                "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
               inventory: p.stock_quantity ?? 0,
               museumSlug: p.museumSlug,
               inspiredByArtifactId: null,
@@ -308,34 +317,6 @@ function ShopContent() {
           cachedShopProducts = mapped
           setLiveProducts(mapped)
           setIsLoading(false)
-
-          // Background enrich: quietly look for media in small batches without blocking UI
-          setTimeout(async () => {
-            try {
-              const enriched = await Promise.all(
-                mapped.slice(0, 16).map(async (item) => {
-                  try {
-                    const mediaRes = await api.media("souvenir", item.id)
-                    if (mediaRes?.data && mediaRes.data.length > 0) {
-                      const m = mediaRes.data[0]
-                      let img = m.storage_path
-                      if (!img.startsWith("http")) {
-                        const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
-                        img = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
-                      }
-                      return { ...item, image: img }
-                    }
-                  } catch {}
-                  return item
-                })
-              )
-              if (active) {
-                setLiveProducts((prev) =>
-                  prev.map((p) => enriched.find((e) => e.id === p.id) ?? p)
-                )
-              }
-            } catch {}
-          }, 300)
         } else {
           setIsLoading(false)
         }
@@ -398,6 +379,49 @@ function ShopContent() {
   const visibleProducts = useMemo(() => {
     return filtered.slice(0, visibleCount)
   }, [filtered, visibleCount])
+
+  // Lazy media enrich: resolve live media URLs for currently visible products only
+  useEffect(() => {
+    let active = true
+    const toFetch = visibleProducts.filter((p) => isUuid(p.id) && !fetchedMediaIds.has(p.id))
+    if (toFetch.length === 0) return
+
+    toFetch.forEach((p) => fetchedMediaIds.add(p.id))
+
+    Promise.all(
+      toFetch.map(async (item) => {
+        try {
+          const mediaRes = await api.media("souvenir", item.id)
+          if (mediaRes?.data && mediaRes.data.length > 0) {
+            const m = mediaRes.data[0]
+            let img = m.storage_path
+            if (!img.startsWith("http")) {
+              const base = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"
+              img = `${base}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
+            }
+            cachedMediaUrls.set(item.id, img)
+            return { id: item.id, image: img }
+          }
+        } catch {
+          fetchedMediaIds.delete(item.id)
+        }
+        return null
+      })
+    ).then((updates) => {
+      const valid = updates.filter((u): u is { id: string; image: string } => u !== null)
+      if (!active || valid.length === 0) return
+      const updateMap = new Map(valid.map((u) => [u.id, u.image]))
+      setLiveProducts((prev) => {
+        const next = prev.map((p) => (updateMap.has(p.id) ? { ...p, image: updateMap.get(p.id)! } : p))
+        cachedShopProducts = next
+        return next
+      })
+    })
+
+    return () => {
+      active = false
+    }
+  }, [visibleProducts])
 
   const hasMore = visibleCount < filtered.length
 

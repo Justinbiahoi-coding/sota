@@ -227,7 +227,16 @@ export default function AdminPortalPage() {
                 </select>
               </label>
 
-              <div className="flex items-center gap-4 text-xs font-semibold">
+              <div className="flex items-center gap-3 flex-wrap text-xs font-semibold">
+                {adminStore.profile && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#d6ddd3] bg-white px-3 py-1 text-[#184c40]">
+                    <span className="font-bold">{adminStore.profile.display_name || "Quản trị viên"}</span>
+                    <span className="text-[#749187]">·</span>
+                    <span className="uppercase tracking-wider text-[10px] text-[#53685f]">
+                      {role === "super_admin" ? "Super Admin" : "Admin Bảo tàng"}
+                    </span>
+                  </span>
+                )}
                 <span className="inline-flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[#587e54]" />
                   Đã kết nối Express

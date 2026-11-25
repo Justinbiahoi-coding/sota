@@ -239,7 +239,7 @@ export function ProductDetailView({
             <div className="mt-8 border-t border-white/10 pt-5">
               <p className="placard text-stone-400">Lấy cảm hứng từ hiện vật</p>
               <Link
-                href={`/hien-vat/${inspiredBy.slug}`}
+                href={`/tim-kiem?category=artifacts&q=${encodeURIComponent(inspiredBy.title)}`}
                 className="mt-1.5 block text-sm italic text-[#fbe396] hover:underline"
               >
                 {inspiredBy.title} — {inspiredBy.artist}
