@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 import { LiquidCanvas } from "@/components/liquid-canvas"
 import { Geist_Mono, Hanken_Grotesk, Newsreader, Pinyon_Script } from "next/font/google"
 import { SiteFooter } from "@/components/site/site-footer"
 import { SiteHeader } from "@/components/site/site-header"
 import { CartProvider } from "@/lib/cart-context"
 import "./globals.css"
+import "./gallery-commerce.css"
 
 // the faces follow pear.no's (Flecha, GT Standard, GT Standard Mono), with free stand-ins that carry
 // Vietnamese: a sharp, high-contrast serif for titles, a grotesk for text, a mono for labels and buttons
@@ -25,9 +27,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col relative selection:bg-foreground selection:text-background">
         <LiquidCanvas />
         <CartProvider>
-          <SiteHeader />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[80] focus:bg-[#f7f4ec] focus:p-3 focus:text-[#08162b]">
+            Đến nội dung chính
+          </a>
+          <Suspense><SiteHeader /></Suspense>
+          <main id="main-content" tabIndex={-1} className="flex-1">{children}</main>
+          <Suspense><SiteFooter /></Suspense>
         </CartProvider>
       </body>
     </html>

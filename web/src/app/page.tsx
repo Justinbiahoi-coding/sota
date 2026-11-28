@@ -1,11 +1,12 @@
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight, CalendarDays, Clock3, MapPin } from "lucide-react"
 import { GalleryWalkthroughHero } from "@/components/home/intro/gallery-walkthrough-hero"
 import { VideoSection } from "@/components/home/video-section"
 import { MuseumMapGL } from "@/components/home/museum-map-gl"
 import { exhibitions, museums } from "@/lib/mock-data"
 import { MuseumButton } from "@/components/reactbits/museum-button"
+import { RenaissanceCorners } from "@/components/renaissance/deco-assets"
 
 const dateFmt = new Intl.DateTimeFormat("vi-VN", { day: "numeric", month: "short", year: "numeric" })
 const range = (a: string, b: string) => `${dateFmt.format(new Date(a))} — ${dateFmt.format(new Date(b))}`
@@ -150,6 +151,37 @@ export default function Home() {
           MUSEUMS — Interactive map
       ════════════════════════════════════════════════════════ */}
       <MuseumMapGL />
+
+      <section className="gallery-page !min-h-0 py-14 md:py-24" aria-labelledby="home-shop-title">
+        <div className="gallery-wrap grid items-center gap-8 lg:grid-cols-[1.05fr_.95fr] lg:gap-16">
+          <Link href="/cua-hang" aria-label="Mở cửa hàng quà lưu niệm" className="gallery-sheet group relative block rounded-t-[5rem] p-2 sm:rounded-t-[8rem] sm:p-3">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-t-[4.5rem] bg-[#08162b] sm:rounded-t-[7.5rem]">
+              <Image src="/map-art-cua-hang.webp" alt="" fill sizes="(max-width: 1023px) 90vw, 48vw"
+                className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.025]" />
+            </div>
+            <RenaissanceCorners />
+          </Link>
+          <div>
+            <p className="gallery-kicker">Cửa hàng Smithsonian</p>
+            <h2 id="home-shop-title" className="mt-4 font-heading text-5xl leading-[.97] tracking-tight md:text-7xl">Quà lưu niệm <em className="text-[#77531c]">từ bảo tàng.</em></h2>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-stone-700">
+              Tìm bưu thiếp, sách nghệ thuật và vật phẩm theo từng bảo tàng trong cụm.
+            </p>
+            <Link href="/cua-hang" className="gallery-action mt-6">Khám phá cửa hàng</Link>
+          </div>
+        </div>
+        <div className="gallery-wrap mt-14 border-t border-[#d3c8b5] pt-9 md:mt-20">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h2 className="font-heading text-4xl tracking-tight">Lên lịch tham quan</h2>
+            <Link href="/dat-ve" className="gallery-action">Đặt vé tham quan</Link>
+          </div>
+          <div className="mt-6 grid gap-x-8 gap-y-4 sm:grid-cols-3">
+            <p className="flex items-center gap-3 text-stone-700"><MapPin className="size-5 shrink-0 text-[#77531c]" /> National Mall, Washington D.C.</p>
+            <p className="flex items-center gap-3 text-stone-700"><Clock3 className="size-5 shrink-0 text-[#77531c]" /> <Link href="/bao-tang" className="underline underline-offset-4">Xem giờ mở cửa từng bảo tàng</Link></p>
+            <p className="flex items-center gap-3 text-stone-700"><CalendarDays className="size-5 shrink-0 text-[#77531c]" /> <Link href="/tim-kiem?category=exhibitions" className="underline underline-offset-4">Xem lịch triển lãm</Link></p>
+          </div>
+        </div>
+      </section>
 
       {/* ════════════════════════════════════════════════════════
           ACCELERATOR — Benefits / Features

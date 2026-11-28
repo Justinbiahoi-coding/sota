@@ -1,15 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowLeft, Landmark } from "lucide-react"
+import { Landmark, Maximize2, X } from "lucide-react"
 import { artifactById, type Product } from "@/lib/mock-data"
 import { ProductAddToCart } from "@/components/shop/product-add-to-cart"
-import { formatVndOrPrice } from "@/app/cua-hang/page"
+import { formatShopPrice, isLiveProduct } from "@/lib/shop-price"
 import { api } from "@/lib/api/client"
-import { BrassPlacardPin } from "@/components/renaissance/deco-assets"
-import { cn } from "@/lib/utils"
+import { RenaissanceCorners } from "@/components/renaissance/deco-assets"
+
 
 const MUSEUM_NAMES: Record<string, string> = {
   "lich-su-tu-nhien": "Bảo tàng Lịch sử Tự nhiên",
@@ -43,8 +43,11 @@ export function ProductDetailView({
   initialProduct: Product | null
 }) {
   const [product, setProduct] = useState<Product | null>(initialProduct)
+  const [loading, setLoading] = useState(!initialProduct && isLiveProduct(slug))
+  const dialog = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
+    if (!isLiveProduct(slug)) return
     let active = true
     async function loadLiveProduct() {
       try {
@@ -55,7 +58,8 @@ export function ProductDetailView({
           try {
             const mediaRes = await api.media("souvenir", p.id)
             if (mediaRes?.data && mediaRes.data.length > 0) {
-              const item = mediaRes.data[0]
+              const item = mediaRes.data.find((asset) => asset.media_type === "image" && asset.is_primary) ?? mediaRes.data.find((asset) => asset.media_type === "image")
+              if (!item) throw new Error("No product image")
               if (item.storage_path.startsWith("http://") || item.storage_path.startsWith("https://")) {
                 imageUrl = item.storage_path
               } else {
@@ -66,7 +70,7 @@ export function ProductDetailView({
           } catch {}
 
           if (!imageUrl) {
-            imageUrl = initialProduct?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80"
+            imageUrl = initialProduct?.image ?? "/map-art-cua-hang.webp"
           }
 
           const text = `${p.name} ${p.sku ?? ""}`.toLowerCase()
@@ -78,7 +82,10 @@ export function ProductDetailView({
                 ? "Thời trang"
                 : "Lưu niệm"
 
-          const resolvedMuseumSlug = initialProduct?.museumSlug ?? "lich-su-tu-nhien"
+          const museumList = await api.museums.list({ limit: 100 }).catch(() => null)
+          const resolvedMuseumSlug = museumList?.data.find((museum) => museum.id === p.museum_id)?.slug
+            ?? initialProduct?.museumSlug ?? ""
+          if (!active) return
 
           setProduct({
             id: p.id,
@@ -90,11 +97,13 @@ export function ProductDetailView({
             museumSlug: resolvedMuseumSlug,
             inspiredByArtifactId: null,
             category,
-            description: p.description ?? "Vật phẩm lưu niệm độc bản phát hành bởi Viện Smithsonian.",
+            description: p.description ?? "",
           })
         }
       } catch {
-        // Fallback remains active
+        // Keep any product data already available.
+      } finally {
+        if (active) setLoading(false)
       }
     }
     loadLiveProduct()
@@ -105,16 +114,10 @@ export function ProductDetailView({
 
   if (!product) {
     return (
-      <div className="mx-auto max-w-xl px-5 py-24 text-center">
-        <h1 className="font-heading text-3xl font-light text-foreground">Không tìm thấy sản phẩm</h1>
-        <p className="mt-3 text-sm text-stone-400">Sản phẩm này có thể đã ngừng kinh doanh hoặc đường dẫn không tồn tại.</p>
-        <div className="mt-6">
-          <Link
-            href="/cua-hang"
-            className="inline-flex items-center gap-2 rounded-full border border-[#d4af37] bg-[#d4af37] px-6 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#08162b]"
-          >
-            Quay lại cửa hàng
-          </Link>
+      <div className="gallery-page pt-32">
+        <div className="gallery-wrap gallery-sheet rounded-md p-7 text-center sm:p-12">
+          <h1 className="font-heading text-4xl">{loading ? "Đang tải vật phẩm…" : "Không tìm thấy vật phẩm"}</h1>
+          {!loading && <Link href="/cua-hang" className="gallery-action mt-6">Về cửa hàng</Link>}
         </div>
       </div>
     )
@@ -125,133 +128,64 @@ export function ProductDetailView({
   const inspiredBy = product.inspiredByArtifactId ? artifactById(product.inspiredByArtifactId) : null
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pt-28 pb-16 md:px-8">
-      {/* Breadcrumb back */}
-      <div className="flex flex-wrap items-center gap-2 text-xs">
-        <Link
-          href="/cua-hang"
-          className="placard text-stone-400 hover:text-[#fbe396] transition-colors"
-        >
-          Cửa hàng
-        </Link>
-        <span className="text-stone-600">/</span>
-        <Link
-          href={`/cua-hang?museum=${viMuseumSlug}`}
-          className="placard text-[#fbe396] hover:underline"
-        >
-          {museumName}
-        </Link>
-        <span className="text-stone-600">/</span>
-        <span className="text-stone-400 line-clamp-1 max-w-[240px]">{product.name}</span>
-      </div>
-
-      <div className="mt-6">
-        <Link
-          href={`/cua-hang?museum=${viMuseumSlug}`}
-          className="placard inline-flex items-center gap-1.5 text-xs text-stone-300 hover:text-[#fbe396] transition-colors"
-        >
-          <ArrowLeft className="size-3.5" /> Trở về Cửa hàng — {museumName}
-        </Link>
-      </div>
-
-      <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        {/* Image */}
-        <div className="relative aspect-square overflow-hidden rounded-xl border border-[#d4af37]/35 bg-stone-900 shadow-md">
-          <Image
-            src={product.image}
-            alt={product.name}
-            fill
-            priority
-            className="object-cover"
-            sizes="(max-width:1024px) 100vw,50vw"
-          />
-        </div>
-
-        {/* Details */}
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="placard inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/40 bg-[#08162b] px-3.5 py-1 text-xs text-[#fbe396] font-medium">
-              <BrassPlacardPin />
-              {product.category}
-            </span>
-
-            <Link
-              href={`/cua-hang?museum=${viMuseumSlug}`}
-              className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-stone-300 hover:border-[#d4af37]/50 hover:text-[#fbe396] transition-colors"
-            >
-              <Landmark className="size-3 text-[#d4af37]" />
-              <span>{museumName}</span>
-            </Link>
-          </div>
-
-          <h1 className="mt-4 font-heading text-3xl font-light leading-snug text-[#f8f6f0] md:text-4xl">
-            {product.name}
-          </h1>
-
-          <p className="mt-4 font-heading text-3xl text-[#fbe396] font-semibold">
-            {formatVndOrPrice(product.price)}
-          </p>
-
-          <div className="mt-3 flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs placard font-semibold",
-                product.inventory > 0
-                  ? "border border-emerald-500/40 bg-emerald-950/60 text-emerald-400"
-                  : "border border-rose-500/40 bg-rose-950/60 text-rose-400"
-              )}
-            >
-              {product.inventory > 0 ? `Còn hàng (${product.inventory} sản phẩm)` : "Tạm hết hàng"}
-            </span>
-          </div>
-
-          <p className="mt-6 text-sm leading-relaxed text-stone-300">{product.description}</p>
-
-          {/* Museum attribution card */}
-          <div className="mt-6 rounded-xl border border-white/10 bg-[#08162b]/80 p-4 shadow-sm backdrop-blur-md">
-            <p className="placard text-[0.68rem] uppercase tracking-wider text-stone-400">
-              Vật phẩm chính thức của bảo tàng
-            </p>
-            <div className="mt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Landmark className="size-4 text-[#d4af37]" />
-                <span className="font-heading text-sm text-white">{museumName}</span>
-              </div>
-              <div className="flex items-center gap-3 text-xs">
-                <Link
-                  href={`/bao-tang/${viMuseumSlug}`}
-                  className="text-[#d4af37] hover:underline"
-                >
-                  Tham quan bảo tàng →
-                </Link>
-                <span className="text-stone-600">|</span>
-                <Link
-                  href={`/cua-hang?museum=${viMuseumSlug}`}
-                  className="text-[#d4af37] hover:underline"
-                >
-                  Cửa hàng bảo tàng →
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {inspiredBy && (
-            <div className="mt-8 border-t border-white/10 pt-5">
-              <p className="placard text-stone-400">Lấy cảm hứng từ hiện vật</p>
-              <Link
-                href={`/tim-kiem?category=artifacts&q=${encodeURIComponent(inspiredBy.title)}`}
-                className="mt-1.5 block text-sm italic text-[#fbe396] hover:underline"
-              >
-                {inspiredBy.title} — {inspiredBy.artist}
-              </Link>
-            </div>
+    <section className="gallery-page pb-16 pt-28">
+      <div className="gallery-wrap">
+        <nav aria-label="Đường dẫn" className="mb-7 flex flex-wrap items-center gap-2 text-sm text-stone-700">
+          <Link href="/cua-hang" className="font-semibold text-[#77531c] underline-offset-4 hover:underline">Cửa hàng</Link>
+          {viMuseumSlug && (
+            <>
+              <span aria-hidden="true">/</span>
+              <Link href={"/cua-hang?museum=" + viMuseumSlug} className="underline-offset-4 hover:underline">{museumName}</Link>
+            </>
           )}
+        </nav>
+        <div className="grid items-center gap-8 lg:grid-cols-[1.08fr_1fr] lg:gap-16">
+          <button
+            type="button"
+            aria-label="Phóng to ảnh sản phẩm"
+            aria-haspopup="dialog"
+            onClick={() => dialog.current?.showModal()}
+            className="gallery-enter gallery-sheet group relative isolate block overflow-hidden rounded-t-[5rem] bg-[#ede4d2] p-2 sm:rounded-t-[8rem] sm:p-3"
+          >
+            <div className="relative aspect-[5/4] overflow-hidden rounded-t-[4.5rem] bg-[#efe8db] sm:rounded-t-[7.5rem]">
+              <Image src={product.image} alt={product.name} fill priority sizes="(max-width: 1023px) 90vw, 45vw" className="object-contain transition-transform duration-500 motion-safe:group-hover:scale-[1.025]" />
+            </div>
+            <RenaissanceCorners />
+            <span className="absolute bottom-5 right-5 flex size-11 items-center justify-center rounded-full border border-[#d4af37]/50 bg-[#08162b] text-white"><Maximize2 className="size-4" /></span>
+          </button>
 
-          <div className="mt-8 pt-4 border-t border-white/10">
-            <ProductAddToCart product={product} />
+          <div className="gallery-enter">
+            <p className="gallery-kicker">{product.category}</p>
+            <h1 className="mt-4 break-words font-heading text-5xl leading-[.97] tracking-tight sm:text-6xl">{product.name}</h1>
+            <p className="mt-5 font-heading text-3xl text-[#77531c]">{formatShopPrice(product.price, product.id)}</p>
+            {product.description && <p className="mt-5 whitespace-pre-line text-base leading-relaxed text-stone-700">{product.description}</p>}
+            <div className="mt-6 border-y border-[#e1d8c7] py-5">
+              <ProductAddToCart product={product} />
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+              <span className="flex items-center gap-2 font-semibold"><Landmark className="size-4 text-[#77531c]" />{museumName}</span>
+              {viMuseumSlug && <Link href={"/bao-tang/" + viMuseumSlug} className="text-[#77531c] underline underline-offset-4">Tham quan bảo tàng</Link>}
+            </div>
+            {inspiredBy && (
+              <p className="mt-4 text-sm text-stone-700">
+                Lấy cảm hứng từ{" "}
+                <Link href={"/tim-kiem?category=artifacts&q=" + encodeURIComponent(inspiredBy.title)} className="text-[#77531c] underline underline-offset-4">{inspiredBy.title}</Link>
+              </p>
+            )}
           </div>
         </div>
       </div>
-    </div>
+      <dialog
+        ref={dialog}
+        aria-label="Ảnh sản phẩm"
+        className="fixed inset-0 m-auto w-[min(92vw,64rem)] max-w-none overflow-visible rounded-md border border-[#d4af37]/40 bg-[#08162b] p-3 backdrop:bg-[#08162b]/80 sm:p-5"
+        onClick={(event) => { if (event.target === event.currentTarget) dialog.current?.close() }}
+      >
+        <div className="relative h-[min(72dvh,48rem)]">
+          <Image src={product.image} alt={product.name} fill sizes="90vw" className="object-contain" />
+        </div>
+        <button type="button" className="gallery-icon-button absolute right-3 top-3" aria-label="Đóng ảnh" onClick={() => dialog.current?.close()}><X className="size-5" /></button>
+      </dialog>
+    </section>
   )
 }

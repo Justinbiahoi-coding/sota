@@ -1,6 +1,7 @@
 "use client"
 
 import "./natural-history-page.css"
+import { SketchfabStage } from "./sketchfab-stage"
 import { useState, useRef, useEffect, useCallback } from "react"
 import {
   specimens,
@@ -87,37 +88,6 @@ function IconDefs() {
 }
 
 // ── Sketchfab iframe ──────────────────────────────────────────────────────────
-function SketchfabStage({
-  uid,
-  theme,
-  loading,
-}: {
-  uid: string
-  theme: "day" | "dusk"
-  loading: boolean
-}) {
-  const src = `https://sketchfab.com/models/${uid}/embed?autostart=1&preload=1&ui_infos=0&ui_watermark=0&ui_ar=0&ui_theme=${theme === "dusk" ? "dark" : "default"}`
-  return (
-    <div className="nha-iframe-wrap" aria-busy={loading}>
-      {loading && (
-        <div className="nha-loader" aria-label="Đang tải mô hình 3D…">
-          <span className="nha-loader__ring" />
-          <span className="nha-loader__text">Chuẩn bị tiêu bản…</span>
-        </div>
-      )}
-      <iframe
-        key={uid}
-        src={src}
-        title="Mô hình 3D tương tác"
-        allow="autoplay; fullscreen; xr-spatial-tracking"
-        className="nha-iframe"
-        onLoad={() => { /* handled via key-based remount */ }}
-        style={{ opacity: loading ? 0 : 1 }}
-      />
-    </div>
-  )
-}
-
 // ── trait icon map ────────────────────────────────────────────────────────────
 const TRAIT_ICON: Record<string, string> = {
   ruler: "ruler",
@@ -230,6 +200,19 @@ export default function NaturalHistoryPage() {
     setTimeout(() => setIframeLoading(false), 2200)
   }, [])
 
+  useEffect(() => {
+    function selectLinkedSpecimen() {
+      const index = specimens.findIndex(({ id }) => id === window.location.hash.slice(1))
+      if (index >= 0) {
+        setCatFilter("all")
+        switchTo(index)
+      }
+    }
+    selectLinkedSpecimen()
+    window.addEventListener("hashchange", selectLinkedSpecimen)
+    return () => window.removeEventListener("hashchange", selectLinkedSpecimen)
+  }, [switchTo])
+
   // keyboard on hero
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -250,6 +233,7 @@ export default function NaturalHistoryPage() {
       className={`nha-hero${expanded ? " is-expanded" : ""}`}
       data-theme={theme}
     >
+      {specimens.map(({ id }) => <span key={id} id={id} className="nha-exhibit-anchor" aria-hidden="true" />)}
       <IconDefs />
 
       {/* ── LEFT SIDEBAR ─────────────────────────────────────── */}

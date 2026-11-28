@@ -8,14 +8,18 @@ export type CartItem = {
   price: number // cents or VND
   image: string
   qty: number
+  museumSlug?: string
+  inventory?: number
 }
 
 type CartContextValue = {
   items: CartItem[]
   totalQty: number
   totalCents: number
-  addItem: (item: Omit<CartItem, "qty">) => void
+  hydrated: boolean
+  addItem: (item: Omit<CartItem, "qty">, quantity?: number) => void
   removeItem: (productId: string) => void
+  removeItems: (productIds: string[]) => void
   updateQty: (productId: string, qty: number) => void
   clearCart: () => void
 }
@@ -50,13 +54,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [items, hydrated])
 
-  const addItem = useCallback((item: Omit<CartItem, "qty">) => {
+  const addItem = useCallback((item: Omit<CartItem, "qty">, quantity = 1) => {
+    if (quantity <= 0 || item.inventory === 0) return
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === item.productId)
-      if (existing) {
-        return prev.map((i) => (i.productId === item.productId ? { ...i, qty: i.qty + 1 } : i))
-      }
-      return [...prev, { ...item, qty: 1 }]
+      const qty = Math.min((existing?.qty ?? 0) + quantity, item.inventory ?? Infinity)
+      return existing
+        ? prev.map((i) => (i.productId === item.productId ? { ...i, ...item, qty } : i))
+        : [...prev, { ...item, qty }]
     })
   }, [])
 
@@ -64,11 +69,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((i) => i.productId !== productId))
   }, [])
 
+  const removeItems = useCallback((productIds: string[]) => {
+    setItems((prev) => prev.filter((i) => !productIds.includes(i.productId)))
+  }, [])
+
   const updateQty = useCallback((productId: string, qty: number) => {
     if (qty <= 0) {
       setItems((prev) => prev.filter((i) => i.productId !== productId))
     } else {
-      setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, qty } : i)))
+      setItems((prev) => prev.map((i) => (i.productId === productId ? { ...i, qty: Math.min(qty, i.inventory ?? Infinity) } : i)))
     }
   }, [])
 
@@ -78,7 +87,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalCents = items.reduce((s, i) => s + i.price * i.qty, 0)
 
   return (
-    <CartContext.Provider value={{ items, totalQty, totalCents, addItem, removeItem, updateQty, clearCart }}>
+    <CartContext.Provider value={{ items, totalQty, totalCents, hydrated, addItem, removeItem, removeItems, updateQty, clearCart }}>
       {children}
     </CartContext.Provider>
   )

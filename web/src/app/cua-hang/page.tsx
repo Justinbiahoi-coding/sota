@@ -14,7 +14,6 @@ import {
   Loader2,
   ArrowUpDown,
   Landmark,
-  ArrowLeft,
   ChevronDown,
 } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
@@ -27,12 +26,12 @@ import {
 } from "@/lib/mock-data"
 import { api } from "@/lib/api/client"
 import { cn } from "@/lib/utils"
-import { SplitText } from "@/components/reactbits/split-text"
-import { DecryptedText } from "@/components/reactbits/decrypted-text"
+import { formatShopPrice } from "@/lib/shop-price"
+import { GalleryMasthead } from "@/components/site/gallery-masthead"
+import { MuseumButton } from "@/components/reactbits/museum-button"
 import {
   BrassPlacardPin,
   RenaissanceCorners,
-  RenaissanceDivider,
   GildedMuseumFrame,
 } from "@/components/renaissance/deco-assets"
 import { Shop3DGallery } from "@/components/shop/shop-gallery-3d"
@@ -120,7 +119,8 @@ function ProductCard({
   product: Product
   onSelectMuseum?: (slug: string) => void
 }) {
-  const { addItem } = useCart()
+  const { addItem, items } = useCart()
+  const available = product.inventory - (items.find((item) => item.productId === product.id)?.qty ?? 0)
   const [added, setAdded] = useState(false)
 
   function handleAdd() {
@@ -129,6 +129,8 @@ function ProductCard({
       name: product.name,
       price: product.price,
       image: product.image,
+      museumSlug: product.museumSlug,
+      inventory: product.inventory,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
@@ -138,18 +140,18 @@ function ProductCard({
   const viSlug = DB_TO_VI_SLUG[product.museumSlug] ?? product.museumSlug
 
   return (
-    <div className="group relative flex flex-col justify-between rounded-xl border border-[#d4af37]/35 bg-white p-3.5 shadow-md transition-all duration-300 hover:border-[#d4af37] hover:shadow-[0_12px_32px_-8px_rgba(212,175,55,0.3)]">
+    <div className="gallery-sheet group relative flex flex-col justify-between rounded-md p-3.5 transition-[transform,box-shadow] duration-300 hover:shadow-lg motion-safe:hover:-translate-y-0.5">
       <RenaissanceCorners />
 
       <div>
         <Link href={`/cua-hang/${product.slug}`}>
           <GildedMuseumFrame className="w-full">
-            <div className="relative aspect-square w-full bg-stone-900">
+            <div className="relative aspect-[5/4] w-full bg-[#efe7d6]">
               <Image
                 src={product.image}
                 alt={product.name}
                 fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                className="object-cover transition-transform duration-500 motion-safe:group-hover:scale-[1.025]"
                 sizes="(max-width:640px) 50vw,(max-width:1024px) 33vw,25vw"
                 loading="lazy"
               />
@@ -177,12 +179,12 @@ function ProductCard({
           </div>
 
           <Link href={`/cua-hang/${product.slug}`}>
-            <h3 className="mt-2 font-heading text-base font-light italic leading-snug text-[#171717] hover:text-[#92400e] transition-colors line-clamp-1">
+            <h3 className="mt-2 font-heading text-[1.3rem] leading-snug text-[#08162b] hover:text-[#77531c] transition-colors">
               {product.name}
             </h3>
           </Link>
           <p className="mt-2 font-heading text-lg font-semibold text-[#92400e]">
-            {formatVndOrPrice(product.price)}
+            {formatShopPrice(product.price, product.id)}
           </p>
         </div>
       </div>
@@ -191,18 +193,18 @@ function ProductCard({
         <button
           type="button"
           onClick={handleAdd}
-          disabled={product.inventory === 0}
+          disabled={available <= 0}
           className={cn(
-            "flex w-full items-center justify-center gap-2 rounded-full py-2 text-xs font-semibold uppercase tracking-wider transition-all duration-300 active:scale-95",
+            "flex w-full items-center justify-center gap-2 min-h-11 rounded-md px-3 py-2 text-sm font-semibold transition-colors",
             added
               ? "border border-emerald-600 bg-emerald-50 text-emerald-700 shadow-sm"
               : product.inventory === 0
                 ? "cursor-not-allowed border border-stone-200 opacity-40 text-stone-400"
-                : "border border-stone-300 bg-stone-50 text-stone-800 shadow-sm hover:border-[#d4af37] hover:bg-[#d4af37] hover:text-[#08162b]",
+                : "border border-[#d3c8b5] bg-[#f7f4ec] text-[#08162b] hover:border-[#08162b] hover:bg-[#08162b] hover:text-white",
           )}
         >
           {added ? <Check className="size-3.5 text-emerald-600" /> : <ShoppingBag className="size-3.5" />}
-          {added ? "Đã vào giỏ!" : product.inventory === 0 ? "Hết hàng" : "Thêm vào giỏ"}
+          {added ? "Đã vào giỏ!" : product.inventory === 0 ? "Hết hàng" : available <= 0 ? "Đã chọn hết số lượng" : "Thêm vào giỏ"}
         </button>
       </div>
     </div>
@@ -232,9 +234,15 @@ const CHUNK_SIZE = 8 // Progressive load step
 
 function ShopContent() {
   const searchParams = useSearchParams()
-  const initialMuseumParam = searchParams.get("museum") || "all"
+  const museumParam = searchParams.get("museum") ?? "all"
+  const selectedMuseum = DB_TO_VI_SLUG[museumParam] ?? museumParam
 
-  const [selectedMuseum, setSelectedMuseum] = useState<string>(initialMuseumParam)
+  function setSelectedMuseum(slug: string) {
+    const url = new URL(window.location.href)
+    if (slug === "all") url.searchParams.delete("museum")
+    else url.searchParams.set("museum", slug)
+    window.history.replaceState(null, "", url)
+  }
   const [category, setCategory] = useState<ProductCategory | "all">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "name-asc">("default")
@@ -247,13 +255,6 @@ function ShopContent() {
   // Progressive loading chunk limit
   const [visibleCount, setVisibleCount] = useState(CHUNK_SIZE)
   const loadMoreRef = useRef<HTMLDivElement>(null)
-
-  // Keep selected museum in sync with URL param if it changes
-  useEffect(() => {
-    if (initialMuseumParam && initialMuseumParam !== selectedMuseum) {
-      setSelectedMuseum(initialMuseumParam)
-    }
-  }, [initialMuseumParam])
 
   // Reset chunk count whenever filters change
   useEffect(() => {
@@ -463,140 +464,52 @@ function ShopContent() {
     return counts
   }, [liveProducts, selectedMuseum])
 
-  // Selected museum info
-  const activeMuseumInfo = useMemo(() => {
-    if (selectedMuseum === "all") return null
-    return (
-      mockMuseums.find((m) => m.slug === selectedMuseum) ?? {
-        name: MUSEUM_NAMES[selectedMuseum] ?? "Bảo tàng Smithsonian",
-        nameEn: "Smithsonian Museum",
-        slug: selectedMuseum,
-        description: "Bộ sưu tập quà lưu niệm, sách nghệ thuật và vật phẩm độc bản.",
-      }
-    )
-  }, [selectedMuseum])
+  const museumName = MUSEUM_NAMES[selectedMuseum] ?? mockMuseums.find((m) => m.slug === selectedMuseum)?.name
+  const filtersActive = Boolean(searchQuery || selectedMuseum !== "all" || category !== "all" || sortBy !== "default")
+
+  function resetFilters() {
+    setSearchQuery("")
+    setCategory("all")
+    setSortBy("default")
+    setSelectedMuseum("all")
+  }
 
   return (
-    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
-      {/* Header */}
-      <header className="mb-6 max-w-4xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
-          <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
-            <DecryptedText
-              text="Smithsonian Boutique · Ấn bản giới hạn"
-              speed={28}
-              maxIterations={12}
-              animateOn="view"
-            />
-          </span>
-          {isLoading && <Loader2 className="ml-2 size-3 animate-spin text-[#d4af37]" />}
-        </div>
-
-        <h1 className="mt-5 font-heading text-4xl font-light tracking-tight text-[#f8f6f0] sm:text-5xl md:text-6xl">
-          <SplitText text="Quà lưu niệm & Sách nghệ thuật" delay={0.04} stagger={0.04} />
-        </h1>
-        <p className="mt-4 max-w-3xl text-base md:text-lg leading-relaxed text-stone-300">
-          Bưu thiếp nghệ thuật in dập nổi, sách chuyên khảo mỹ thuật phục chế và các vật phẩm lưu niệm độc bản được phát hành riêng cho từng bảo tàng trong cụm Smithsonian.
-        </p>
-      </header>
-
-      {/* Museum Selector Tabs (Use flow: Bảo tàng -> Cửa hàng) */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Landmark className="size-4 text-[#d4af37]" />
-            <span className="placard text-xs font-semibold uppercase tracking-wider text-stone-300">
-              Chọn cửa hàng theo bảo tàng
-            </span>
-          </div>
-          {selectedMuseum !== "all" && (
-            <button
-              onClick={() => setSelectedMuseum("all")}
-              className="text-xs text-[#d4af37] hover:underline flex items-center gap-1"
-            >
-              <X className="size-3" /> Xem tất cả bảo tàng
-            </button>
+    <div className="gallery-page">
+      <GalleryMasthead
+        label={museumName ?? "Cửa hàng Smithsonian"}
+        title={<>Quà <em>lưu niệm.</em></>}
+        description="Bưu thiếp, sách nghệ thuật và vật phẩm từ các bộ sưu tập Smithsonian."
+        image="/map-art-cua-hang.webp"
+      >
+        <div className="mt-7 flex flex-wrap gap-3">
+          <MuseumButton href="#bo-suu-tap" variant="primary" size="md">Xem sản phẩm</MuseumButton>
+          {museumName && (
+            <MuseumButton href={"/bao-tang/" + selectedMuseum} variant="outline" size="md">
+              Về bảo tàng
+            </MuseumButton>
           )}
         </div>
+      </GalleryMasthead>
 
-        <div className="flex flex-wrap gap-2">
-          {MUSEUM_TABS.map((tab) => {
-            const isActive = selectedMuseum === tab.slug
-            const count = tab.slug === "all"
-              ? liveProducts.length
-              : liveProducts.filter(
-                  (p) =>
-                    p.museumSlug === tab.slug ||
-                    p.museumSlug === (VI_TO_DB_SLUG[tab.slug] ?? tab.slug) ||
-                    DB_TO_VI_SLUG[p.museumSlug] === tab.slug
-                ).length
-
-            return (
-              <button
-                key={tab.slug}
-                onClick={() => setSelectedMuseum(tab.slug)}
-                className={cn(
-                  "placard flex items-center gap-1.5 rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
-                  isActive
-                    ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_14px_rgba(212,175,55,0.4)]"
-                    : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]"
-                )}
-              >
-                <span>{tab.label}</span>
-                <span className={cn(
-                  "text-[0.68rem] px-1.5 py-0.2 rounded-full",
-                  isActive ? "bg-[#08162b]/20 text-[#08162b]" : "bg-white/10 text-stone-400"
-                )}>
-                  {count}
-                </span>
-              </button>
-            )
-          })}
+      <section id="bo-suu-tap" className="gallery-wrap scroll-mt-24 py-12 md:py-16" aria-labelledby="catalog-title">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <h2 id="catalog-title" className="font-heading text-4xl font-normal tracking-tight md:text-5xl">Danh mục lưu niệm</h2>
+          <label className="grid w-full gap-1.5 text-sm font-semibold sm:w-auto">
+            Bảo tàng
+            <select
+              value={selectedMuseum}
+              onChange={(event) => setSelectedMuseum(event.target.value)}
+              className="gallery-control w-full px-3 sm:min-w-56"
+            >
+              {MUSEUM_TABS.map(({ slug, label }) => <option key={slug} value={slug}>{label}</option>)}
+              {!MUSEUM_TABS.some(({ slug }) => slug === selectedMuseum) && <option value={selectedMuseum}>{museumName ?? "Bảo tàng đã chọn"}</option>}
+            </select>
+          </label>
         </div>
-      </div>
-
-      {/* Dedicated Museum Active Banner */}
-      {activeMuseumInfo && selectedMuseum !== "all" && (
-        <div className="mb-8 rounded-2xl border border-[#d4af37]/45 bg-gradient-to-r from-[#08162b]/95 via-[#0b1d3a]/90 to-[#08162b]/95 p-6 shadow-xl backdrop-blur-md">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <BrassPlacardPin />
-                <span className="placard text-xs text-[#fbe396] font-semibold uppercase tracking-widest">
-                  BOUTIQUE ĐỘC QUYỀN
-                </span>
-              </div>
-              <h2 className="mt-2 text-2xl font-heading font-light text-white md:text-3xl">
-                Cửa hàng lưu niệm — {activeMuseumInfo.name}
-              </h2>
-              <p className="mt-1 text-sm text-stone-300 max-w-2xl leading-relaxed">
-                {(activeMuseumInfo as any).description ?? "Vật phẩm lưu niệm và ấn bản nghệ thuật đặc trưng của bảo tàng."}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href={`/bao-tang/${selectedMuseum}`}
-                className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-medium text-stone-200 hover:bg-white/20 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="size-3.5" /> Không gian bảo tàng
-              </Link>
-              <button
-                onClick={() => setSelectedMuseum("all")}
-                className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37]/60 bg-[#d4af37]/20 px-4 py-2 text-xs font-semibold text-[#fbe396] hover:bg-[#d4af37] hover:text-[#08162b] transition-colors"
-              >
-                Tất cả sản phẩm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <RenaissanceDivider title={selectedMuseum === "all" ? "Bộ sưu tập lưu niệm toàn hệ thống" : `Vật phẩm — ${activeMuseumInfo?.name}`} />
 
       {/* Controls: Search Bar & View Switch */}
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="gallery-sheet mb-5 flex flex-wrap items-center justify-between gap-4 rounded-md p-4">
         {/* Search Bar */}
         <div className="relative w-full max-w-md">
           <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-stone-400" />
@@ -604,13 +517,15 @@ function ShopContent() {
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm bưu thiếp, sách, áo, quà lưu niệm..."
-            className="h-11 w-full rounded-full border border-white/20 bg-[#08162b]/80 pl-11 pr-10 text-sm text-[#f8f6f0] placeholder:text-stone-400 shadow-sm backdrop-blur-md outline-none transition-all focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
+            aria-label="Tìm quà lưu niệm"
+            placeholder="Tìm theo tên vật phẩm…"
+            className="gallery-control w-full pl-10 pr-10 text-base placeholder:text-stone-500 [&::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-white"
+              aria-label="Xóa từ khóa"
+              className="absolute right-1 top-1/2 flex size-10 -translate-y-1/2 items-center justify-center text-stone-600 hover:text-[#08162b]"
             >
               <X className="size-4" />
             </button>
@@ -620,17 +535,18 @@ function ShopContent() {
         {/* View toggle & Sort */}
         <div className="flex flex-wrap items-center gap-3">
           {/* Sort Selector */}
-          <div className="flex items-center gap-1.5 rounded-full border border-white/15 bg-[#08162b]/80 px-3 py-1.5 text-xs text-stone-300 shadow-sm">
+          <div className="gallery-control flex items-center gap-2 px-3 text-sm">
             <ArrowUpDown className="size-3 text-[#d4af37]" />
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-transparent text-xs text-stone-200 outline-none cursor-pointer"
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              aria-label="Sắp xếp sản phẩm"
+              className="bg-white text-sm"
             >
-              <option value="default" className="bg-[#08162b] text-white">Mặc định</option>
-              <option value="price-asc" className="bg-[#08162b] text-white">Giá: Thấp đến Cao</option>
-              <option value="price-desc" className="bg-[#08162b] text-white">Giá: Cao đến Thấp</option>
-              <option value="name-asc" className="bg-[#08162b] text-white">Tên: A-Z</option>
+              <option value="default" >Mặc định</option>
+              <option value="price-asc" >Giá: Thấp đến Cao</option>
+              <option value="price-desc" >Giá: Cao đến Thấp</option>
+              <option value="name-asc" >Tên: A-Z</option>
             </select>
           </div>
 
@@ -638,11 +554,12 @@ function ShopContent() {
           <div className="flex gap-1.5">
             <button
               onClick={() => setView("grid")}
+              aria-pressed={view === "grid"}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-300",
+                "flex items-center gap-1.5 min-h-11 rounded-md border px-3 py-2 text-sm transition-colors",
                 view === "grid"
-                  ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                  : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]"
+                  ? "border-[#08162b] bg-[#08162b] text-[#f7f4ec] font-semibold"
+                  : "border-[#d3c8b5] bg-white text-[#08162b] hover:border-[#967331]"
               )}
             >
               <LayoutGrid className="size-3.5" />
@@ -650,11 +567,12 @@ function ShopContent() {
             </button>
             <button
               onClick={() => setView("gallery")}
+              aria-pressed={view === "gallery"}
               className={cn(
-                "flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs transition-all duration-300",
+                "flex items-center gap-1.5 min-h-11 rounded-md border px-3 py-2 text-sm transition-colors",
                 view === "gallery"
-                  ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                  : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]"
+                  ? "border-[#08162b] bg-[#08162b] text-[#f7f4ec] font-semibold"
+                  : "border-[#d3c8b5] bg-white text-[#08162b] hover:border-[#967331]"
               )}
             >
               <Boxes className="size-3.5" />
@@ -680,11 +598,12 @@ function ShopContent() {
                 <button
                   key={cat.value}
                   onClick={() => setCategory(cat.value)}
+                  aria-pressed={category === cat.value}
                   className={cn(
-                    "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
+                    "min-h-11 rounded-full border px-4 py-2 text-sm transition-colors font-medium",
                     category === cat.value
-                      ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                      : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]"
+                      ? "border-[#08162b] bg-[#08162b] text-[#f7f4ec] font-semibold"
+                      : "border-[#d3c8b5] bg-white text-[#08162b] hover:border-[#967331]"
                   )}
                 >
                   {cat.label} {count > 0 && `(${count})`}
@@ -693,30 +612,18 @@ function ShopContent() {
             })}
           </div>
 
-          {/* Results stats */}
-          <div className="mb-6 flex items-center justify-between text-xs text-stone-400">
-            <span>
-              Đang hiển thị <strong className="text-[#fbe396] font-mono">{visibleProducts.length}</strong> / <strong className="text-white font-mono">{filtered.length}</strong> vật phẩm
-              {selectedMuseum !== "all" && <span> tại <em>{MUSEUM_NAMES[selectedMuseum]}</em></span>}
-              {searchQuery && <span> cho &ldquo;{searchQuery}&rdquo;</span>}
-            </span>
-            {(searchQuery || selectedMuseum !== "all" || category !== "all") && (
-              <button
-                onClick={() => {
-                  setSearchQuery("")
-                  setSelectedMuseum("all")
-                  setCategory("all")
-                }}
-                className="text-[#d4af37] hover:underline"
-              >
-                Đặt lại tất cả bộ lọc
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm text-stone-700">
+            <p aria-live="polite">{isLoading ? "Đang tải danh mục…" : `Hiển thị ${visibleProducts.length} / ${filtered.length} vật phẩm`}</p>
+            {filtersActive && (
+              <button type="button" onClick={resetFilters} className="min-h-11 text-[#77531c] underline underline-offset-4">
+                Xóa bộ lọc
               </button>
             )}
           </div>
 
           {/* Skeletons while initial loading */}
           {isLoading && !cachedShopProducts ? (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-6">
               {Array.from({ length: 8 }).map((_, i) => (
                 <ProductSkeleton key={i} />
               ))}
@@ -734,11 +641,7 @@ function ShopContent() {
               </p>
               {(searchQuery || category !== "all" || selectedMuseum !== "all") && (
                 <button
-                  onClick={() => {
-                    setSearchQuery("")
-                    setCategory("all")
-                    setSelectedMuseum("all")
-                  }}
+                  onClick={resetFilters}
                   className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#d4af37] bg-[#d4af37] px-5 py-2 text-xs font-semibold uppercase tracking-wider text-[#08162b] shadow-sm hover:bg-[#e0be47]"
                 >
                   Xem tất cả vật phẩm
@@ -748,7 +651,7 @@ function ShopContent() {
           ) : (
             <>
               {/* Product Grid */}
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-6">
                 {visibleProducts.map((p) => (
                   <ProductCard
                     key={p.id}
@@ -788,6 +691,7 @@ function ShopContent() {
           )}
         </>
       )}
+      </section>
     </div>
   )
 }

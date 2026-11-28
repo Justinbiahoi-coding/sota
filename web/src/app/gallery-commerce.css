@@ -1,0 +1,191 @@
+.gallery-page {
+  --gallery-cream: #f7f4ec;
+  --gallery-navy: #08162b;
+  --gallery-gold: #d4af37;
+  --gallery-brass: #77531c;
+  --gallery-line: #e1d8c7;
+  color: var(--gallery-navy);
+  background: var(--gallery-cream);
+  min-height: 75vh;
+}
+
+.gallery-wrap {
+  width: min(100% - clamp(2rem, 8vw, 8rem), 80rem);
+  margin-inline: auto;
+}
+
+.gallery-masthead {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(7.3rem, 12vw, 10rem) clamp(3.2rem, 7vw, 6rem);
+  color: #f7f4ec;
+  border-bottom: 1px solid #d4af3760;
+  background: radial-gradient(ellipse at 85% 8%, #233955, transparent 63%), #08162b;
+}
+
+.gallery-masthead-grid {
+  display: grid;
+  gap: clamp(2rem, 6vw, 6rem);
+  align-items: center;
+}
+
+.gallery-masthead-grid:has(.gallery-masthead-art) {
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+}
+
+.gallery-kicker {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+  font: 500 .75rem/1.5 var(--font-mono), monospace;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  color: var(--gallery-brass, #77531c);
+}
+
+.gallery-kicker::before {
+  content: "";
+  width: 1.65rem;
+  height: 1px;
+  flex: none;
+  background: currentColor;
+}
+
+.gallery-masthead .gallery-kicker,
+.gallery-on-dark .gallery-kicker {
+  color: #f2d790;
+}
+
+.gallery-title {
+  font: 400 clamp(3.1rem, 7.2vw, 7.2rem)/.94 var(--font-heading), Georgia, serif;
+  letter-spacing: -.05em;
+  overflow-wrap: anywhere;
+  margin: .28em 0 0;
+  text-wrap: balance;
+}
+
+.gallery-title em {
+  font-weight: 400;
+  color: #f2d790;
+}
+
+.gallery-lead {
+  max-width: 35rem;
+  margin-top: 1.25rem;
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  line-height: 1.65;
+  color: #ddd8cb;
+}
+
+.gallery-masthead-art {
+  position: relative;
+  width: min(100%, 26rem);
+  margin-inline: auto;
+  border: 1px solid #d4af3770;
+  border-radius: 50% 50% 0 0 / 62% 62% 0 0;
+  padding: .65rem;
+  background: #08162b;
+  box-shadow: 0 1.5rem 4rem #0005;
+}
+
+.gallery-masthead-art > div:first-child {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border-radius: inherit;
+  background: #101d31;
+}
+
+.gallery-masthead-art img {
+  object-fit: cover;
+}
+
+.gallery-sheet {
+  border: 1px solid var(--gallery-line, #e1d8c7);
+  background: white;
+  box-shadow: 0 .5rem 1.7rem #3026160a;
+}
+
+.gallery-control {
+  min-height: 2.75rem;
+  border: 1px solid #d3c8b5;
+  border-radius: .35rem;
+  background: white;
+  color: #08162b;
+}
+
+.gallery-action, .gallery-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  min-height: 2.75rem;
+  border: 1px solid #08162b;
+  border-radius: .35rem;
+  padding: .6rem 1rem;
+  background: #08162b;
+  color: #f7f4ec;
+  font-weight: 600;
+  transition: background-color .18s, border-color .18s, color .18s;
+}
+
+.gallery-action:hover {
+  background: #1e385b;
+}
+
+.gallery-action-muted, .gallery-icon-button {
+  border-color: #d3c8b5;
+  color: #08162b;
+  background: #f7f4ec;
+}
+
+.gallery-action-muted:hover, .gallery-icon-button:hover {
+  border-color: #967331;
+  background: #efe4ca;
+}
+
+.gallery-icon-button {
+  padding: 0;
+  width: 2.75rem;
+}
+
+.gallery-icon-button:disabled {
+  opacity: .43;
+}
+
+.gallery-page :is(button, a, input, textarea, select):focus-visible,
+.gallery-on-dark :is(button, a, input):focus-visible {
+  outline: 2px solid #966820;
+  outline-offset: 3px;
+}
+
+.gallery-enter {
+  animation: gallery-enter .65s cubic-bezier(.2,.7,.2,1) both;
+}
+
+.gallery-drawer[open] > div {
+  animation: gallery-drawer-in .25s ease-out both;
+}
+
+@keyframes gallery-drawer-in {
+  from { opacity: 0; transform: translateX(1rem); }
+}
+
+@keyframes gallery-enter {
+  from { opacity: 0; transform: translateY(.65rem); }
+}
+
+@media (max-width: 767px) {
+  .gallery-masthead-grid:has(.gallery-masthead-art) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .gallery-masthead-art {
+    width: min(78%, 20rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-enter, .gallery-drawer[open] > div, .animate-star-movement-top, .animate-star-movement-bottom {
+    animation: none;
+  }
+}

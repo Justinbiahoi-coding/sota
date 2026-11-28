@@ -1,30 +1,31 @@
 "use client"
 
-import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { KeyRound, LogOut, QrCode, ShieldCheck, UserCheck, X } from "lucide-react"
+import { Suspense, useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { KeyRound, LogOut, ReceiptText, TicketCheck, UserRound, X } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { api } from "@/lib/api/client"
 import { formatVndOrPrice } from "@/app/cua-hang/page"
 import { cn } from "@/lib/utils"
 import { SpotlightCard } from "@/components/reactbits/spotlight-card"
-import { BlurText } from "@/components/reactbits/blur-text"
 import { MuseumButton } from "@/components/reactbits/museum-button"
-import { BrassPlacardPin } from "@/components/renaissance/deco-assets"
-import { DecryptedText } from "@/components/reactbits/decrypted-text"
+import { GalleryMasthead } from "@/components/site/gallery-masthead"
+import { EntryQr } from "@/components/site/entry-qr"
+import { formatPrice } from "@/lib/mock-data"
 
 type Ticket = {
-  code: string
+  id?: string
+  code: string | null
   invoice?: string
   museum: string
   date: string
   time: string
-  adults: number
+  adults?: number
   children: number
   total: number
   status?: string
+  demo?: boolean
 }
 
 type Order = {
@@ -36,6 +37,7 @@ type Order = {
   name: string
   address: string
   createdAt: string
+  demo?: boolean
 }
 
 const DB_MUSEUM_VI_NAMES: Record<string, string> = {
@@ -62,34 +64,21 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   cancelled: "Đã hủy",
 }
 
-// Minimal SVG QR placeholder
-function QrPlaceholder({ value }: { value: string }) {
-  const size = 11
-  const cells: boolean[][] = Array.from({ length: size }, (_, r) =>
-    Array.from({ length: size }, (_, c) => {
-      const inFinder =
-        (r < 3 && c < 3) || (r < 3 && c >= size - 3) || (r >= size - 3 && c < 3)
-      if (inFinder) return true
-      const hash = (value.charCodeAt((r * size + c) % value.length) + r * 7 + c * 13) % 2
-      return hash === 0
-    }),
-  )
-  return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="size-28" xmlns="http://www.w3.org/2000/svg">
-      {cells.map((row, r) =>
-        row.map((filled, c) =>
-          filled ? (
-            <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="currentColor" />
-          ) : null,
-        ),
-      )}
-    </svg>
-  )
+export default function TaiKhoanPage() {
+  return <Suspense fallback={<AccountLoading />}><AccountContent /></Suspense>
 }
 
-export default function TaiKhoanPage() {
+function AccountLoading() {
+  return <div className="gallery-page"><GalleryMasthead label="Tài khoản Sota" title="Hồ sơ của bạn" /><p role="status" className="gallery-wrap py-12">Đang tải hồ sơ…</p></div>
+}
+
+function AccountContent() {
   const router = useRouter()
-  const [tab, setTab] = useState<"tickets" | "orders" | "profile">("tickets")
+  const params = useSearchParams()
+  const selectedTab = params.get("tab")
+  const tab = selectedTab === "orders" || selectedTab === "profile" ? selectedTab : "tickets"
+  const ticketDialog = useRef<HTMLDialogElement>(null)
+  const [orderDetails, setOrderDetails] = useState<Record<string, "loading" | "loaded" | "error">>({})
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [qrTicket, setQrTicket] = useState<Ticket | null>(null)
@@ -101,6 +90,7 @@ export default function TaiKhoanPage() {
   const [userPhone, setUserPhone] = useState("")
   const [roleLabel, setRoleLabel] = useState("Hội viên Sota")
   const [isAdmin, setIsAdmin] = useState(false)
+  const [logoutError, setLogoutError] = useState("")
 
   // Profile & password edit state (UC09, UC25)
   const [displayNameInput, setDisplayNameInput] = useState("")
@@ -123,7 +113,9 @@ export default function TaiKhoanPage() {
         if (!active) return
 
         if (!user) {
-          const localName = localStorage.getItem("sota_user_name")
+          const localName = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            ? null
+            : localStorage.getItem("sota_user_name")
           if (localName) {
             setIsLoggedIn(true)
             setUserName(localName)
@@ -177,75 +169,39 @@ export default function TaiKhoanPage() {
         } catch {}
 
         // 3. Lấy danh sách vé đã đặt từ Backend API
-        const localTickets: Ticket[] = JSON.parse(localStorage.getItem("sota_tickets") ?? "[]")
         try {
           const ticketRes = await api.ticketOrders.list()
           const serverTickets: Ticket[] = (ticketRes?.data ?? []).map((t) => ({
-            code: t.entry_code || t.id.slice(0, 8).toUpperCase(),
+            id: t.id,
+            code: t.entry_code,
             invoice: t.invoice?.invoice_number,
             museum: museumMap.get(t.museum_id) ?? "Bảo tàng Smithsonian",
             date: t.visit_date,
             time: t.time_slot,
-            adults: t.items?.reduce((s, it) => s + it.quantity, 0) || 1,
+            adults: t.items?.reduce((s, it) => s + it.quantity, 0),
             children: 0,
             total: parseFloat(t.total_amount || "0"),
             status: t.status,
           }))
-          const merged = [
-            ...serverTickets,
-            ...localTickets.filter((lt) => !serverTickets.some((st) => st.code === lt.code)),
-          ]
-          if (active) setTickets(merged)
+          if (active) setTickets(serverTickets)
         } catch {
-          if (active) setTickets(localTickets)
+          if (active) setTickets([])
         }
 
-        // 4. Lấy danh sách đơn hàng lưu niệm từ Backend API
-        const localOrders: Order[] = JSON.parse(localStorage.getItem("sota_orders") ?? "[]")
         try {
           const shopRes = await api.shopOrders.list()
-          const serverOrders: Order[] = await Promise.all(
-            (shopRes?.data ?? []).map(async (o) => {
-              const orderItems = await Promise.all(
-                (o.items ?? []).map(async (it) => {
-                  let img = "/museum-elephant.webp"
-                  try {
-                    const mediaRes = await api.media("souvenir", it.product_id)
-                    if (mediaRes?.data?.[0]?.storage_path) {
-                      const m = mediaRes.data[0]
-                      img = m.storage_path.startsWith("http")
-                        ? m.storage_path
-                        : `${process.env.NEXT_PUBLIC_SUPABASE_URL || "https://onauuvsjpnmjxqxeiuvy.supabase.co"}/storage/v1/object/public/${m.storage_bucket}/${m.storage_path}`
-                    }
-                  } catch {}
-                  return {
-                    productId: it.product_id,
-                    name: it.product_name,
-                    qty: it.quantity,
-                    price: parseFloat(it.unit_price || "0"),
-                    image: img,
-                  }
-                }),
-              )
-              return {
-                id: o.id,
-                invoice: o.invoice?.invoice_number,
-                status: o.status,
-                items: orderItems,
-                total: parseFloat(o.total_amount || "0"),
-                name: o.shipping_name,
-                address: o.shipping_address,
-                createdAt: o.created_at,
-              }
-            }),
-          )
-          const mergedOrders = [
-            ...serverOrders,
-            ...localOrders.filter((lo) => !serverOrders.some((so) => so.id === lo.id)),
-          ]
-          if (active) setOrders(mergedOrders)
+          const serverOrders: Order[] = shopRes.data.map((order) => ({
+            id: order.id,
+            status: order.status,
+            items: [],
+            total: Number(order.total_amount),
+            name: order.shipping_name,
+            address: order.shipping_address,
+            createdAt: order.created_at,
+          }))
+          if (active) setOrders(serverOrders)
         } catch {
-          if (active) setOrders(localOrders)
+          if (active) setOrders([])
         }
       } catch {
         // Fallback offline
@@ -261,13 +217,40 @@ export default function TaiKhoanPage() {
   }, [])
 
   async function handleLogout() {
+    setLogoutError("")
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut()
-    } catch {}
-    localStorage.removeItem("sota_user_name")
-    router.push("/dang-nhap")
-    router.refresh()
+      if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        const { error } = await createClient().auth.signOut()
+        if (error) throw error
+      }
+      localStorage.removeItem("sota_user_name")
+      router.push("/dang-nhap")
+      router.refresh()
+    } catch {
+      setLogoutError("Chưa thể đăng xuất. Vui lòng thử lại.")
+    }
+  }
+
+  async function loadOrderDetails(order: Order) {
+    if (order.demo || !/^[0-9a-f-]{36}$/i.test(order.id) || ["loading", "loaded"].includes(orderDetails[order.id])) return
+    setOrderDetails((current) => ({ ...current, [order.id]: "loading" }))
+    try {
+      const { data } = await api.shopOrders.get(order.id)
+      setOrders((current) => current.map((item) => item.id === order.id ? {
+        ...item,
+        invoice: data.invoice?.invoice_number,
+        items: data.items.map((line) => ({
+          productId: line.product_id,
+          name: line.product_name,
+          qty: line.quantity,
+          price: Number(line.unit_price),
+          image: "",
+        })),
+      } : item))
+      setOrderDetails((current) => ({ ...current, [order.id]: "loaded" }))
+    } catch {
+      setOrderDetails((current) => ({ ...current, [order.id]: "error" }))
+    }
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -317,24 +300,20 @@ export default function TaiKhoanPage() {
     }
   }
 
-  if (authChecked && !isLoggedIn) {
+  if (!authChecked) return <AccountLoading />
+
+  if (!isLoggedIn) {
     return (
-      <div className="mx-auto max-w-xl px-5 pt-32 pb-20 text-center">
-        <div className="rounded-2xl border border-[#d4af37]/30 bg-[#08162b]/90 p-10 shadow-2xl backdrop-blur-md">
-          <div className="mx-auto inline-flex size-14 items-center justify-center rounded-full border border-[#d4af37]/40 bg-[#d4af37]/10 text-[#fbe396]">
-            <UserCheck className="size-6" />
-          </div>
-          <h1 className="mt-5 font-heading text-3xl font-light text-white">Hồ sơ Hội viên Sota</h1>
-          <p className="mt-3 text-sm leading-relaxed text-stone-300">
-            Đăng nhập tài khoản để quản lý vé tham quan kèm mã QR, theo dõi đơn hàng lưu niệm và cập nhật hồ sơ cá nhân.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <MuseumButton href="/dang-nhap" variant="primary" size="md" icon>
-              Đăng nhập
-            </MuseumButton>
-            <MuseumButton href="/dang-ky" variant="outline" size="md">
-              Đăng ký tài khoản
-            </MuseumButton>
+      <div className="gallery-page">
+        <GalleryMasthead label="Tài khoản Sota" title={<>Hồ sơ <em>của bạn.</em></>} image="/museum-elephant.webp" />
+        <div className="gallery-wrap py-12">
+          <div className="gallery-sheet mx-auto max-w-2xl rounded-md p-8 text-center sm:p-12">
+            <h2 className="font-heading text-4xl">Vé, đơn hàng và hồ sơ</h2>
+            <p className="mt-4 text-stone-700">Đăng nhập để xem vé tham quan, theo dõi đơn lưu niệm và cập nhật thông tin cá nhân.</p>
+            <div className="mt-6 flex flex-wrap justify-center gap-3">
+              <Link href="/dang-nhap" className="gallery-action">Đăng nhập</Link>
+              <Link href="/dang-ky" className="gallery-action gallery-action-muted">Tạo tài khoản</Link>
+            </div>
           </div>
         </div>
       </div>
@@ -342,80 +321,46 @@ export default function TaiKhoanPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-5 pt-28 pb-16 md:px-8">
-      {/* Header cleanly below fixed 72px navbar */}
-      <div className="mb-10 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
-            <BrassPlacardPin />
-            <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
-              <DecryptedText
-                text={`Hồ sơ Hội viên · ${roleLabel}`}
-                speed={28}
-                maxIterations={12}
-                animateOn="view"
-              />
-            </span>
-          </div>
-          <h1 className="mt-4 font-heading text-4xl font-light text-foreground md:text-5xl">
-            <BlurText text={userName} delay={0.04} />
-          </h1>
-          {(userEmail || userPhone) && (
-            <p className="mt-2 text-sm text-stone-400">
-              {userEmail}
-              {userPhone ? ` · ${userPhone}` : ""}
-            </p>
-          )}
+    <div className="gallery-page">
+      <GalleryMasthead label={roleLabel} title={userName}>
+        {(userEmail || userPhone) && <p className="gallery-lead break-words">{[userEmail, userPhone].filter(Boolean).join(" · ")}</p>}
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          {isAdmin && <MuseumButton href="/admin" variant="outline">Bảng điều khiển quản trị</MuseumButton>}
+          <MuseumButton onClick={handleLogout} variant="outline"><LogOut className="size-4" /> Đăng xuất</MuseumButton>
         </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          {isAdmin && (
+        {logoutError && <p role="alert" className="mt-3 text-sm text-rose-200">{logoutError}</p>}
+      </GalleryMasthead>
+      <div className="gallery-wrap grid items-start gap-7 py-10 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-12 lg:py-14">
+        <nav aria-label="Tài khoản" className="gallery-sheet flex flex-wrap gap-2 rounded-md p-2 lg:sticky lg:top-24 lg:flex-col">
+          {([
+            { key: "tickets", label: "Vé của tôi", count: tickets.length, icon: TicketCheck },
+            { key: "orders", label: "Đơn lưu niệm", count: orders.length, icon: ReceiptText },
+            { key: "profile", label: "Hồ sơ & bảo mật", icon: UserRound },
+          ] as const).map(({ key, label, icon: Icon, ...meta }) => (
             <Link
-              href="/admin"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#d4af37] bg-[#d4af37]/15 px-4 py-2 text-xs font-semibold text-[#fbe396] shadow-sm transition-colors hover:bg-[#d4af37] hover:text-[#08162b]"
+              key={key}
+              href={"/tai-khoan?tab=" + key}
+              scroll={false}
+              aria-current={tab === key ? "page" : undefined}
+              className={cn("flex min-h-11 items-center gap-2.5 rounded-sm px-3 text-sm font-semibold transition-colors",
+                tab === key ? "bg-[#08162b] text-[#f7f4ec]" : "hover:bg-[#f7f4ec]")}
             >
-              <ShieldCheck className="size-4" /> Bảng điều khiển Quản trị
+              <Icon className="size-4 shrink-0" /> {label}
+              {"count" in meta && <span className="ml-auto font-mono text-xs tabular-nums">{meta.count}</span>}
             </Link>
-          )}
-          <MuseumButton
-            onClick={handleLogout}
-            variant="ghost"
-            size="sm"
-            className="border border-white/10 text-stone-300 hover:border-rose-500/40 hover:text-rose-300"
-          >
-            <LogOut className="size-4" /> Đăng xuất
-          </MuseumButton>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mb-8 flex flex-wrap gap-3 border-b border-border pb-4">
-        {(["tickets", "orders", "profile"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={cn(
-              "placard rounded-full px-5 py-2 text-xs transition-all duration-300 font-medium cursor-pointer",
-              tab === t
-                ? "border border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-sm"
-                : "border border-border bg-card text-stone-300 hover:border-[#d4af37]/50 hover:text-white",
-            )}
-          >
-            {t === "tickets"
-              ? `Vé của tôi (${tickets.length})`
-              : t === "orders"
-                ? `Đơn hàng (${orders.length})`
-                : "Hồ sơ & Bảo mật"}
-          </button>
-        ))}
-      </div>
+          ))}
+        </nav>
+        <section aria-labelledby="account-section">
+          <h2 id="account-section" className="mb-5 font-heading text-4xl">
+            {tab === "tickets" ? "Vé tham quan" : tab === "orders" ? "Đơn lưu niệm" : "Hồ sơ & bảo mật"}
+          </h2>
 
       {/* Tickets tab */}
       {tab === "tickets" && (
         <div>
           {tickets.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card/60 py-20 text-center text-muted-foreground shadow-sm">
-              <p className="font-heading text-xl text-stone-200">Bạn chưa có vé tham quan nào.</p>
+            <div className="gallery-sheet rounded-md p-8 text-center">
+              <p className="font-heading text-2xl text-[#08162b]">Bạn chưa có vé tham quan nào.</p>
               <div className="mt-5">
                 <MuseumButton href="/dat-ve" variant="primary" size="md" icon>
                   Đặt vé ngay
@@ -425,39 +370,41 @@ export default function TaiKhoanPage() {
           ) : (
             <ul className="space-y-4">
               {tickets.map((tk) => (
-                <li key={tk.code}>
-                  <SpotlightCard className="flex items-center justify-between gap-4 p-5 bg-card border-border shadow-sm hover:shadow-md transition-all">
+                <li key={tk.id ?? tk.code}>
+                  <SpotlightCard className="flex flex-wrap items-center justify-between gap-4 gallery-sheet p-5">
                     <div>
                       <div className="flex flex-wrap items-center gap-2.5">
-                        <p className="font-heading text-xl text-foreground font-light">{tk.museum}</p>
+                        <p className="font-heading text-xl text-[#08162b] font-light">{tk.museum}</p>
                         {tk.status && (
                           <span className="rounded-full border border-emerald-500/35 bg-emerald-950/60 px-2.5 py-0.5 text-[0.65rem] font-medium text-emerald-300">
                             {TICKET_STATUS_LABEL[tk.status] ?? tk.status}
                           </span>
                         )}
                       </div>
-                      <p className="placard mt-1.5 text-xs text-stone-400">
+                      <p className="placard mt-1.5 text-xs text-stone-700">
                         {tk.date} · {tk.time}
                       </p>
-                      <p className="mt-1.5 text-sm text-stone-300">
-                        {tk.adults} khách{tk.children > 0 ? ` (gồm ${tk.children} trẻ em)` : ""} ·{" "}
-                        <span className="text-[#fbe396] font-medium">{formatVndOrPrice(tk.total)}</span>
+                      <p className="mt-1.5 text-sm text-stone-700">
+                        {tk.adults ? `${tk.adults} khách${tk.children ? ` (gồm ${tk.children} trẻ em)` : ""} · ` : ""}
+                        <span className="text-[#77531c] font-medium">
+                          {tk.demo ? formatPrice(tk.total) : tk.id ? new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(tk.total) : formatVndOrPrice(tk.total)}
+                        </span>
                       </p>
-                      <p className="mt-1.5 font-mono text-xs tracking-widest text-stone-400 font-semibold">
+                      <p className="mt-1.5 font-mono text-xs tracking-widest text-stone-700 font-semibold">
                         {tk.code}{" "}
                         {tk.invoice && (
                           <span className="text-[0.68rem] font-normal text-emerald-400">· {tk.invoice}</span>
                         )}
                       </p>
                     </div>
-                    <button
-                      onClick={() => setQrTicket(tk)}
-                      className="flex shrink-0 flex-col items-center gap-1.5 rounded-lg border border-border bg-background/80 p-3 text-muted-foreground hover:border-[#d4af37] hover:text-[#fbe396] transition-all duration-300 active:scale-95 shadow-sm cursor-pointer"
-                      aria-label="Mở mã QR"
+                    {tk.code && <button
+                      onClick={() => { setQrTicket(tk); ticketDialog.current?.showModal() }}
+                      className="gallery-action gallery-action-muted"
+                      aria-haspopup="dialog"
                     >
-                      <QrCode className="size-6 text-foreground" />
-                      <span className="placard text-[0.6rem] font-bold">MÃ QR</span>
-                    </button>
+                      <TicketCheck className="size-5 text-[#08162b]" />
+                      Xem mã QR
+                    </button>}
                   </SpotlightCard>
                 </li>
               ))}
@@ -470,8 +417,8 @@ export default function TaiKhoanPage() {
       {tab === "orders" && (
         <div>
           {orders.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card/60 py-20 text-center text-muted-foreground shadow-sm">
-              <p className="font-heading text-xl text-stone-200">Bạn chưa có đơn hàng lưu niệm nào.</p>
+            <div className="gallery-sheet rounded-md p-8 text-center">
+              <p className="font-heading text-2xl text-[#08162b]">Bạn chưa có đơn hàng lưu niệm nào.</p>
               <div className="mt-5">
                 <MuseumButton href="/cua-hang" variant="primary" size="md" icon>
                   Ghé cửa hàng
@@ -482,44 +429,33 @@ export default function TaiKhoanPage() {
             <ul className="space-y-5">
               {orders.map((ord) => (
                 <li key={ord.id}>
-                  <SpotlightCard className="p-6 bg-card border-border shadow-sm hover:shadow-md transition-all">
-                    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border pb-4">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-mono text-sm tracking-widest text-[#fbe396] font-semibold">
-                            {ord.invoice || ord.id}
-                          </p>
-                          {ord.status && (
-                            <span className="rounded-full border border-emerald-500/35 bg-emerald-950/60 px-2.5 py-0.5 text-[0.65rem] font-medium text-emerald-300">
-                              {ORDER_STATUS_LABEL[ord.status] ?? ord.status}
-                            </span>
-                          )}
-                        </div>
-                        <p className="placard mt-1 text-xs text-stone-400">
-                          {new Date(ord.createdAt).toLocaleDateString("vi-VN")}
-                        </p>
+                  <details className="gallery-sheet group rounded-md" onToggle={(event) => {
+                    if (event.currentTarget.open) void loadOrderDetails(ord)
+                  }}>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden">
+                      <div className="min-w-0">
+                        <p className="break-all font-mono text-sm font-semibold text-[#77531c]">{ord.invoice || ord.id}</p>
+                        <p className="mt-1 text-sm text-stone-700">{new Date(ord.createdAt).toLocaleDateString("vi-VN")}</p>
                       </div>
-                      <p className="font-heading text-xl font-light text-foreground">
-                        {formatVndOrPrice(ord.total)}
-                      </p>
+                      <div className="text-right">
+                        <p className="font-semibold">{ord.demo ? formatPrice(ord.total) : new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(ord.total)}</p>
+                        <p className="mt-1 text-sm text-stone-700">{ord.demo ? "Đơn thử nghiệm" : ORDER_STATUS_LABEL[ord.status ?? ""] ?? ord.status}</p>
+                      </div>
+                      <span className="text-sm font-semibold text-[#77531c] group-open:hidden">Xem chi tiết</span>
+                    </summary>
+                    <div className="border-t border-[#e1d8c7] p-5">
+                      {orderDetails[ord.id] === "loading" && <p role="status">Đang tải vật phẩm…</p>}
+                      {orderDetails[ord.id] === "error" && <button type="button" onClick={() => loadOrderDetails(ord)} className="gallery-action gallery-action-muted">Tải lại chi tiết đơn</button>}
+                      <ul className="divide-y divide-[#e1d8c7]">
+                        {ord.items.map((item, idx) => (
+                          <li key={item.productId ?? idx} className="flex justify-between gap-3 py-2 text-sm">
+                            <span>{item.name}</span><span className="shrink-0 font-mono">× {item.qty}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-3 text-sm text-stone-700">Người nhận: {ord.name} · {ord.address}</p>
                     </div>
-                    <ul className="mt-4 flex flex-wrap gap-4">
-                      {ord.items.map((item, idx) => (
-                        <li key={idx} className="flex items-center gap-3 text-sm text-foreground">
-                          <div className="relative size-12 overflow-hidden rounded-md border border-border bg-muted shadow-sm">
-                            <Image src={item.image} alt={item.name} fill className="object-cover" />
-                          </div>
-                          <span>
-                            {item.name} <span className="text-stone-400 font-mono">× {item.qty}</span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-4 pt-3 border-t border-border text-xs text-stone-400">
-                      Người nhận: <span className="text-foreground">{ord.name}</span> · Địa chỉ:{" "}
-                      <span className="text-foreground">{ord.address}</span>
-                    </p>
-                  </SpotlightCard>
+                  </details>
                 </li>
               ))}
             </ul>
@@ -530,49 +466,49 @@ export default function TaiKhoanPage() {
       {/* Profile & Security tab (UC09 & UC25) */}
       {tab === "profile" && (
         <div className="grid gap-6 md:grid-cols-2">
-          <SpotlightCard className="p-6 bg-card border-border shadow-sm">
-            <h2 className="font-heading text-2xl font-light text-white">Thông tin cá nhân</h2>
-            <p className="mt-1 text-xs text-stone-400">Cập nhật tên hiển thị và số điện thoại liên hệ.</p>
+          <SpotlightCard className="gallery-sheet p-6">
+            <h2 className="font-heading text-2xl text-[#08162b]">Thông tin cá nhân</h2>
+            <p className="mt-1 text-xs text-stone-700">Cập nhật tên hiển thị và số điện thoại liên hệ.</p>
             <form onSubmit={handleSaveProfile} className="mt-5 space-y-4">
-              <label className="block text-xs text-stone-300">
+              <label className="block text-xs text-stone-700">
                 <span className="placard block mb-1.5">Họ và tên hiển thị</span>
                 <input
                   type="text"
                   required
                   value={displayNameInput}
                   onChange={(e) => setDisplayNameInput(e.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-background px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#d4af37]"
+                  className="gallery-control w-full px-3.5 py-2.5 text-base"
                 />
               </label>
-              <label className="block text-xs text-stone-300">
+              <label className="block text-xs text-stone-700">
                 <span className="placard block mb-1.5">Số điện thoại</span>
                 <input
                   type="tel"
                   value={phoneInput}
                   onChange={(e) => setPhoneInput(e.target.value)}
                   placeholder="0901 234 567"
-                  className="w-full rounded-lg border border-white/15 bg-background px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#d4af37]"
+                  className="gallery-control w-full px-3.5 py-2.5 text-base"
                 />
               </label>
-              {profileMsg && <p className="text-xs text-[#fbe396]">{profileMsg}</p>}
+              {profileMsg && <p role="status" className="text-sm text-[#77531c]">{profileMsg}</p>}
               <button
                 type="submit"
                 disabled={profileSaving}
-                className="rounded-full bg-[#d4af37] px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#08162b] hover:bg-[#e5c158] disabled:opacity-60 cursor-pointer"
+                className="gallery-action disabled:opacity-60"
               >
                 {profileSaving ? "Đang lưu…" : "Lưu thay đổi"}
               </button>
             </form>
           </SpotlightCard>
 
-          <SpotlightCard className="p-6 bg-card border-border shadow-sm">
+          <SpotlightCard className="gallery-sheet p-6">
             <div className="flex items-center gap-2">
               <KeyRound className="size-5 text-[#d4af37]" />
-              <h2 className="font-heading text-2xl font-light text-white">Đổi mật khẩu</h2>
+              <h2 className="font-heading text-2xl text-[#08162b]">Đổi mật khẩu</h2>
             </div>
-            <p className="mt-1 text-xs text-stone-400">Thiết lập mật khẩu mới có độ dài tối thiểu 8 ký tự.</p>
+            <p className="mt-1 text-xs text-stone-700">Thiết lập mật khẩu mới có độ dài tối thiểu 8 ký tự.</p>
             <form onSubmit={handleChangePassword} className="mt-5 space-y-4">
-              <label className="block text-xs text-stone-300">
+              <label className="block text-xs text-stone-700">
                 <span className="placard block mb-1.5">Mật khẩu mới</span>
                 <input
                   type="password"
@@ -580,10 +516,10 @@ export default function TaiKhoanPage() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-background px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#d4af37]"
+                  className="gallery-control w-full px-3.5 py-2.5 text-base"
                 />
               </label>
-              <label className="block text-xs text-stone-300">
+              <label className="block text-xs text-stone-700">
                 <span className="placard block mb-1.5">Nhập lại mật khẩu mới</span>
                 <input
                   type="password"
@@ -591,14 +527,14 @@ export default function TaiKhoanPage() {
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full rounded-lg border border-white/15 bg-background px-3.5 py-2.5 text-sm text-white outline-none focus:border-[#d4af37]"
+                  className="gallery-control w-full px-3.5 py-2.5 text-base"
                 />
               </label>
-              {pwMsg && <p className="text-xs text-[#fbe396]">{pwMsg}</p>}
+              {pwMsg && <p role="status" className="text-sm text-[#77531c]">{pwMsg}</p>}
               <button
                 type="submit"
                 disabled={pwSaving}
-                className="rounded-full border border-[#d4af37] bg-transparent px-5 py-2.5 text-xs font-semibold uppercase tracking-wider text-[#fbe396] hover:bg-[#d4af37] hover:text-[#08162b] disabled:opacity-60 cursor-pointer transition-colors"
+                className="gallery-action disabled:opacity-60"
               >
                 {pwSaving ? "Đang cập nhật…" : "Cập nhật mật khẩu"}
               </button>
@@ -607,35 +543,19 @@ export default function TaiKhoanPage() {
         </div>
       )}
 
-      {/* QR modal */}
-      {qrTicket && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
-          onClick={() => setQrTicket(null)}
-        >
-          <div
-            className="relative rounded-xl border border-border bg-white p-8 text-center text-black shadow-2xl max-w-sm w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              className="absolute right-4 top-4 text-black/60 hover:text-black p-1 transition-colors cursor-pointer"
-              onClick={() => setQrTicket(null)}
-              aria-label="Đóng"
-            >
-              <X className="size-5" />
-            </button>
-            <p className="font-heading text-2xl font-light">{qrTicket.museum}</p>
-            <p className="placard mt-1 text-black/60 text-xs">
-              {qrTicket.date} · {qrTicket.time}
-            </p>
-            <div className="mx-auto mt-6 inline-flex p-3 rounded-lg border border-stone-200 bg-stone-50">
-              <QrPlaceholder value={qrTicket.code} />
-            </div>
-            <p className="mt-4 font-mono font-bold tracking-widest text-xl text-stone-900">{qrTicket.code}</p>
-            <p className="placard mt-1.5 text-black/60 text-xs">Xuất trình tại cửa soát vé tự động</p>
-          </div>
-        </div>
-      )}
+        </section>
+      </div>
+      <dialog ref={ticketDialog} aria-label="Mã vé tham quan" onClose={() => setQrTicket(null)}
+        className="gallery-sheet fixed inset-0 m-auto w-[min(90vw,28rem)] rounded-md p-7 text-center backdrop:bg-[#08162b]/70">
+        {qrTicket?.code && <div>
+          <button type="button" className="gallery-icon-button ml-auto flex" onClick={() => ticketDialog.current?.close()} aria-label="Đóng mã vé"><X className="size-5" /></button>
+          <h2 className="mt-4 font-heading text-3xl">{qrTicket.museum}</h2>
+          <p className="mt-1 text-sm text-stone-700">{qrTicket.date} · {qrTicket.time}</p>
+          <div className="mx-auto mt-4 flex w-fit justify-center border border-[#e1d8c7]"><EntryQr value={qrTicket.code} /></div>
+          <p className="mt-4 text-sm text-stone-700">Mã vào cổng</p>
+          <p className="mt-2 break-all border border-[#e1d8c7] bg-[#f7f4ec] p-4 font-mono text-2xl font-semibold text-[#77531c]">{qrTicket.code}</p>
+        </div>}
+      </dialog>
     </div>
   )
 }

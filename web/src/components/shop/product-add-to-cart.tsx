@@ -1,68 +1,60 @@
 "use client"
 
-import { useState } from "react"
-import { Check, ShoppingBag } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Check, Minus, Plus, ShoppingBag } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
 import type { Product } from "@/lib/mock-data"
-import { cn } from "@/lib/utils"
+import { StarBorder } from "@/components/reactbits/star-border"
 
 export function ProductAddToCart({ product }: { product: Product }) {
-  const { addItem } = useCart()
-  const [qty, setQty] = useState(1)
+  const { addItem, items, hydrated } = useCart()
+  const [quantity, setQuantity] = useState(1)
   const [added, setAdded] = useState(false)
+  const inCart = items.find((item) => item.productId === product.id)?.qty ?? 0
+  const remaining = Math.max(0, product.inventory - inCart)
+  const quantityToAdd = Math.min(quantity, remaining)
+
+  useEffect(() => {
+    if (!added) return
+    const timer = window.setTimeout(() => setAdded(false), 1700)
+    return () => window.clearTimeout(timer)
+  }, [added])
 
   function handleAdd() {
-    for (let i = 0; i < qty; i++) {
-      addItem({
-        productId: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-      })
-    }
+    if (!quantityToAdd) return
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      museumSlug: product.museumSlug,
+      inventory: product.inventory,
+    }, quantityToAdd)
+    setQuantity(1)
     setAdded(true)
-    setTimeout(() => setAdded(false), 2000)
   }
 
   return (
     <>
-      <div className="mt-8 flex items-center gap-3">
-        <div className="flex items-center rounded-full border border-border bg-card p-1 shadow-sm">
-          <button
-            onClick={() => setQty(Math.max(1, qty - 1))}
-            className="flex size-9 items-center justify-center rounded-full hover:bg-muted text-foreground transition-colors active:scale-90"
-            aria-label="Giảm"
-          >
-            −
-          </button>
-          <span className="w-10 text-center tabular-nums font-mono text-sm font-semibold">{qty}</span>
-          <button
-            onClick={() => setQty(Math.min(product.inventory, qty + 1))}
-            className="flex size-9 items-center justify-center rounded-full hover:bg-muted text-foreground transition-colors active:scale-90"
-            aria-label="Tăng"
-          >
-            +
-          </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <div aria-label="Số lượng" className="flex items-center">
+          <button type="button" onClick={() => setQuantity(quantityToAdd - 1)} disabled={quantityToAdd <= 1}
+            className="gallery-icon-button" aria-label="Giảm số lượng"><Minus className="size-4" /></button>
+          <span className="w-10 text-center font-mono text-sm tabular-nums" aria-live="polite">{quantityToAdd}</span>
+          <button type="button" onClick={() => setQuantity(quantityToAdd + 1)} disabled={quantityToAdd >= remaining}
+            className="gallery-icon-button" aria-label="Tăng số lượng"><Plus className="size-4" /></button>
         </div>
-        <button
-          onClick={handleAdd}
-          disabled={product.inventory === 0}
-          className={cn(
-            "flex flex-1 items-center justify-center gap-2 rounded-full py-3 px-6 text-xs uppercase tracking-wider font-medium transition-all duration-300 active:scale-95 shadow-sm",
-            added
-              ? "border border-emerald-500 bg-emerald-50 text-emerald-800"
-              : product.inventory === 0
-                ? "cursor-not-allowed bg-muted text-muted-foreground opacity-50"
-                : "bg-foreground text-background hover:bg-foreground/90 hover:shadow-md",
-          )}
-        >
-          {added ? <Check className="size-4 text-emerald-600" /> : <ShoppingBag className="size-4" />}
-          {added ? "Đã thêm vào giỏ!" : "Thêm vào giỏ hàng"}
-        </button>
+        <StarBorder type="button" disabled={!hydrated || !quantityToAdd} onClick={handleAdd}
+          className="min-h-11 min-w-40 grow bg-[#d4af37] disabled:opacity-50">
+          <span className="inline-flex items-center gap-2">
+            {added ? <Check className="size-4" /> : <ShoppingBag className="size-4" />}
+            {added ? "Đã thêm vào giỏ" : "Thêm vào giỏ"}
+          </span>
+        </StarBorder>
       </div>
-
-      <p className="mt-3 text-xs text-muted-foreground">
-        {product.inventory > 0 ? `Còn ${product.inventory} sản phẩm trong kho` : "Hết hàng"}
+      <p className="mt-3 text-sm text-stone-700" aria-live="polite">
+        {product.inventory ? "Còn " + product.inventory + " sản phẩm" : "Tạm hết hàng"}
+        {inCart > 0 && " · " + inCart + " trong giỏ"}
       </p>
     </>
   )

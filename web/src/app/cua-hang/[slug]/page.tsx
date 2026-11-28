@@ -6,10 +6,13 @@ export function generateStaticParams() {
   return products.map((p) => ({ slug: p.slug }))
 }
 
-export default async function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+async function ProductFromParams({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const initial = productBySlug(slug) || products.find((p) => p.id === slug) || null
+  return <ProductDetailView slug={slug} initialProduct={initial} />
+}
 
+export default function ProductDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   return (
     <Suspense
       fallback={
@@ -18,7 +21,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
       }
     >
-      <ProductDetailView slug={slug} initialProduct={initial} />
+      <ProductFromParams params={params} />
     </Suspense>
   )
 }

@@ -48,6 +48,7 @@ export default function AdminPortalPage() {
 
   // Filters matching app.js
   const [filter, setFilter] = useState("")
+  const [productQuery, setProductQuery] = useState("")
   const [visitFilter, setVisitFilter] = useState("")
   const [reportFrom, setReportFrom] = useState("")
   const [reportTo, setReportTo] = useState("")
@@ -120,6 +121,13 @@ export default function AdminPortalPage() {
   if (!adminStore.profile || !accessibleMuseums.length) {
     return <AdminAccess store={adminStore} />
   }
+
+  const catalogRows = adminStore.list(museumId, page as AdminKind)
+  const productTerm = productQuery.trim().toLocaleLowerCase("vi")
+  const visibleCatalog = page === "product" && productTerm
+    ? catalogRows.filter((item) => [item.name, item.fields.code].some((value) =>
+        value?.toLocaleLowerCase("vi").includes(productTerm)))
+    : catalogRows
 
   return (
     <div className="min-h-screen bg-[#f7f6ef] text-[#202d2a] font-sans">
@@ -351,7 +359,7 @@ export default function AdminPortalPage() {
                       setSelectedItemId(null)
                       setModalType("edit-item")
                     }}
-                    className="bg-[#184c40] hover:bg-[#143e34] text-white px-3.5 py-1.5 rounded text-xs font-semibold cursor-pointer"
+                    className="gallery-action"
                   >
                     Thêm sản phẩm
                   </button>
@@ -470,7 +478,17 @@ export default function AdminPortalPage() {
                     : "Thông tin bảo tàng"}
                 </h2>
 
-                {adminStore.list(museumId, page as AdminKind).map((item) => {
+                {page === "product" && (
+                  <div className="gallery-sheet mb-5 flex flex-wrap items-end justify-between gap-4 rounded-md p-4">
+                    <label className="grid w-full max-w-sm gap-1.5 text-sm font-semibold">
+                      Tìm sản phẩm
+                      <input type="search" value={productQuery} onChange={(event) => setProductQuery(event.target.value)}
+                        placeholder="Tên hoặc mã sản phẩm" className="gallery-control w-full px-3 font-normal" />
+                    </label>
+                    <p aria-live="polite" className="text-sm text-[#77531c]">{visibleCatalog.length} / {catalogRows.length} sản phẩm</p>
+                  </div>
+                )}
+                {visibleCatalog.map((item) => {
                   const details: string[] = []
                   if (item.fields.code) details.push(`Mã danh mục · ${item.fields.code}`)
                   if (item.fields.period) details.push(`Niên đại · ${item.fields.period}`)
@@ -483,10 +501,10 @@ export default function AdminPortalPage() {
                   return (
                     <article
                       key={item.id}
-                      className="bg-white border border-[#d6ddd3] rounded-[6px] p-3.5 sm:p-4 flex items-center justify-between gap-4 flex-wrap"
+                      className={cn("rounded-md p-4 flex items-center justify-between gap-4 flex-wrap", page === "product" ? "gallery-sheet" : "bg-white border border-[#d6ddd3]")}
                     >
                       <div className="flex-1 min-w-[140px] space-y-1">
-                        <h3 className="text-[1.06rem] font-bold text-[#202d2a]">{item.name}</h3>
+                        <h3 className={page === "product" ? "font-heading text-2xl text-[#08162b]" : "text-[1.06rem] font-bold text-[#202d2a]"}>{item.name}</h3>
                         {details.length > 0 && (
                           <p className="text-xs text-[#53685f]">{details.join("　/　")}</p>
                         )}
@@ -514,9 +532,9 @@ export default function AdminPortalPage() {
                   )
                 })}
 
-                {!adminStore.list(museumId, page as AdminKind).length && (
+                {!visibleCatalog.length && (
                   <p className="p-6 border border-dashed border-[#92a598] rounded text-[#53685f] text-sm text-center">
-                    Chưa có bản ghi cho bảo tàng này.
+                    {page === "product" && productTerm ? "Không tìm thấy sản phẩm theo từ khóa." : "Chưa có bản ghi cho bảo tàng này."}
                   </p>
                 )}
 
@@ -529,6 +547,12 @@ export default function AdminPortalPage() {
             {/* 3. SOÁT VÉ (GATE) & ĐƠN HÀNG (ORDER) */}
             {(page === "gate" || page === "order") && (
               <div className="space-y-4">
+                {page === "order" && (
+                  <div className="gallery-on-dark rounded-md border border-[#d4af37]/25 bg-[#08162b] p-5 text-[#f7f4ec] sm:p-7">
+                    <p className="gallery-kicker">Cửa hàng bảo tàng</p>
+                    <h2 className="mt-3 font-heading text-4xl">Đơn lưu niệm</h2>
+                  </div>
+                )}
                 {/* Tools bar */}
                 <div className="flex items-end gap-3 flex-wrap mb-4">
                   <label className="grid gap-1 text-xs font-semibold text-[#53685f]">

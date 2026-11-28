@@ -1,6 +1,15 @@
 /* Natural History Museum — isolated namespace .nha- */
 /* Day / Dusk tokens on .nha-hero */
 
+.nha-exhibit-anchor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
 .nha-hero {
   /* day tokens */
   --nha-bg: #f4ede0;

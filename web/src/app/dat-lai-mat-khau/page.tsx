@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation"
 import { useState } from "react"
+import { GalleryMasthead } from "@/components/site/gallery-masthead"
+import { RenaissanceCorners } from "@/components/renaissance/deco-assets"
 import { createClient } from "@/lib/supabase/client"
 
 export default function Page() {
@@ -24,25 +26,25 @@ export default function Page() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-5 pt-28 pb-16">
-      <div className="rounded-2xl border border-[#d4af37]/30 bg-[#08162b]/90 p-8 shadow-2xl backdrop-blur-md">
-        <p className="placard text-[0.65rem] text-[#fbe396]">Tài khoản · Bảo mật</p>
-        <h1 className="mt-2 font-heading text-3xl font-light tracking-tight text-white">Đặt lại mật khẩu</h1>
+    <div className="gallery-page pb-16">
+      <GalleryMasthead label="Bảo mật" title="Đặt lại mật khẩu" />
+      <div className="gallery-sheet relative mx-auto mt-10 w-[calc(100%-2rem)] max-w-lg rounded-md p-6 sm:p-9">
+        <RenaissanceCorners />
         <form onSubmit={send} className="mt-6 flex flex-col gap-4">
-          <label className="flex flex-col gap-1.5 text-sm text-stone-200">
+          <label className="flex flex-col gap-1.5 text-sm text-stone-700">
             Mật khẩu mới
             <input type="password" required minLength={8} autoComplete="new-password"
               value={password} onChange={e => setPassword(e.target.value)}
-              className="rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition-colors focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]" />
+              className="gallery-control w-full px-3 text-base" />
           </label>
-          <label className="flex flex-col gap-1.5 text-sm text-stone-200">
+          <label className="flex flex-col gap-1.5 text-sm text-stone-700">
             Nhập lại mật khẩu
             <input type="password" required minLength={8} autoComplete="new-password"
               value={confirm} onChange={e => setConfirm(e.target.value)}
-              className="rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition-colors focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]" />
+              className="gallery-control w-full px-3 text-base" />
           </label>
-          {note && <p className="text-sm text-rose-400">{note}</p>}
-          <button disabled={loading} className="mt-2 h-11 rounded-full bg-[#d4af37] text-xs font-semibold uppercase tracking-wider text-[#08162b] transition-colors hover:bg-[#e5c158] disabled:opacity-60">
+          {note && <p role="status" className="text-sm text-rose-800">{note}</p>}
+          <button disabled={loading} className="gallery-action mt-2 disabled:opacity-60">
             {loading ? "Đang lưu…" : "Lưu mật khẩu mới"}
           </button>
         </form>

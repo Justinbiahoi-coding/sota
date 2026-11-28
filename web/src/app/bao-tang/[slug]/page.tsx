@@ -10,7 +10,6 @@ import { MuseumDetailView } from "./museum-detail-view"
 export function generateStaticParams() {
   return [
     { slug: "lich-su-tu-nhien" },
-    { slug: "hang-khong-vu-tru" },
     { slug: "lich-su-hoa-ky" },
     { slug: "phong-tranh-chan-dung" },
     { slug: "hirshhorn" },

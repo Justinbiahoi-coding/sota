@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { X, ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react"
 import { useCart } from "@/lib/cart-context"
-import { formatPrice, type Product } from "@/lib/mock-data"
+import type { Product } from "@/lib/mock-data"
+import { formatShopPrice } from "@/lib/shop-price"
 import type * as ThreeTypes from "three"
 
 // ─────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ function makeTexture(product: Product): HTMLCanvasElement {
     ctx.fillText(line1, W / 2, H * 0.77)
   }
   ctx.font = `${W * 0.038}px monospace`; ctx.fillStyle = pal.fg + "99"
-  ctx.fillText(formatPrice(product.price), W / 2, H * 0.92)
+  ctx.fillText(formatShopPrice(product.price, product.id), W / 2, H * 0.92)
   return c
 }
 
@@ -69,7 +70,7 @@ function makeTexture(product: Product): HTMLCanvasElement {
 export function Shop3DGallery({ products }: { products: Product[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const walkRef = useRef<(dir: number) => void>(() => {})
-  const { addItem } = useCart()
+  const { addItem, items, hydrated } = useCart()
   const [panel, setPanel] = useState<Product | null>(null)
 
   useEffect(() => {
@@ -326,14 +327,14 @@ export function Shop3DGallery({ products }: { products: Product[] }) {
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="w-full aspect-[3/4] rounded mb-4" style={{ background: (CAT_PALETTE[panel.category] ?? { bg: "#B8CCBE" }).bg }} />
               <h3 className="font-heading text-xl font-light italic text-stone-900 leading-snug">{panel.name}</h3>
-              <p className="mt-1 font-heading text-lg font-semibold text-[#92400e]">{formatPrice(panel.price)}</p>
+              <p className="mt-1 font-heading text-lg font-semibold text-[#92400e]">{formatShopPrice(panel.price, panel.id)}</p>
               <p className="mt-3 text-sm leading-relaxed text-stone-600">{panel.description}</p>
               {panel.inventory === 0 && <p className="mt-3 font-mono text-xs tracking-wider text-red-600">HẾT HÀNG</p>}
             </div>
             <div className="border-t border-stone-200 px-5 py-4 flex flex-col gap-2">
               <button
-                onClick={() => { addItem({ productId: panel.id, name: panel.name, price: panel.price, image: panel.image }); setPanel(null) }}
-                disabled={panel.inventory === 0}
+                onClick={() => { addItem({ productId: panel.id, name: panel.name, price: panel.price, image: panel.image, museumSlug: panel.museumSlug, inventory: panel.inventory }); setPanel(null) }}
+                disabled={!hydrated || panel.inventory <= (items.find((item) => item.productId === panel.id)?.qty ?? 0)}
                 className="flex w-full items-center justify-center gap-2 rounded-full border border-[#d4af37] bg-[#08162b] py-2.5 text-xs font-semibold uppercase tracking-wider text-[#fbe396] transition hover:bg-[#0f2040] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ShoppingBag className="size-3.5" />

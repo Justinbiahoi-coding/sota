@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Menu, ChevronDown, Search } from "lucide-react"
@@ -49,9 +49,20 @@ function NavDropdown({ navIndex }: { navIndex: number }) {
     <div
       className="relative"
       onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      onMouseLeave={(event) => {
+        if (!event.currentTarget.contains(document.activeElement)) setOpen(false)
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape" && open) {
+          event.currentTarget.querySelector("button")?.focus()
+          setOpen(false)
+        }
+      }}
     >
-      <button className="flex items-center gap-1 text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex min-h-11 items-center gap-1 text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
         {item.label}
         <ChevronDown className={`size-3 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
@@ -65,6 +76,8 @@ function NavDropdown({ navIndex }: { navIndex: number }) {
                 <Link
                   key={sub.href}
                   href={sub.href}
+                  aria-current={path === sub.href ? "page" : undefined}
+                  onClick={() => setOpen(false)}
                   className={`flex flex-col gap-0.5 rounded-lg px-3 py-2.5 transition-colors duration-150 ${
                     active ? "bg-[#d4af37]/15 text-[#d4af37]" : "text-stone-200 hover:bg-white/10 hover:text-white"
                   }`}
@@ -88,31 +101,38 @@ const RIGHT_NAV = NAV.slice(2) // Đặt vé, Cửa hàng
 
 export function SiteHeader() {
   const pathname = usePathname()
+  const mobileMenu = useRef<HTMLDetailsElement>(null)
   if (pathname?.startsWith("/admin")) return null
 
   const isSearchActive = pathname === "/tim-kiem"
 
+  function closeMenu() {
+    if (mobileMenu.current) mobileMenu.current.open = false
+  }
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-black/40 backdrop-blur-md border-b border-white/[0.08]">
-      <div className="relative grid h-[72px] max-w-[1560px] mx-auto items-center px-6 md:px-8"
-        style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+    <header className="fixed top-0 left-0 right-0 z-[60] text-[#f8f6f0] bg-[#08162b]/95 backdrop-blur-md border-b border-[#d4af37]/20">
+      <div className="relative mx-auto grid h-[72px] max-w-[1560px] grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6 xl:px-8">
 
         {/* Left nav: Bảo tàng ▾  Tham quan ▾ */}
-        <nav className="hidden md:flex items-center justify-end gap-8 pr-8" aria-label="Chính">
+        <nav className="hidden lg:flex items-center justify-end gap-7 pr-7" aria-label="Chính">
           <NavDropdown navIndex={0} />
           <NavDropdown navIndex={1} />
         </nav>
 
         {/* Seal */}
-        <Link href="/" className="text-stone-300 hover:text-white transition-colors" aria-label="Sota — Trang chủ">
+        <Link href="/" className="col-start-2 row-start-1 text-stone-300 hover:text-white transition-colors" aria-label="Sota — Trang chủ">
           <SmithsonianSeal size={38} />
         </Link>
 
         {/* Right nav + utilities */}
-        <div className="hidden md:flex items-center gap-6 lg:gap-8 pl-8">
+        <div className="hidden lg:flex items-center gap-5 pl-7 xl:gap-8">
           {RIGHT_NAV.map(n => (
             <Link key={n.href + n.label} href={n.href}
-              className="text-sm text-stone-300 hover:text-white transition-colors whitespace-nowrap">
+              aria-current={pathname === n.href ? "page" : undefined}
+              className={pathname === n.href || pathname.startsWith(n.href + "/")
+                ? "whitespace-nowrap border-b border-[#d4af37] py-1 text-sm text-[#f2d790]"
+                : "whitespace-nowrap text-sm text-stone-300 transition-colors hover:text-white"}>
               {n.label}
             </Link>
           ))}
@@ -136,14 +156,25 @@ export function SiteHeader() {
         </div>
 
         {/* Mobile menu */}
-        <details className="group relative md:hidden absolute right-6">
+        <div className="col-start-1 row-start-1 lg:hidden"><CartIcon /></div>
+        <details ref={mobileMenu} className="group relative col-start-3 row-start-1 justify-self-end lg:hidden"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              closeMenu()
+              event.currentTarget.querySelector("summary")?.focus()
+            }
+          }}
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest("a")) closeMenu()
+          }}
+        >
           <summary
-            className="list-none cursor-pointer inline-flex size-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-stone-200 hover:text-white [&::-webkit-details-marker]:hidden"
+            className="list-none cursor-pointer inline-flex size-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-stone-200 hover:text-white [&::-webkit-details-marker]:hidden"
             aria-label="Mở menu"
           >
             <Menu className="size-5" />
           </summary>
-          <div className="absolute right-0 top-12 w-64 rounded-xl border border-white/10 bg-[#08162b]/95 p-5 shadow-2xl backdrop-blur-xl">
+          <div className="absolute right-0 top-12 w-[min(20rem,calc(100vw-2rem))] max-h-[calc(100dvh-5.5rem)] overflow-y-auto rounded-md border border-[#d4af37]/25 bg-[#08162b] p-5 shadow-2xl">
             <nav className="flex flex-col gap-3">
               <Link href="/tim-kiem"
                 className="flex items-center gap-2 rounded-lg border border-[#d4af37]/30 bg-white/5 px-3 py-2 text-xs font-medium text-[#fbe396] hover:bg-[#d4af37]/15">

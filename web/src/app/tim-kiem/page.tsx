@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useTransition, useMemo, useEffect, Suspense } from "react"
+import { useState, useDeferredValue, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { Search, ArrowUpRight, Loader2 } from "lucide-react"
+import { Search, ArrowUpRight, Box, Landmark, Layers3, Package, Images, X } from "lucide-react"
 import {
   artifacts as initialMockArtifacts,
   exhibitions as initialMockExhibitions,
@@ -18,11 +18,11 @@ import {
   type ProductCategory,
 } from "@/lib/mock-data"
 import { api } from "@/lib/api/client"
-import { cn } from "@/lib/utils"
-import { SpotlightCard } from "@/components/reactbits/spotlight-card"
-import { BlurText } from "@/components/reactbits/blur-text"
-import { BrassPlacardPin } from "@/components/renaissance/deco-assets"
-import { DecryptedText } from "@/components/reactbits/decrypted-text"
+import { motion, useReducedMotion } from "framer-motion"
+import { airExhibits, AIR_TOUR } from "@/components/museum/air-space/exhibits"
+import { specimens } from "@/lib/natural-history-specimens"
+import { formatShopPrice } from "@/lib/shop-price"
+import "./archive-search.css"
 
 const DB_TO_VI_SLUG: Record<string, string> = {
   "national-museum-of-natural-history": "lich-su-tu-nhien",
@@ -47,13 +47,6 @@ function deriveCategory(name: string, sku?: string | null): ProductCategory {
   return "Lưu niệm"
 }
 
-function formatVndOrPrice(centsOrAmount: number | string, free = "Miễn phí") {
-  const num = typeof centsOrAmount === "string" ? parseFloat(centsOrAmount) : centsOrAmount
-  if (isNaN(num) || num === 0) return free
-  if (num >= 1000) return `${Math.round(num).toLocaleString("vi-VN")}₫`
-  return `${(num / 100).toFixed(2)}$`
-}
-
 type Category = "all" | "artifacts" | "exhibitions" | "museums" | "products"
 
 const VALID_CATEGORIES = new Set<Category>(["all", "artifacts", "exhibitions", "museums", "products"])
@@ -63,12 +56,15 @@ function SearchContent() {
   const rawCategory = searchParams.get("category") as Category | null
   const initialCategory = rawCategory && VALID_CATEGORIES.has(rawCategory) ? rawCategory : "all"
   const initialQuery = searchParams.get("q") ?? ""
+  const rawMuseum = searchParams.get("museum") ?? ""
+  const initialMuseum = DB_TO_VI_SLUG[rawMuseum] ?? rawMuseum
 
   return (
     <SearchContentInner
-      key={`${initialCategory}:${initialQuery}`}
+      key={`${initialCategory}:${initialMuseum}:${initialQuery}`}
       initialCategory={initialCategory}
       initialQuery={initialQuery}
+      initialMuseum={initialMuseum}
     />
   )
 }
@@ -76,13 +72,17 @@ function SearchContent() {
 function SearchContentInner({
   initialCategory,
   initialQuery,
+  initialMuseum,
 }: {
   initialCategory: Category
   initialQuery: string
+  initialMuseum: string
 }) {
   const [query, setQuery] = useState(initialQuery)
   const [category, setCategory] = useState<Category>(initialCategory)
-  const [, startTransition] = useTransition()
+  const [museum, setMuseum] = useState(initialMuseum)
+  const deferredQuery = useDeferredValue(query)
+  const reducedMotion = useReducedMotion()
 
   const [liveMuseums, setLiveMuseums] = useState<Museum[]>(initialMockMuseums)
   const [liveArtifacts, setLiveArtifacts] = useState<Artifact[]>(initialMockArtifacts)
@@ -137,8 +137,8 @@ function SearchContentInner({
             try {
               const artRes = await api.museums.artifacts(dbM.id, { limit: 20 })
               if (artRes?.data && artRes.data.length > 0) {
-                arts = artRes.data.map((a, idx) => {
-                  const fallbackMatch = initialMockArtifacts[idx % initialMockArtifacts.length]
+                arts = artRes.data.map((a) => {
+                  const fallbackMatch = initialMockArtifacts.find((item) => item.museumSlug === viSlug && normalize(item.title) === normalize(a.name))
                   return {
                     id: a.id,
                     slug: a.id,
@@ -147,7 +147,7 @@ function SearchContentInner({
                     year: a.period ?? "Hiện vật lịch sử",
                     medium: a.inventory_code ?? "Hiện vật bảo tàng",
                     dimensions: "Trưng bày thường xuyên",
-                    image: fallbackMatch?.image ?? "https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?w=800&q=80",
+                    image: fallbackMatch?.image ?? "",
                     description: a.description ?? "",
                     museumSlug: viSlug,
                     exhibitionSlugs: [],
@@ -162,14 +162,14 @@ function SearchContentInner({
             try {
               const prodRes = await api.museums.products(dbM.id)
               if (prodRes?.data && prodRes.data.length > 0) {
-                prods = prodRes.data.map((p, idx) => {
-                  const fallbackMatch = initialMockProducts[idx % initialMockProducts.length]
+                prods = prodRes.data.map((p) => {
+                  const fallbackMatch = initialMockProducts.find((item) => item.museumSlug === viSlug && normalize(item.name) === normalize(p.name))
                   return {
                     id: p.id,
                     slug: p.id,
                     name: p.name,
                     price: Number(p.price) || 0,
-                    image: fallbackMatch?.image ?? "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80",
+                    image: fallbackMatch?.image ?? "",
                     inventory: p.stock_quantity ?? 0,
                     museumSlug: viSlug,
                     inspiredByArtifactId: null,
@@ -249,246 +249,166 @@ function SearchContentInner({
     }
   }, [])
 
-  const trimmed = query.trim().toLowerCase()
+  const term = normalize(deferredQuery)
+  const matches = (text: string) => term.split(/\s+/).every((word) => normalize(text).includes(word))
+  const inMuseum = (slug: string) => !museum || slug === museum
+  const museumName = (slug: string) => liveMuseums.find((item) => item.slug === slug)?.name ?? museumBySlug(slug)?.name ?? "Smithsonian"
+  const localArt: ResultItem[] = [
+    ...airExhibits.map((item) => ({
+      id: item.id, title: item.name, image: item.image, museum: "hang-khong-vu-tru",
+      label: item.category + " · " + item.year, details: item.description,
+      url: AIR_TOUR + "#" + item.id, model: true,
+      keywords: [item.keywords, ...(item.catalogTitles ?? [])].filter(Boolean).join(" "),
+      catalogTitles: item.catalogTitles,
+    })),
+    ...specimens.map((item) => ({
+      id: item.id, title: item.nameVi, image: item.image, museum: "lich-su-tu-nhien",
+      label: item.latin, details: item.description, url: "/tham-quan/lich-su-tu-nhien#" + item.id,
+      model: true, keywords: item.name + " " + item.tags.join(" "),
+    })),
+  ]
+  const groups = [
+    { key: "artifacts" as const, title: "Hiện vật", icon: Box, items: [
+      ...localArt,
+      ...liveArtifacts.filter((item) => !localArt.some((known) => known.museum === item.museumSlug &&
+        [known.title, ...(known.catalogTitles ?? [])].some((title) => normalize(title) === normalize(item.title)))).map((item) => ({
+        id: item.id, title: item.title, label: [item.artist, item.year].filter(Boolean).join(" · "),
+        image: item.image, museum: item.museumSlug, url: "/bao-tang/" + item.museumSlug, details: item.description,
+      })),
+    ] },
+    { key: "museums" as const, title: "Bảo tàng", icon: Landmark, items: liveMuseums.map((item) => ({
+      id: item.slug, title: item.name, details: item.description, label: item.nameEn, image: item.image,
+      museum: item.slug, url: "/bao-tang/" + item.slug,
+    })) },
+    { key: "exhibitions" as const, title: "Triển lãm", icon: Images, items: liveExhibitions.map((item) => ({
+      id: item.slug, title: item.title, details: item.description, label: item.curator,
+      image: item.image, museum: item.museumSlug, url: "/bao-tang/" + item.museumSlug,
+    })) },
+    { key: "products" as const, title: "Quà lưu niệm", icon: Package, items: liveProducts.map((item) => ({
+      id: item.id, title: item.name, details: item.description, label: item.category + " · " + formatShopPrice(item.price, item.id),
+      image: item.image, museum: item.museumSlug, url: "/cua-hang/" + item.slug,
+    })) },
+  ].map((group) => ({
+    ...group,
+    items: group.items.filter((item: ResultItem) => inMuseum(item.museum) && matches([
+      item.title, item.label, item.details, item.keywords, museumName(item.museum),
+    ].filter(Boolean).join(" "))) as ResultItem[],
+  }))
 
-  const matchedArtifacts = useMemo(() => {
-    if (!trimmed) return liveArtifacts.slice(0, 8)
-    return liveArtifacts.filter(
-      (a) =>
-        a.title.toLowerCase().includes(trimmed) ||
-        a.artist.toLowerCase().includes(trimmed) ||
-        a.description.toLowerCase().includes(trimmed),
-    )
-  }, [trimmed, liveArtifacts])
-
-  const matchedExhibitions = useMemo(() => {
-    if (!trimmed) return liveExhibitions.slice(0, 4)
-    return liveExhibitions.filter(
-      (e) =>
-        e.title.toLowerCase().includes(trimmed) ||
-        e.curator.toLowerCase().includes(trimmed) ||
-        e.description.toLowerCase().includes(trimmed),
-    )
-  }, [trimmed, liveExhibitions])
-
-  const matchedMuseums = useMemo(() => {
-    if (!trimmed) return liveMuseums
-    return liveMuseums.filter(
-      (m) =>
-        m.name.toLowerCase().includes(trimmed) ||
-        m.nameEn.toLowerCase().includes(trimmed) ||
-        m.description.toLowerCase().includes(trimmed),
-    )
-  }, [trimmed, liveMuseums])
-
-  const matchedProducts = useMemo(() => {
-    if (!trimmed) return liveProducts.slice(0, 8)
-    return liveProducts.filter(
-      (p) =>
-        p.name.toLowerCase().includes(trimmed) ||
-        p.description.toLowerCase().includes(trimmed) ||
-        p.category.toLowerCase().includes(trimmed),
-    )
-  }, [trimmed, liveProducts])
-
-  const totalResults =
-    (category === "all" || category === "artifacts" ? matchedArtifacts.length : 0) +
-    (category === "all" || category === "exhibitions" ? matchedExhibitions.length : 0) +
-    (category === "all" || category === "museums" ? matchedMuseums.length : 0) +
-    (category === "all" || category === "products" ? matchedProducts.length : 0)
+  const visible = groups.filter((group) => category === "all" || group.key === category)
+  const total = visible.reduce((count, group) => count + group.items.length, 0)
+  const [limits, setLimits] = useState<Record<string, number>>({})
+  function updateQuery(next: string) {
+    setLimits({})
+    setQuery(next)
+  }
 
   return (
-    <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 xl:px-16">
-      <header className="mb-10 max-w-3xl">
-        <div className="inline-flex items-center gap-2 rounded-full border border-[#d4af37]/45 bg-[#08162b]/90 px-4 py-1.5 shadow-md backdrop-blur-md">
-          <BrassPlacardPin />
-          <span className="placard text-[0.68rem] tracking-wider text-[#fbe396]">
-            <DecryptedText
-              text="Bộ máy Tra cứu Tổng hợp · Smithsonian Index"
-              speed={28}
-              maxIterations={12}
-              animateOn="view"
-            />
-          </span>
-          {isLoading && <Loader2 className="ml-2 size-3 animate-spin text-[#d4af37]" />}
-        </div>
-        <h1 className="mt-4 text-4xl font-light tracking-tight md:text-5xl text-foreground">
-          <BlurText text="Tìm kiếm trong kho lưu trữ" delay={0.04} />
-        </h1>
-        <p className="mt-4 text-base text-stone-300 leading-relaxed">
-          Tra cứu hiện vật, triển lãm, bảo tàng và quà lưu niệm trong một nơi duy nhất với dữ liệu đồng bộ trực tiếp từ hệ thống.
-        </p>
+    <div className="flight-search">
+      <header className="archive-heading">
+        <motion.div initial={{ opacity:0,y:12 }} animate={{opacity:1,y:0}} transition={{duration:reducedMotion ? 0 : .45}}>
+          <p className="archive-eyebrow">Kho lưu trữ Smithsonian</p>
+          <h1>Tìm kiếm <em>bộ sưu tập.</em></h1>
+        </motion.div>
+        <form role="search" onSubmit={(event) => {
+          event.preventDefault()
+          const params = new URLSearchParams()
+          if (query.trim()) params.set("q", query.trim())
+          if (category !== "all") params.set("category", category)
+          if (museum) params.set("museum", museum)
+          history.replaceState(history.state, "", "/tim-kiem" + (params.size ? "?" + params : ""))
+        }}>
+          <label htmlFor="archive-query">Từ khóa</label>
+          <div className="archive-input">
+            <Search size={21} aria-hidden="true" />
+            <input id="archive-query" type="search" value={query} onChange={(event) => updateQuery(event.target.value)}
+              placeholder="Ví dụ: Apollo 11, khủng long, Hubble" />
+            {query && <button type="button" aria-label="Xóa từ khóa" onClick={() => updateQuery("")}><X size={18}/></button>}
+            <button type="submit" className="archive-submit">Tìm</button>
+          </div>
+        </form>
       </header>
 
-      {/* Search Input */}
-      <div className="relative mb-8 max-w-2xl">
-        <Search className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
-        <input
-          type="search"
-          autoFocus
-          value={query}
-          onChange={(e) => {
-            const v = e.target.value
-            startTransition(() => setQuery(v))
-          }}
-          placeholder="Tìm Monet, Apollo 11, hóa thạch, chân dung, áo khoác..."
-          className="h-14 w-full rounded-full border border-border bg-card pl-12 pr-5 text-base text-foreground shadow-sm outline-none transition-all focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
-        />
+      <div className="archive-layout">
+        <aside className="archive-filters" aria-label="Bộ lọc kho lưu trữ">
+          <h2>Loại kết quả</h2>
+          <button type="button" aria-pressed={category === "all"} onClick={() => setCategory("all")}><Layers3 size={17} /> Tất cả</button>
+          {groups.map(({ key, title, icon: Icon, items }) => (
+            <button key={key} type="button" aria-pressed={category === key} onClick={() => setCategory(key)}>
+              <Icon size={17} /> {title} <span>{items.length}</span>
+            </button>
+          ))}
+          <label htmlFor="archive-museum">Bảo tàng</label>
+          <select id="archive-museum" value={museum} onChange={(event) => { setLimits({}); setMuseum(event.target.value) }}>
+            <option value="">Tất cả bảo tàng</option>
+            {liveMuseums.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+            {museum && !liveMuseums.some(({slug}) => slug === museum) && <option value={museum}>{museumName(museum)}</option>}
+          </select>
+        </aside>
+        <section className="archive-results" aria-label="Kết quả tìm kiếm">
+          <div className="archive-result-head">
+            <h2>{term ? "Kết quả tìm kiếm" : "Khám phá kho lưu trữ"}</h2>
+            <p role="status">{isLoading ? "Đang cập nhật danh mục · " : ""}{total} kết quả</p>
+          </div>
+          {!total && <div className="archive-empty">
+            <Search size={24} /><h3>Chưa tìm thấy kết quả</h3>
+            <p>Thử từ khóa ngắn hơn hoặc tìm trong tất cả bảo tàng.</p>
+            <button type="button" onClick={() => { updateQuery(""); setCategory("all"); setMuseum("") }}>Xóa bộ lọc và từ khóa</button>
+          </div>}
+          {visible.filter(({items}) => items.length).map(({ key, title, items }) => {
+            const limit = limits[key] ?? (category === "all" ? 6 : 12)
+            return (
+              <section key={key} className="archive-result-group" aria-label={title}>
+                <h3>{title}</h3>
+                <div className="archive-grid">
+                  {items.slice(0, limit).map((item) => (
+                    <article key={item.id}>
+                      <Link href={item.url} className="archive-card">
+                        <div className="archive-card-art" data-model={Boolean(item.model)}>
+                          {item.image ? <ArchiveImage src={item.image} /> : <Box aria-hidden="true" size={35} />}
+                        </div>
+                        <div className="archive-card-copy">
+                          <p>{item.label}</p>
+                          <h4>{item.title}</h4>
+                          <span>{item.model ? "Xem mô hình 3D" : key === "artifacts" ? "Xem bảo tàng" : "Xem chi tiết"} <ArrowUpRight size={14} /></span>
+                        </div>
+                      </Link>
+                    </article>
+                  ))}
+                </div>
+                {items.length > limit && <button type="button" className="archive-more" onClick={() => setLimits({ ...limits, [key]: limit + 12 })}>Xem thêm {title.toLowerCase()}</button>}
+              </section>
+            )
+          })}
+        </section>
       </div>
-
-      {/* Category Tabs */}
-      <div className="mb-10 flex flex-wrap gap-2.5 border-b border-border pb-4">
-        {[
-          { key: "all", label: "Tất cả" },
-          { key: "artifacts", label: `Hiện vật (${matchedArtifacts.length})` },
-          { key: "exhibitions", label: `Triển lãm (${matchedExhibitions.length})` },
-          { key: "museums", label: `Bảo tàng (${matchedMuseums.length})` },
-          { key: "products", label: `Quà lưu niệm (${matchedProducts.length})` },
-        ].map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setCategory(tab.key as Category)}
-            className={cn(
-              "placard rounded-full border px-4 py-2 text-xs transition-all duration-300 font-medium",
-              category === tab.key
-                ? "border-[#d4af37] bg-[#d4af37] text-[#08162b] font-bold shadow-[0_0_12px_rgba(212,175,55,0.35)]"
-                : "border-white/15 bg-[#08162b]/80 text-stone-300 hover:border-[#d4af37]/60 hover:text-[#fbe396]",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {totalResults === 0 ? (
-        <div className="rounded-lg border border-border bg-card/60 py-24 text-center shadow-sm">
-          <p className="text-xl text-foreground font-light">Không tìm thấy kết quả nào cho &ldquo;{query}&rdquo;</p>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Thử tìm kiếm với từ khóa khác như &ldquo;Monet&rdquo;, &ldquo;Apollo&rdquo;, &ldquo;Khủng long&rdquo; hoặc &ldquo;Kim cương&rdquo;.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-14">
-          {/* Museums section */}
-          {(category === "all" || category === "museums") && matchedMuseums.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-heading font-light text-foreground mb-6">Bảo tàng ({matchedMuseums.length})</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {matchedMuseums.map((m) => (
-                  <SpotlightCard key={m.slug} className="p-5 bg-card border-border shadow-sm">
-                    <Link
-                      href={`/bao-tang/${m.slug}`}
-                      style={{ "--museum-accent": m.accent } as React.CSSProperties}
-                      className="group flex flex-col justify-between h-full"
-                    >
-                      <div>
-                        <p className="placard text-xs text-muted-foreground">{m.opens} – {m.closes}</p>
-                        <h3 className="mt-2 text-xl font-heading font-light group-hover:text-museum transition-colors">{m.name}</h3>
-                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground leading-relaxed">{m.description}</p>
-                      </div>
-                      <span className="mt-5 flex items-center gap-1 text-xs font-medium text-museum group-hover:translate-x-1.5 transition-transform">
-                        Xem chi tiết <ArrowUpRight className="size-3.5" />
-                      </span>
-                    </Link>
-                  </SpotlightCard>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Artifacts section */}
-          {(category === "all" || category === "artifacts") && matchedArtifacts.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-heading font-light text-foreground mb-6">Hiện vật ({matchedArtifacts.length})</h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {matchedArtifacts.map((art) => (
-                  <SpotlightCard key={art.id} className="p-3 bg-card border-border shadow-sm">
-                    <Link href={`/bao-tang/${art.museumSlug}`} className="group flex flex-col">
-                      <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
-                        <Image
-                          src={art.image}
-                          alt={art.title}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width:640px) 50vw,25vw"
-                        />
-                      </div>
-                      <p className="mt-3 font-heading italic text-base leading-snug group-hover:text-museum transition-colors line-clamp-1">
-                        {art.title}
-                      </p>
-                      <p className="placard mt-1 text-xs text-muted-foreground">{art.artist} · {art.year}</p>
-                    </Link>
-                  </SpotlightCard>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Exhibitions section */}
-          {(category === "all" || category === "exhibitions") && matchedExhibitions.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-heading font-light text-foreground mb-6">Triển lãm ({matchedExhibitions.length})</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {matchedExhibitions.map((e) => (
-                  <SpotlightCard key={e.slug} className="p-5 bg-card border-border shadow-sm">
-                    <Link
-                      href={`/bao-tang/${e.museumSlug}`}
-                      className="group flex flex-col justify-between h-full"
-                    >
-                      <div>
-                        <p className="placard text-xs text-muted-foreground">Giám tuyển: {e.curator}</p>
-                        <h3 className="mt-2 text-xl font-heading font-light group-hover:text-museum transition-colors">{e.title}</h3>
-                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground leading-relaxed">{e.description}</p>
-                      </div>
-                      <span className="mt-5 flex items-center gap-1 text-xs font-medium text-museum group-hover:translate-x-1.5 transition-transform">
-                        Chi tiết <ArrowUpRight className="size-3.5" />
-                      </span>
-                    </Link>
-                  </SpotlightCard>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Products section */}
-          {(category === "all" || category === "products") && matchedProducts.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-heading font-light text-foreground mb-6">Quà lưu niệm ({matchedProducts.length})</h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {matchedProducts.map((p) => (
-                  <SpotlightCard key={p.id} className="p-3.5 bg-card border-border shadow-sm">
-                    <Link
-                      href={`/cua-hang/${p.slug}`}
-                      className="group flex flex-col h-full"
-                    >
-                      <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
-                        <Image src={p.image} alt={p.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
-                      </div>
-                      <p className="placard mt-3 text-xs text-muted-foreground">{p.category}</p>
-                      <p className="mt-1 text-sm font-medium leading-tight group-hover:text-museum transition-colors line-clamp-1">{p.name}</p>
-                      <p className="mt-auto pt-3 font-heading text-base font-semibold text-museum">{formatVndOrPrice(p.price)}</p>
-                    </Link>
-                  </SpotlightCard>
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
     </div>
   )
 }
 
+type ResultItem = {
+  id: string
+  title: string
+  image: string
+  label: string
+  museum: string
+  details: string
+  url: string
+  model?: boolean
+  keywords?: string
+  catalogTitles?: string[]
+}
+
+function normalize(value: string) {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replaceAll("đ", "d").replace(/[–—-]/g, " ").trim()
+}
+
+function ArchiveImage({ src }: { src: string }) {
+  const [failed, setFailed] = useState("")
+  if (failed === src) return <Box aria-hidden="true" size={35} />
+  return <Image src={src} alt="" fill sizes="(max-width: 600px) 44vw, (max-width: 1100px) 38vw, 26vw" onError={() => setFailed(src)} />
+}
+
 export default function SearchPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="mx-auto max-w-[1560px] px-6 pt-28 pb-16 md:px-12 text-center">
-          <p className="font-heading text-2xl text-stone-400">Đang tải kho lưu trữ Smithsonian...</p>
-        </div>
-      }
-    >
-      <SearchContent />
-    </Suspense>
-  )
+  return <Suspense fallback={<div className="archive-loading" role="status">Đang tải kho lưu trữ…</div>}><SearchContent /></Suspense>
 }

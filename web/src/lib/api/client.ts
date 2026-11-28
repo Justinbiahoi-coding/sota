@@ -24,6 +24,7 @@ async function request<T>(
   }
 
   const res = await fetch(`${BASE}/api/v1${path}`, { ...init, headers })
+  if (res.status === 204) return undefined as T
   const json = await res.json()
 
   if (!res.ok) {
@@ -124,7 +125,10 @@ export const api = {
     removeItem: (cartId: string, itemId: string) =>
       request<void>(`/carts/${cartId}/items/${itemId}`, { method: "DELETE" }, true),
     checkout: (cartId: string, shipping: import("./types").CheckoutRequest) =>
-      request<ApiResponse<import("./types").ShopOrder>>(`/carts/${cartId}/checkout`, {
+      request<ApiResponse<{
+        order: import("./types").ShopOrder
+        invoice: { invoice_number: string }
+      }>>(`/carts/${cartId}/checkout`, {
         method: "POST", body: JSON.stringify(shipping),
       }, true),
   },
@@ -135,7 +139,10 @@ export const api = {
     get: (id: string) =>
       request<ApiResponse<import("./types").TicketOrder>>(`/ticket-orders/${id}`, {}, true),
     create: (body: import("./types").TicketOrderRequest) =>
-      request<ApiResponse<import("./types").TicketOrder>>("/ticket-orders", {
+      request<ApiResponse<{
+        order: import("./types").TicketOrder & { entry_code: string }
+        invoice: { invoice_number: string }
+      }>>("/ticket-orders", {
         method: "POST", body: JSON.stringify(body),
       }, true),
     cancel: (id: string) =>
@@ -146,7 +153,11 @@ export const api = {
     list: (params?: { limit?: number; offset?: number }) =>
       request<PaginatedResponse<import("./types").ShopOrder>>("/shop-orders", {}, true),
     get: (id: string) =>
-      request<ApiResponse<import("./types").ShopOrder>>(`/shop-orders/${id}`, {}, true),
+      request<ApiResponse<{
+        order: import("./types").ShopOrder
+        items: import("./types").ShopOrderItem[]
+        invoice: import("./types").ShopInvoice | null
+      }>>(`/shop-orders/${id}`, {}, true),
     cancel: (id: string) =>
       request<void>(`/shop-orders/${id}/cancel`, { method: "POST" }, true),
   },
